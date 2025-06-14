@@ -15,7 +15,11 @@ public class Main implements ApplicationListener {
     private AssetManager assetManager; // Para gestionar assets
     private SoundManager soundManager; // Instancia de nuestro SoundManager
 
-    private static final String BACKGROUND_MUSIC_PATH = "SoundsBackground/Green Hill Zone Theme Sonic (8 Bit Version).mp3";
+    private static final String BACKGROUND_MUSIC_PATH1 = "SoundsBackground/Green Hill Zone Theme Sonic (8 Bit Version).mp3";
+    private static final String BACKGROUND_MUSIC_PATH2 = "SoundsBackground/Dating Fight.mp3";
+    private static final String BACKGROUND_MUSIC_PATH3 = "SoundsBackground/Heartache.mp3";
+
+
 
     @Override
     public void create() {
@@ -30,7 +34,7 @@ public class Main implements ApplicationListener {
 
         // 3. Cargar la música con el SoundManager usando el AssetManager
         // Esto solo la pone en la cola de carga
-        soundManager.loadMusic(BACKGROUND_MUSIC_PATH);
+        soundManager.loadMusic(BACKGROUND_MUSIC_PATH2);
 
         // 4. IMPORTANTE: Esperar a que el AssetManager termine de cargar los assets.
         // En un juego real, esto se haría en una pantalla de carga.
@@ -38,7 +42,7 @@ public class Main implements ApplicationListener {
         assetManager.finishLoading(); // Espera a que todos los assets en cola se carguen
 
         // 5. Reproducir la música de fondo una vez que todo esté cargado
-        soundManager.playBackgroundMusic(BACKGROUND_MUSIC_PATH, 0.5f, true); // Volumen al 50%, en bucle
+        soundManager.playBackgroundMusic(BACKGROUND_MUSIC_PATH2, 0.5f, true); // Volumen al 50%, en bucle
     }
 
     @Override

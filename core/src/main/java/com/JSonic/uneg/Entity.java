@@ -7,36 +7,42 @@ import com.badlogic.gdx.graphics.g2d.TextureRegion;
 
 import java.util.EnumMap;
 
-public abstract class Entity{
+public abstract class Entity {
     //Atributos
     private int tileSize;
     protected int positionX;
     protected int positionY;
     protected int speed;
 
-//Atributos para dibujar las animaciones de entidades
-
-    // ¡Importante! Aseguramos que 'animacion' siempre use el tipo genérico <TextureRegion>
-    protected Animation<TextureRegion> animacion;
-    protected Texture spriteSheet;//Imagen donde se encuentra todos los sprites en columnas y filas
-    protected TextureRegion[] frameIdle;//Arreglo para almacenar los sprites de ir hacia arriba
-    protected TextureRegion[] frameUp;//Arreglo para almacenar los sprites de ir hacia arriba
-    protected TextureRegion[] frameDown;//Arreglo para almacenar los sprites de ir hacia abajo
-    protected TextureRegion[] frameLeft;//Arreglo para almacenar los sprites de ir hacia izquierda
-    protected TextureRegion[] frameRight;//Arreglo para almacenar los sprites de ir hacia derecha
-    protected TextureRegion[] frameHit;//Arreglo para almacenar los sprites de atacar
-    protected TextureRegion frameActual;
-    protected float tiempoXFrame;
+    //Atributos para dibujar las animaciones de entidades
+    protected Animation<TextureRegion> animacion; // ¡Importante! Aseguramos que 'animacion' siempre use el tipo genérico <TextureRegion>
+    protected Texture spriteSheet; //Imagen donde se encuentra todos los sprites en columnas y filas
+    protected TextureRegion[] frameIdleRight; //Arreglo para almacenar los sprites cuando el personaje no se mueve
+    protected TextureRegion[] frameIdleLeft; //Arreglo para almacenar los sprites cuando el personaje no se mueve
+    protected TextureRegion[] frameUp; //Arreglo para almacenar los sprites de ir hacia arriba
+    protected TextureRegion[] frameDown; //Arreglo para almacenar los sprites de ir hacia abajo
+    protected TextureRegion[] frameLeft; //Arreglo para almacenar los sprites de ir hacia izquierda
+    protected TextureRegion[] frameRight; //Arreglo para almacenar los sprites de ir hacia derecha
+    protected TextureRegion[] frameHitRight; //Arreglo para almacenar los sprites de golpear a la derecha
+    protected TextureRegion[] frameHitLeft; //Arreglo para almacenar los sprites de golpear a la izquierda
+    protected TextureRegion[] frameKickRight; //Arreglo para almacenar los sprites de patear a la derecha
+    protected TextureRegion[] frameKickLeft; //Arreglo para almacenar los sprites de patear a la izquierda
+    protected TextureRegion frameActual; // El frame actual a dibujar
+    protected float tiempoXFrame; // Tiempo transcurrido para el frame de animación actual
 
     public enum EstadoPlayer {
-        IDLE,
+        IDLE_RIGHT,
+        IDLE_LEFT,
         UP,
         DOWN,
         LEFT,
         RIGHT,
-        HIT,
-        SPIN,
-        KICK,
+        HIT_RIGHT,
+        HIT_LEFT,
+        KICK_RIGHT,
+        KICK_LEFT,
+        SPIN_RIGHT,
+        SPIN_LEFT
     }
 
     // Mapa para almacenar diferentes animaciones por estado
@@ -44,30 +50,32 @@ public abstract class Entity{
     protected EstadoPlayer estadoActual; // El estado actual del jugador
 
     //Constructor
-    Entity(){//Constructor default
-        tileSize = 48;//Tamaño de las entidades
+    Entity() { //Constructor default
+        tileSize = 48; //Tamaño de las entidades
         positionX = 0;
         positionY = 0;
         speed = 0;
-        // La inicialización a 'null' es aceptable aquí, siempre y cuando se asigne
-        // una animación válida en el constructor de las subclases (como hicimos en Sonic).
         animacion = null;
         spriteSheet = null;
-        frameIdle = null; // Inicializar todos los arreglos a null en el constructor es una buena práctica
+        frameIdleRight = null;
+        frameIdleLeft = null;
         frameUp = null;
         frameDown = null;
         frameLeft = null;
         frameRight = null;
-        frameHit = null;
+        frameHitRight = null;
+        frameHitLeft = null;
+        frameKickRight = null;
+        frameKickLeft = null;
         tiempoXFrame = 0.0f;
-        estadoActual = EstadoPlayer.IDLE; // Establecer un estado por defecto es útil
-        // Inicializar el mapa de animaciones si planeas usarlo
+        estadoActual = EstadoPlayer.IDLE_RIGHT; // Establecer un estado por defecto es útil
+        // Inicializar el mapa de animaciones
         animations = new EnumMap<>(EstadoPlayer.class);
     }
 
     //Setters
-//SETTERS MOVIMIENTO
-    public void setTileSize(int tileSize){
+    // SETTERS DE MOVIMIENTO
+    public void setTileSize(int tileSize) {
         this.tileSize = tileSize;
     }
 
@@ -75,7 +83,7 @@ public abstract class Entity{
         this.positionX += positionX;
     }
 
-    public void setPositionY(int positionY){
+    public void setPositionY(int positionY) {
         this.positionY += positionY;
     }
 
@@ -84,22 +92,26 @@ public abstract class Entity{
     }
 
     // ¡Importante! El setter ahora también usa el tipo genérico <TextureRegion>
-    public void setAnimacion(Animation<TextureRegion> animacion){
+    public void setAnimacion(Animation<TextureRegion> animacion) {
         this.animacion = animacion;
     }
 
-    public void setSpriteSheet(Texture spriteSheet){
+    public void setSpriteSheet(Texture spriteSheet) {
         this.spriteSheet = spriteSheet;
     }
 
     public void setFrameActual(TextureRegion frameActual) {
-        // La línea de depuración es útil, la mantendremos.
-        System.out.println("DEBUG: Tipo de objeto recibido en setFrameActual: " + frameActual.getClass().getName());
+        // La línea de depuración es útil, la mantenemos durante el desarrollo.
+        // System.out.println("DEBUG: Tipo de objeto recibido en setFrameActual: " + frameActual.getClass().getName());
         this.frameActual = frameActual;
     }
 
-    public void setFrameIdle(TextureRegion[] frameIdle) {
-        this.frameIdle = frameIdle;
+    public void setFrameIdleRight(TextureRegion[] frameIdleRight) {
+        this.frameIdleRight = frameIdleRight;
+    }
+
+    public void setFrameIdleLeft(TextureRegion[] frameIdleLeft) {
+        this.frameIdleLeft = frameIdleLeft;
     }
 
     public void setFrameUp(TextureRegion[] frameUp) {
@@ -118,24 +130,36 @@ public abstract class Entity{
         this.frameRight = frameRight;
     }
 
-    public void setFrameHit(TextureRegion[] frameHit) {
-        this.frameHit = frameHit;
+    public void setFrameHitRight(TextureRegion[] frameHitRight) {
+        this.frameHitRight = frameHitRight;
+    }
+
+    public void setFrameHitLeft(TextureRegion[] frameHitLeft) {
+        this.frameHitLeft = frameHitLeft;
+    }
+
+    public void setFrameKickRight(TextureRegion[] frameKickRight) {
+        this.frameKickRight = frameKickRight;
+    }
+
+    public void setFrameKickLeft(TextureRegion[] frameKickLeft) {
+        this.frameKickLeft = frameKickLeft;
     }
 
     public void setTiempoXFrame(float tiempoXFrame) {
-        this.tiempoXFrame += tiempoXFrame;
+        this.tiempoXFrame = tiempoXFrame; // Cambiado de += a =. Esto establece el tiempo, no lo acumula.
     }
 
-    public void setEstadoActual(EstadoPlayer estadoActual){
+    public void setEstadoActual(EstadoPlayer estadoActual) {
         this.estadoActual = estadoActual;
     }
 
     //Getters
-    public int getTileSize(){
+    public int getTileSize() {
         return tileSize;
     }
 
-    public int getPositionX(){
+    public int getPositionX() {
         return positionX;
     }
 
@@ -143,7 +167,7 @@ public abstract class Entity{
         return positionY;
     }
 
-    public int getSpeed(){
+    public int getSpeed() {
         return speed;
     }
 
@@ -156,17 +180,21 @@ public abstract class Entity{
         return frameActual;
     }
 
+    // Añadidos getters para todos los arreglos de frames para completitud.
+    public TextureRegion[] getFrameIdleRight() {
+        return frameIdleRight;
+    }
 
-    public TextureRegion[] getFrameIdle() {
-        return frameIdle;
+    public TextureRegion[] getFrameIdleLeft() {
+        return frameIdleLeft;
     }
 
     public TextureRegion[] getFrameUp() {
         return frameUp;
     }
 
-    public TextureRegion[] getFrameHit() {
-        return frameHit;
+    public TextureRegion[] getFrameDown() {
+        return frameDown;
     }
 
     public TextureRegion[] getFrameLeft() {
@@ -177,6 +205,21 @@ public abstract class Entity{
         return frameRight;
     }
 
+    public TextureRegion[] getFrameHitRight() {
+        return frameHitRight;
+    }
+
+    public TextureRegion[] getFrameHitLeft() {
+        return frameHitLeft;
+    }
+
+    public TextureRegion[] getFrameKickRight() {
+        return frameKickRight;
+    }
+
+    public TextureRegion[] getFrameKickLeft() {
+        return frameKickLeft;
+    }
 
     public Texture getSpriteSheet() {
         return spriteSheet;
@@ -186,14 +229,14 @@ public abstract class Entity{
         return tiempoXFrame;
     }
 
-    public EstadoPlayer getEstadoActual(){
+    public EstadoPlayer getEstadoActual() {
         return estadoActual;
     }
 
     //Methods
-    protected abstract void setDefaultValues();//Inicialización de valores lógicos por defecto
-    protected abstract void CargarSprites();//Carga de los sprites de la entidad
-    protected abstract void KeyHandler();//Metodo abstracto para implementar la lógica de movilidad
-    public abstract void draw(SpriteBatch batch);//Metodo abstracto para implementar la lógica del dibujado por pantalla
-    public abstract void update(float deltaTime); //Método abstracto para actualizar lógica y animación
+    protected abstract void setDefaultValues(); // Inicialización de valores lógicos por defecto
+    protected abstract void CargarSprites(); // Carga de los sprites de la entidad
+    protected abstract void KeyHandler(); // Método abstracto para implementar la lógica de movilidad
+    public abstract void draw(SpriteBatch batch); // Método abstracto para implementar la lógica del dibujado por pantalla
+    public abstract void update(float deltaTime); // Método abstracto para actualizar lógica y animación
 }
