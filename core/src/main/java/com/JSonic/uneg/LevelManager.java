@@ -1,32 +1,34 @@
 package com.JSonic.uneg;
 
+import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.graphics.OrthographicCamera;
 import com.badlogic.gdx.maps.tiled.TiledMap;
 import com.badlogic.gdx.maps.tiled.TmxMapLoader;
 import com.badlogic.gdx.maps.tiled.renderers.OrthogonalTiledMapRenderer;
-import com.badlogic.gdx.graphics.g2d.SpriteBatch; //Para que si despues se dibujan cosas en el mapa
+import com.badlogic.gdx.graphics.g2d.SpriteBatch; // Necesario para el constructor, aunque no se usa directamente en dibujar()
+import com.badlogic.gdx.math.MathUtils; // Importar para MathUtils.clamp
 
-// Clase para manejar la carga y renderizado de los niveles (mapas)
 public class LevelManager {
 
-    private TiledMap mapaActual; // El mapa Tiled que está cargado actualmente
-    private OrthogonalTiledMapRenderer renderizadorMapa; // El encargado de dibujar el mapa
-    private OrthographicCamera camaraJuego; // La cámara que verá el mapa
+    private TiledMap mapaActual;
+    private OrthogonalTiledMapRenderer renderizadorMapa;
+    private OrthographicCamera camaraJuego; // Referencia a la cámara principal del juego
 
-    // Constructor de la clase. Recibe la cámara que usará el nivel y el batch para dibujar.
+    // --- NUEVAS VARIABLES PARA DIMENSIONES DEL MAPA ---
+    private float anchoMapaPixels;
+    private float altoMapaPixels;
+    private int tileWidth;
+    private int tileHeight;
+    // --- FIN NUEVAS VARIABLES ---
+
+    // Constructor que recibe la cámara y el SpriteBatch (aunque el batch no se use directamente aquí para dibujar el mapa)
     public LevelManager(OrthographicCamera camara, SpriteBatch batch) {
         this.camaraJuego = camara;
-        // this.batchSprites = batch; // Puedes pasar el batch si el nivel va a dibujar sus propios objetos
-
-        // Inicializamos el renderizador con un mapa nulo por ahora, se asignará al cargar
         this.renderizadorMapa = null;
         this.mapaActual = null;
     }
 
-    /**
-     * Carga un mapa Tiled específico.
-     * @param rutaMapa La ruta al archivo .tmx dentro de la carpeta assets/ (ej. "maps/Zona1N1.tmx")
-     */
+    // Método para cargar un nivel (mapa Tiled)
     public void cargarNivel(String rutaMapa) {
         // Si ya hay un mapa cargado, liberamos sus recursos antes de cargar uno nuevo
         if (mapaActual != null) {
@@ -36,86 +38,100 @@ public class LevelManager {
             renderizadorMapa.dispose();
         }
 
-        // Carga el nuevo mapa desde la ruta especificada
         mapaActual = new TmxMapLoader().load(rutaMapa);
 
-        // Inicializa el renderizador del mapa con el mapa recién cargado y la escala de los tiles
-        renderizadorMapa = new OrthogonalTiledMapRenderer(mapaActual,1);
+        // --- CÓDIGO NUEVO AQUÍ ---
+        // Obtener dimensiones del mapa en píxeles virtuales.
+        // Asumiendo que todos los tiles del mapa tienen el mismo tamaño.
+        tileWidth = mapaActual.getProperties().get("tilewidth", Integer.class);
+        tileHeight = mapaActual.getProperties().get("tileheight", Integer.class);
+        int mapWidthInTiles = mapaActual.getProperties().get("width", Integer.class);
+        int mapHeightInTiles = mapaActual.getProperties().get("height", Integer.class);
 
-        // LÓGICA FUTURA: Aquí podrías inicializar el jugador, enemigos y objetos específicos del nivel
-        // dependiendo de las propiedades del mapa Tiled o de una capa de objetos en Tiled.
-        // Por ejemplo, leer puntos de aparición para el jugador o posiciones de enemigos.
-        // map.getLayers().get("ObjectsLayer").getObjects();
+        anchoMapaPixels = (float) mapWidthInTiles * tileWidth;
+        altoMapaPixels = (float) mapHeightInTiles * tileHeight;
+        Gdx.app.log("LevelManager", "Mapa cargado. Dimensiones: " + anchoMapaPixels + "x" + altoMapaPixels + " pixels.");
+        // --- FIN CÓDIGO NUEVO ---
+
+        // El '1' es la escala, si tu mapa ya está a la resolución que quieres, déjalo en 1.
+        renderizadorMapa = new OrthogonalTiledMapRenderer(mapaActual, 1);
     }
 
-    /**
-     * Actualiza la lógica del nivel.
-     * @param deltaTime El tiempo transcurrido desde el último frame (para movimientos suaves)
-     */
+    // Método para actualizar la lógica del nivel (si es necesario)
     public void actualizar(float deltaTime) {
-        // Por ahora, solo actualiza la cámara para asegurar que esté lista.
-        // En el futuro, aquí iría la lógica de actualización para todos los elementos del nivel:
-        // - Movimiento de enemigos
-        // - Lógica de objetos interactivos
-        // - Lógica de colisiones (aunque parte de esto puede ir en otras clases como PersonajeJugable)
-
-        camaraJuego.update();
+        // En este caso, la cámara se actualiza y se limita en PantallaDeJuego,
+        // no es necesario actualizar la cámara aquí.
     }
 
-    /**
-     * Dibuja el mapa en pantalla usando la cámara actual.
-     */
+    // Método para dibujar el nivel en pantalla
     public void dibujar() {
         if (mapaActual == null || renderizadorMapa == null) {
-
             return;
         }
-        renderizadorMapa.setView(camaraJuego); // Le dice al renderizador qué es lo que la cámara está viendo
-        renderizadorMapa.render(); // Dibuja el mapa
-
-        // LÓGICA FUTURA: Aquí se dibujarían los elementos dinámicos del nivel (personajes, enemigos, etc.)
-        // Esto generalmente se hace en la clase que orquesta el juego (GameScreen o Main)
-        // para tener control sobre el SpriteBatch.
-        // Si ManejadorNivel va a dibujar los elementos, necesitaría el SpriteBatch
-        /*
-        batchSprites.setProjectionMatrix(camaraJuego.combined);
-        batchSprites.begin();
-        // Dibujar jugador: jugador.dibujar(batchSprites);
-        // Dibujar enemigos: for (Enemigo e : listaEnemigos) e.dibujar(batchSprites);
-        batchSprites.end();
-        */
+        // Configura el renderizador del mapa para usar la cámara actual
+        renderizadorMapa.setView(camaraJuego);
+        // Dibuja todas las capas del mapa
+        renderizadorMapa.render();
     }
 
-    /**
-     * Libera los recursos del mapa y el renderizador cuando ya no se necesitan.
-     * Es crucial para evitar fugas de memoria.
-     */
+    // --- NUEVO MÉTODO PARA LIMITAR LA CÁMARA A LOS BORDES DEL MAPA ---
+    public void limitarCamaraAMapa(OrthographicCamera camara) {
+        // Si el mapa no está cargado o sus dimensiones no son válidas, no hacemos nada.
+        if (mapaActual == null || anchoMapaPixels == 0 || altoMapaPixels == 0) {
+            return;
+        }
+
+        // Calcula la mitad del ancho y alto visible por la cámara
+        float camHalfWidth = camara.viewportWidth / 2f;
+        float camHalfHeight = camara.viewportHeight / 2f;
+
+        // Calcula los límites mínimos y máximos de la posición X e Y de la cámara
+        // La cámara no puede ir más allá de los bordes del mapa.
+        // Asegúrate de que el "centro" de la cámara esté siempre dentro de los límites.
+        float minCamX = camHalfWidth;
+        float maxCamX = anchoMapaPixels - camHalfWidth;
+        float minCamY = camHalfHeight;
+        float maxCamY = altoMapaPixels - camHalfHeight;
+
+        // Aplica MathUtils.clamp para limitar la posición de la cámara
+        camara.position.x = MathUtils.clamp(camara.position.x, minCamX, maxCamX);
+        camara.position.y = MathUtils.clamp(camara.position.y, minCamY, maxCamY);
+
+        // Se llama a camara.update() en PantallaDeJuego.render() después de este método.
+        // No es necesario aquí para evitar llamadas dobles.
+    }
+    // --- FIN NUEVO MÉTODO ---
+
+    // Método para liberar los recursos del nivel
     public void dispose() {
         if (mapaActual != null) {
             mapaActual.dispose();
+            mapaActual = null;
         }
         if (renderizadorMapa != null) {
             renderizadorMapa.dispose();
+            renderizadorMapa = null;
         }
-        // TODO: LÓGICA FUTURA: Liberar recursos de enemigos, objetos, etc., cargados por este nivel.
     }
 
-    // --- Métodos adicionales que podrías necesitar ---
-
-    /**
-     * Obtiene el mapa Tiled actual. Útil para que otras clases accedan a sus capas y propiedades para colisiones.
-     * @return El TiledMap actual.
-     */
     public TiledMap getMapaActual() {
         return mapaActual;
     }
 
-    /**
-     * Ajusta la cámara para que se centre en una posición específica.
-     * Esto lo llamaría tu clase principal (GameScreen) para centrar la cámara en el jugador.
-     */
-    public void centrarCamaraEn(float x, float y) {
-        camaraJuego.position.set(x, y, 0);
-       // camaraJuego.update();
+    // --- Nuevos getters para las dimensiones del mapa (útiles para colisiones) ---
+    public float getAnchoMapaPixels() {
+        return anchoMapaPixels;
+    }
+
+    public float getAltoMapaPixels() {
+        return altoMapaPixels;
+    }
+
+    public int getTileWidth() {
+        return tileWidth;
+    }
+
+    public int getTileHeight() {
+        return tileHeight;
     }
 }

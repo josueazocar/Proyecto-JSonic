@@ -35,9 +35,9 @@ public class WindowLauncher {
         //// You may also need to configure GPU drivers to fully disable Vsync; this can cause screen tearing.
 
 
-        configuration.setWindowedMode(1040, 900);
+        configuration.setWindowedMode(1366, 768);
 
-        configuration.setWindowedMode(screenWidth, screenHeight);
+        //configuration.setWindowedMode(screenWidth, screenHeight);
 
         //// You can change these files; they are in lwjgl3/src/main/resources/ .
         //// They can also be loaded from the root of assets/ .
