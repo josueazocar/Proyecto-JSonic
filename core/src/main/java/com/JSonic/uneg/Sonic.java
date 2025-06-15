@@ -200,7 +200,7 @@ public class Sonic extends Player { // Ahora extiende Player, que ya implementa 
 
     @Override
     public void draw(SpriteBatch batch) {
-        // --- MODIFICADO: ELIMINADAS LAS LLAMADAS A batch.begin() y batch.end() ---
+
         // Estas llamadas ahora son responsabilidad de PantallaDeJuego.render()
         if (frameActual != null) {
             batch.draw(frameActual, positionX, positionY, getTileSize(), getTileSize());
@@ -208,11 +208,5 @@ public class Sonic extends Player { // Ahora extiende Player, que ya implementa 
             Gdx.app.log("Sonic", "Advertencia: 'frameActual' es nulo en el método draw(). No se puede dibujar a Sonic.");
         }
     }
-
-    // El método dispose() se encuentra ahora en la clase Player.
-    // Ya no es necesario implementarlo aquí en Sonic.
-    // @Override
-    // public void dispose() {
-    //    // No se libera spriteSheet aquí porque Player.dispose() lo hace.
-    // }
+    
 }
