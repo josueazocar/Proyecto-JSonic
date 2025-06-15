@@ -9,9 +9,11 @@ import java.util.EnumMap;
 
 public abstract class Entity {
     //Atributos
+   // public int id; // Identificador único para la red
     private int tileSize;
-    protected int positionX;
-    protected int positionY;
+    public PlayerState estado;
+   // protected float positionX;
+   // protected float positionY;
     protected int speed;
 
     //Atributos para dibujar las animaciones de entidades
@@ -50,10 +52,9 @@ public abstract class Entity {
     protected EstadoPlayer estadoActual; // El estado actual del jugador
 
     //Constructor
-    Entity() { //Constructor default
+    Entity(PlayerState estadoInicial) { //Constructor default
+        this.estado = estadoInicial;
         tileSize = 48; //Tamaño de las entidades
-        positionX = 0;
-        positionY = 0;
         speed = 0;
         animacion = null;
         spriteSheet = null;
@@ -77,14 +78,6 @@ public abstract class Entity {
     // SETTERS DE MOVIMIENTO
     public void setTileSize(int tileSize) {
         this.tileSize = tileSize;
-    }
-
-    public void setPositionX(int positionX) {
-        this.positionX += positionX;
-    }
-
-    public void setPositionY(int positionY) {
-        this.positionY += positionY;
     }
 
     public void setSpeed(int speed) {
@@ -155,16 +148,10 @@ public abstract class Entity {
     }
 
     //Getters
+
+
     public int getTileSize() {
         return tileSize;
-    }
-
-    public int getPositionX() {
-        return positionX;
-    }
-
-    public int getPositionY() {
-        return positionY;
     }
 
     public int getSpeed() {

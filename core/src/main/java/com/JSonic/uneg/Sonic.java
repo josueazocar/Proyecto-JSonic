@@ -1,28 +1,36 @@
 package com.JSonic.uneg;
 
 import com.badlogic.gdx.Gdx;
+import com.badlogic.gdx.Input.Keys; // Importa Keys
 import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.Animation;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.graphics.g2d.TextureRegion;
+import com.badlogic.gdx.math.MathUtils; // Importar para MathUtils.clamp
 
-public class Sonic extends Player { // Ahora extiende Player, que ya implementa Disposable
+
+public class Sonic extends Player {
 
     protected TextureRegion[] frameSpinRight; // Arreglo para almacenar los sprites de girar a la derecha
     protected TextureRegion[] frameSpinLeft;  // Arreglo para almacenar los sprites de girar a la izquierda
 
-    // --- CONSTRUCTOR MODIFICADO (Opción más limpia) ---
-    Sonic(LevelManager levelManager) { // Recibe el LevelManager
-        super(levelManager); // Llama al constructor de la superclase (Player) con LevelManager
-        // Asegúrate de que setDefaultValues() en Player configure los valores iniciales.
+    // Constructor unificado: recibe el estado inicial (de red) y el LevelManager
+    public Sonic(PlayerState estadoInicial) {
+        super(estadoInicial); // Llama al constructor de la superclase (Player) con PlayerState
         CargarSprites(); // Carga los sprites específicos de Sonic después de la inicialización base
-        // Establecer la animación inicial
+        // Establecer la animación inicial basada en el estado actual del jugador
         animacion = animations.get(getEstadoActual());
         if (animacion != null) {
             animacion.setPlayMode(Animation.PlayMode.LOOP);
         }
     }
-    // --- FIN CONSTRUCTOR MODIFICADO ---
+
+    // Nuevo constructor que también permite pasar el LevelManager (para el jugador local en PantallaDeJuego)
+    public Sonic(PlayerState estadoInicial, LevelManager levelManager) {
+        this(estadoInicial); // Llama al constructor de arriba
+        this.levelManager = levelManager; // Asigna el LevelManager
+    }
+
 
     // --- NUEVO MÉTODO para obtener la ruta del SpriteSheet (implementa un método abstracto que podrías añadir a Player) ---
     @Override
@@ -33,15 +41,9 @@ public class Sonic extends Player { // Ahora extiende Player, que ya implementa 
 
     @Override
     protected void CargarSprites() {
-        // --- MODIFICADO: Llama al método de la superclase para cargar la Texture principal ---
-        // Esto asume que Player.CargarSprites() o un nuevo método en Player
-        // ahora maneja la carga de la spriteSheet basándose en getSpriteSheetPath().
-        // Si Player.CargarSprites() no existe, o no hace esto, tendrías que cargar la Texture aquí
-        // Y luego llamar a setSpriteSheet(coleccionDeSprites);
-        // Si mantienes el patron de que cada subclase carga su Texture:
+        // Carga la Texture principal para Sonic
         Texture coleccionDeSprites = new Texture(Gdx.files.internal(getSpriteSheetPath()));
-        setSpriteSheet(coleccionDeSprites);
-        // --- FIN MODIFICADO ---
+        setSpriteSheet(coleccionDeSprites); // Establece la Texture en la superclase
 
         // Dividir el sprite sheet en una matriz de TextureRegion
         // Asegúrate de que las dimensiones de tu sprite sheet coincidan con esta división
@@ -157,27 +159,49 @@ public class Sonic extends Player { // Ahora extiende Player, que ya implementa 
 
     @Override
     public void update(float deltaTime) {
-        KeyHandler(); // Maneja la entrada del teclado y actualiza la posición y el estado
+        // Manejo de la entrada del teclado y actualización de la posición
+        // Esta parte se llama en PantallaDeJuego para el jugador local.
+        KeyHandler();
 
         // Obtener la animación actual basada en el estado
         Animation<TextureRegion> currentAnimation = animations.get(estadoActual);
 
+        // Aumentamos el tiempo del fotograma solo si la animación actual no es nula.
         if (currentAnimation != null) {
-            // Reiniciar el tiempoXFrame si la animación acaba de cambiar (para acciones de un solo disparo)
+            // Si la animación actual es diferente de la que se estaba reproduciendo, resetea tiempoXFrame
             if (animacion != currentAnimation) {
                 tiempoXFrame = 0; // Reinicia el tiempo cuando la animación cambia
             }
             animacion = currentAnimation; // Actualiza la referencia a la animación actual
 
-            // Si la animación es de un solo disparo (NORMAL) y ya terminó, vuelve a IDLE.
-            if (animacion.getPlayMode() == Animation.PlayMode.NORMAL && animacion.isAnimationFinished(tiempoXFrame)) {
-                // Volver al estado IDLE correspondiente a la última dirección horizontal.
-                setEstadoActual(lastDirection);
-                tiempoXFrame = 0; // Reiniciar el tiempo para el nuevo estado IDLE
+            // Lógica de transición de estado después de que una animación de acción termina
+            if ((estadoActual == EstadoPlayer.HIT_RIGHT || estadoActual == EstadoPlayer.HIT_LEFT ||
+                estadoActual == EstadoPlayer.KICK_RIGHT || estadoActual == EstadoPlayer.KICK_LEFT) &&
+                animacion.isAnimationFinished(tiempoXFrame)) {
+                // Si la animación de acción terminó, volvemos a IDLE según la última dirección horizontal guardada
+                if (lastDirection == EstadoPlayer.LEFT || lastDirection == EstadoPlayer.IDLE_LEFT) {
+                    setEstadoActual(EstadoPlayer.IDLE_LEFT);
+                } else {
+                    setEstadoActual(EstadoPlayer.IDLE_RIGHT);
+                }
+                tiempoXFrame = 0; // Reseteamos el tiempo para la nueva animación IDLE
                 // Asegurar que la animación de IDLE se actualice.
                 animacion = animations.get(estadoActual);
                 if (animacion == null) {
                     Gdx.app.error("Sonic", "Animación IDLE nula después de una acción.");
+                }
+            } else if ((estadoActual == EstadoPlayer.SPIN_RIGHT || estadoActual == EstadoPlayer.SPIN_LEFT) &&
+                !Gdx.input.isKeyPressed(Keys.SPACE)) { // Asumiendo que SPACE es para Spin
+                // Si estaba en SPIN y la tecla de SPIN ya no está presionada
+                if (lastDirection == EstadoPlayer.LEFT || lastDirection == EstadoPlayer.IDLE_LEFT) {
+                    setEstadoActual(EstadoPlayer.IDLE_LEFT);
+                } else {
+                    setEstadoActual(EstadoPlayer.IDLE_RIGHT);
+                }
+                tiempoXFrame = 0; // Reseteamos el tiempo
+                animacion = animations.get(estadoActual);
+                if (animacion == null) {
+                    Gdx.app.error("Sonic", "Animación IDLE nula después de salir de SPIN.");
                 }
             }
         } else {
@@ -200,13 +224,11 @@ public class Sonic extends Player { // Ahora extiende Player, que ya implementa 
 
     @Override
     public void draw(SpriteBatch batch) {
-
-        // Estas llamadas ahora son responsabilidad de PantallaDeJuego.render()
+        // Dibujamos el frame actual en la posición actual del jugador (usando estado.x/y)
         if (frameActual != null) {
-            batch.draw(frameActual, positionX, positionY, getTileSize(), getTileSize());
+            batch.draw(frameActual, estado.x, estado.y, getTileSize(), getTileSize());
         } else {
             Gdx.app.log("Sonic", "Advertencia: 'frameActual' es nulo en el método draw(). No se puede dibujar a Sonic.");
         }
     }
-    
 }
