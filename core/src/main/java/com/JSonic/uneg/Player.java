@@ -11,8 +11,8 @@ public abstract class Player extends Entity {
     protected EstadoPlayer lastDirection = EstadoPlayer.IDLE_RIGHT; // Default
 
     // Constructor
-    Player() {
-        super(); // Call the superclass constructor
+    Player(PlayerState estadoInicial) {
+        super(estadoInicial);
         setDefaultValues(); // Set default logical values
     }
 
@@ -22,10 +22,12 @@ public abstract class Player extends Entity {
     // Methods
     @Override
     protected void setDefaultValues() { // Method to set default values
-        positionX = 100; // Initialize initial X position
-        positionY = 100; // Initialize initial Y position
-        speed = 4; // Set speed
-        setEstadoActual(EstadoPlayer.IDLE_RIGHT); // Initialize 'estadoActual' by default.
+        if (this.estado != null) {
+            this.estado.x = 100; // Initialize initial X position in the state
+            this.estado.y = 100; // Initialize initial Y position in the state
+        }
+        speed = 4;
+        setEstadoActual(EstadoPlayer.IDLE_RIGHT);
     }
 
 
@@ -47,23 +49,23 @@ public abstract class Player extends Entity {
         // Position updates occur independently of the current animation,
         // allowing movement while spinning.
         if (Gdx.input.isKeyPressed(Keys.W)) {
-            positionY += speed;
+            estado.y += speed;
             proposedMovementState = EstadoPlayer.UP;
             isMoving = true;
         }
         if (Gdx.input.isKeyPressed(Keys.S)) {
-            positionY -= speed;
+            estado.y -= speed;
             proposedMovementState = EstadoPlayer.DOWN;
             isMoving = true;
         }
         if (Gdx.input.isKeyPressed(Keys.A)) { // Left
-            positionX -= speed;
+            estado.x -= speed;
             lastDirection = EstadoPlayer.LEFT; // Update the last HORIZONTAL direction
             proposedMovementState = EstadoPlayer.LEFT;
             isMoving = true;
         }
         if (Gdx.input.isKeyPressed(Keys.D)) { // Right
-            positionX += speed;
+            estado.x += speed;
             lastDirection = EstadoPlayer.RIGHT; // Update the last HORIZONTAL direction
             proposedMovementState = EstadoPlayer.RIGHT;
             isMoving = true;
@@ -100,12 +102,12 @@ public abstract class Player extends Entity {
         // Handle SPIN (L)
         // Spin can be held down and combines with WASD movement.
         else if (Gdx.input.isKeyPressed(Keys.L) && Gdx.input.isKeyPressed(Keys.D) ) {
-            positionX += speed;
+            estado.x += speed;
             setEstadoActual(EstadoPlayer.SPIN_LEFT);
             actionStateSet = true;
         }
         else if (Gdx.input.isKeyPressed(Keys.L) && Gdx.input.isKeyPressed(Keys.A) ) {
-            positionX -= speed;
+            estado.x -= speed;
             setEstadoActual(EstadoPlayer.SPIN_RIGHT);
             actionStateSet = true;
         }

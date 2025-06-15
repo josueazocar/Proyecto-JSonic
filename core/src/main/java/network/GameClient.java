@@ -1,17 +1,21 @@
 // paquete/network/GameClient.java
 package network;
 
+import com.JSonic.uneg.Main;
 import com.esotericsoftware.kryonet.Client;
 import com.esotericsoftware.kryonet.Connection;
 import com.esotericsoftware.kryonet.Listener;
-
+import java.util.concurrent.ConcurrentLinkedQueue;
 import java.io.IOException;
 
 public class GameClient {
 
-    private Client cliente;
+    public Client cliente;
+    private Main juego;
+    public ConcurrentLinkedQueue<Object> paquetesRecibidos = new ConcurrentLinkedQueue<>();
 
-    public GameClient() {
+    public GameClient(Main juego) {
+        this.juego= juego;
         cliente = new Client();
 
         Network.registrar(cliente);
@@ -28,11 +32,8 @@ public class GameClient {
             }
 
             public void received(Connection connection, Object objeto) {
-                // Comprobamos si hemos recibido una respuesta de login
-                if (objeto instanceof Network.RespuestaAccesoPaquete) {
-                    Network.RespuestaAccesoPaquete respuesta = (Network.RespuestaAccesoPaquete) objeto;
-                    System.out.println("[CLIENT] Respuesta del servidor: " + respuesta.mensajeRespuesta);
-                }
+
+                paquetesRecibidos.add(objeto);
             }
 
             public void disconnected(Connection conexion) {
@@ -51,21 +52,4 @@ public class GameClient {
         }
     }
 
-    public static void main(String[] args) {
-        // com.esotericsoftware.minlog.Log.set(com.esotericsoftware.minlog.Log.LEVEL_DEBUG);
-        new GameClient();
-
-
-        // En un juego real, el bucle de renderizado mantendría la aplicación viva.
-        // Para esta prueba, necesitamos mantener el hilo principal vivo artificialmente
-        // para que el hilo de red de KryoNet pueda seguir funcionando en segundo plano.
-        while (true) {
-            try {
-                // Ponemos el hilo a "dormir" por un momento para que no consuma el 100% del CPU.
-                Thread.sleep(1000);
-            } catch (InterruptedException e) {
-                e.printStackTrace();
-            }
-        }
-    }
 }

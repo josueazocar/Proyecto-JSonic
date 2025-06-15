@@ -11,8 +11,8 @@ public class Sonic extends Player {
     protected TextureRegion[] frameSpinLeft; //Arreglo para almacenar los sprites cuando del spin izquierdo
 
     // Constructor
-    Sonic() {
-        super();
+    public Sonic(PlayerState estadoInicial) {
+        super(estadoInicial);
         CargarSprites();
         // Inicializamos 'animacion' con la animación del estado inicial.
         // Ahora obtenemos la animación del mapa 'animations'.
@@ -168,7 +168,7 @@ public class Sonic extends Player {
         }
 
         // Manejo de la entrada del teclado (llama a KeyHandler en Player)
-        KeyHandler();
+       // KeyHandler();
 
         // Aumentamos el tiempo del fotograma solo si la animación actual no es nula.
         if (animacion != null) {
@@ -205,15 +205,15 @@ public class Sonic extends Player {
 
     @Override
     public void draw(SpriteBatch batch) {
-        batch.begin();
+
         // Dibujamos el frame actual en la posición actual del jugador
         if (frameActual != null) {
             // Dibujamos el sprite en la posición actual y con el tamaño del tile
-            batch.draw(frameActual, positionX, positionY, getTileSize(), getTileSize());
+            batch.draw(frameActual, estado.x, estado.y, getTileSize(), getTileSize());
         } else {
             // Si 'frameActual' es nulo, registramos una advertencia para depuración.
             Gdx.app.log("Sonic", "Advertencia: 'frameActual' es nulo en el método draw(). No se puede dibujar a Sonic.");
         }
-        batch.end();
+
     }
 }
