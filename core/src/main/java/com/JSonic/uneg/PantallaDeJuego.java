@@ -9,6 +9,9 @@ import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.utils.viewport.FitViewport;
 import com.badlogic.gdx.utils.viewport.Viewport;
 import com.badlogic.gdx.audio.Music;
+import network.GameClient;
+
+import java.util.HashMap;
 
 public class PantallaDeJuego implements Screen {
 
@@ -20,7 +23,7 @@ public class PantallaDeJuego implements Screen {
     private SpriteBatch batchSprites;
     private AssetManager assetManager;
     private SoundManager soundManager;
-
+    private PlayerState sonicEstado;
     // Componentes del juego
     private OrthographicCamera camaraJuego;
     private Viewport viewport;
@@ -31,7 +34,7 @@ public class PantallaDeJuego implements Screen {
     private Music currentBackgroundMusic;
 
     // Constructor que recibe las instancias de Batch, AssetManager y SoundManager
-    public PantallaDeJuego(SpriteBatch batchSprites, AssetManager assetManager, SoundManager soundManager) {
+    public PantallaDeJuego(SpriteBatch batchSprites, AssetManager assetManager, SoundManager soundManager, GameClient gameClient, Sonic sonic, HashMap<Integer, Player> otrosJugadores) {
         this.batchSprites = batchSprites;
         this.assetManager = assetManager;
         this.soundManager = soundManager;
@@ -46,10 +49,15 @@ public class PantallaDeJuego implements Screen {
         viewport.apply(); // Aplica el viewport al inicio
 
         manejadorNivel = new LevelManager(camaraJuego, batchSprites); // Pasa la cámara y el batch al LevelManager
-        manejadorNivel.cargarNivel("maps/Zona1N1.tmx"); // Carga tu mapa aquí
-
+        manejadorNivel.cargarNivel("maps/Zona1N1.tmx");
+        // Carga tu mapa aquí
+        sonicEstado = new PlayerState(); // Estado inicial por defecto, se actualizará con el ID del servidor
+        sonicEstado.x = 100; // Posición inicial
+        sonicEstado.y = 100;
+        // Crea el objeto Sonic local con el estado inicial.
+        // El LevelManager se le asignará en PantallaDeJuego cuando se inicialice.
         // --- CÓDIGO MODIFICADO AQUÍ ---
-        sonic = new Sonic(manejadorNivel); // Pasa el LevelManager al constructor de Sonic
+        sonic = new Sonic(sonicEstado, manejadorNivel); // Pasa el LevelManager al constructor de Sonic
         // --- FIN CÓDIGO MODIFICADO ---
 
         // Configurar y reproducir música
@@ -75,8 +83,8 @@ public class PantallaDeJuego implements Screen {
 
             // --- CÓDIGO MODIFICADO AQUÍ ---
             // Centrar la cámara en la posición de Sonic (centrada en el medio del sprite).
-            camaraJuego.position.x = sonic.getPositionX() + sonic.getTileSize() / 2;
-            camaraJuego.position.y = sonic.getPositionY() + sonic.getTileSize() / 2;
+            camaraJuego.position.x = sonicEstado.x + sonic.getTileSize() / 2;
+            camaraJuego.position.y = sonicEstado.y + sonic.getTileSize() / 2;
 
             // Limita la cámara a los bordes del mapa.
             manejadorNivel.limitarCamaraAMapa(camaraJuego);

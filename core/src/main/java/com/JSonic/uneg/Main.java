@@ -53,12 +53,7 @@ public class Main extends Game {
 
         // --- Lógica de networking y creación del jugador local ---
         gameClient = new GameClient(this); // 'this' se pasa para que GameClient pueda llamar a métodos de Main
-        sonicEstado = new PlayerState(); // Estado inicial por defecto, se actualizará con el ID del servidor
-        sonicEstado.x = 100; // Posición inicial
-        sonicEstado.y = 100;
-        // Crea el objeto Sonic local con el estado inicial.
-        // El LevelManager se le asignará en PantallaDeJuego cuando se inicialice.
-        sonic = new Sonic(sonicEstado);
+
 
         otrosJugadores = new HashMap<>(); // Inicializa el mapa de otros jugadores
 

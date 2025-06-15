@@ -27,13 +27,19 @@ public class Sonic extends Player {
 
     // Nuevo constructor que también permite pasar el LevelManager (para el jugador local en PantallaDeJuego)
     public Sonic(PlayerState estadoInicial, LevelManager levelManager) {
-        this(estadoInicial); // Llama al constructor de arriba
+        super(estadoInicial); // Llama al constructor de arriba
+        CargarSprites(); // Carga los sprites específicos de Sonic después de la inicialización base
+        // Establecer la animación inicial basada en el estado actual del jugador
+        animacion = animations.get(getEstadoActual());
+        if (animacion != null) {
+            animacion.setPlayMode(Animation.PlayMode.LOOP);
+        }
         this.levelManager = levelManager; // Asigna el LevelManager
     }
 
 
     // --- NUEVO MÉTODO para obtener la ruta del SpriteSheet (implementa un método abstracto que podrías añadir a Player) ---
-    @Override
+
     protected String getSpriteSheetPath() {
         return "Entidades/Player/Sonic/sonic.png";
     }
@@ -230,5 +236,10 @@ public class Sonic extends Player {
         } else {
             Gdx.app.log("Sonic", "Advertencia: 'frameActual' es nulo en el método draw(). No se puede dibujar a Sonic.");
         }
+    }
+
+    @Override
+    public void dispose() {
+
     }
 }
