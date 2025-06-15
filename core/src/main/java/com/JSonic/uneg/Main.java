@@ -1,40 +1,41 @@
 package com.JSonic.uneg;
 
-import com.badlogic.gdx.ApplicationListener;
+import com.badlogic.gdx.Game;
+import com.JSonic.uneg.PantallaDeJuego; // <-- IMPORTA TU CLASE PANTALLADEJUEGO
+// Asegúrate de que la ruta sea correcta según donde la creaste.
+// Si la creaste en un paquete 'screens', sería:
+// import com.JSonic.uneg.screens.PantallaDeJuego;
 
-/** {@link com.badlogic.gdx.ApplicationListener} implementation shared by all platforms. */
-public class Main implements ApplicationListener {
+
+/** {@link com.badlogic.gdx.Game} implementation shared by all platforms. */
+
+public class Main extends Game {
+
     @Override
     public void create() {
-        // Prepare your application here.
+        // En el método create simplemente establecemos la pantalla inicial de nuestro juego.
+        setScreen(new PantallaDeJuego());
     }
 
-    @Override
-    public void resize(int width, int height) {
-        // If the window is minimized on a desktop (LWJGL3) platform, width and height are 0, which causes problems.
-        // In that case, we don't resize anything, and wait for the window to be a normal size before updating.
-        if(width <= 0 || height <= 0) return;
+    // Comente esto proque ya La clase Game los maneja y los delega a PantallaDeJuego.
+    // @Override
+    // public void resize(int width, int height) {
+    //     if(width <= 0 || height <= 0) return;
+    // }
 
-        // Resize your application here. The parameters represent the new window size.
-    }
+    // @Override
+    // public void render() {
+    // }
 
-    @Override
-    public void render() {
-        // Draw your application here.
-    }
+    // @Override
+    // public void pause() {
+    // }
 
-    @Override
-    public void pause() {
-        // Invoked when your application is paused.
-    }
+    // @Override
+    // public void resume() {
+    // }
 
-    @Override
-    public void resume() {
-        // Invoked when your application is resumed after pause.
-    }
-
-    @Override
-    public void dispose() {
-        // Destroy application's resources here.
-    }
+    // @Override
+    // public void dispose() {
+    // }
 }
