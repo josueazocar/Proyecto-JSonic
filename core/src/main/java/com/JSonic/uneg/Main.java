@@ -7,34 +7,53 @@ import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 public class Main extends Game {
 
     // Main solo gestiona los recursos que podrían compartirse entre pantallas.
-    public AssetManager assetManager;
-    public SoundManager soundManager;
-    public SpriteBatch batch;
+
+    JSonicJuego sonicJuego;
 
     @Override
     public void create() {
-        // Inicializa los recursos una sola vez al inicio del juego.
-        batch = new SpriteBatch();
-        assetManager = new AssetManager();
-        soundManager = new SoundManager(assetManager);
 
-        // Establece la pantalla inicial y le pasa los recursos que necesita.
-        // Ya no le pasamos jugadores ni el cliente de red.
-        this.setScreen(new PantallaDeJuego(this));
+        sonicJuego = new JSonicJuego();
+        sonicJuego.create();
     }
 
     // render() simplemente delega a la pantalla activa. Perfecto.
     @Override
     public void render() {
         super.render();
+        if (sonicJuego != null) {
+            sonicJuego.render();
+        }
+    }
+
+    @Override
+    public void pause() {
+        if(sonicJuego != null) {
+            sonicJuego.pause();
+        }
+    }
+
+    @Override
+    public void resume() {
+        if(sonicJuego != null) {
+            sonicJuego.resume();
+        }
+    }
+
+    @Override
+    public void resize(int width, int height) {
+        if(sonicJuego != null) {
+            sonicJuego.resize(width, height);
+        }
     }
 
     // dispose() libera los recursos compartidos cuando el juego se cierra.
     @Override
     public void dispose() {
         super.dispose();
-        batch.dispose();
-        assetManager.dispose();
-        soundManager.dispose();
+
+        if(sonicJuego != null) {
+            sonicJuego.dispose();
+        }
     }
 }
