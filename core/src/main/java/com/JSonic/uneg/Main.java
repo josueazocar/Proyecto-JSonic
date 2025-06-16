@@ -1,62 +1,40 @@
 package com.JSonic.uneg;
 
-import com.badlogic.gdx.ApplicationListener;
-import com.badlogic.gdx.Gdx;
+import com.badlogic.gdx.Game;
+import com.badlogic.gdx.assets.AssetManager;
+import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 
-/** {@link com.badlogic.gdx.ApplicationListener} implementation shared by all platforms. */
-public class Main implements ApplicationListener {
+public class Main extends Game {
 
-
-    JSonicJuego sonicJuego;
-
+    // Main solo gestiona los recursos que podrían compartirse entre pantallas.
+    public AssetManager assetManager;
+    public SoundManager soundManager;
+    public SpriteBatch batch;
 
     @Override
     public void create() {
+        // Inicializa los recursos una sola vez al inicio del juego.
+        batch = new SpriteBatch();
+        assetManager = new AssetManager();
+        soundManager = new SoundManager(assetManager);
 
-        sonicJuego = new JSonicJuego();
-        sonicJuego.create();
+        // Establece la pantalla inicial y le pasa los recursos que necesita.
+        // Ya no le pasamos jugadores ni el cliente de red.
+        this.setScreen(new PantallaDeJuego(this));
     }
 
-    @Override
-    public void resize(int width, int height) {
-        if(width <= 0 || height <= 0) return;
-
-        if(sonicJuego != null) {
-            sonicJuego.resize(width, height);
-        }
-    }
-
+    // render() simplemente delega a la pantalla activa. Perfecto.
     @Override
     public void render() {
-
-        if (sonicJuego != null) {
-            sonicJuego.render();
-        }
+        super.render();
     }
 
-    @Override
-    public void pause() {
-
-
-
-        if(sonicJuego != null) {
-            sonicJuego.pause();
-        }
-    }
-
-    @Override
-    public void resume() {
-
-        if(sonicJuego != null) {
-            sonicJuego.resume();
-        }
-    }
-
+    // dispose() libera los recursos compartidos cuando el juego se cierra.
     @Override
     public void dispose() {
-        if(sonicJuego != null) {
-            sonicJuego.dispose();
-        }
-
+        super.dispose();
+        batch.dispose();
+        assetManager.dispose();
+        soundManager.dispose();
     }
 }

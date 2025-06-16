@@ -6,7 +6,7 @@ import com.JSonic.uneg.Main;
 
 /** Launches the desktop (LWJGL3) application. */
 public class WindowLauncher {
-    private static  int tile = 48;
+    private static final int tile = 48;
     private static final int maxScreenCol = 16;//Numero de tiles horizontales en pantalla
     private static final int maxScreenRow = 12; //Numero de tiles verticales en la pantalla
     private static final int screenWidth = tile * maxScreenCol;//768 pixels
@@ -34,7 +34,11 @@ public class WindowLauncher {
         //// useful for testing performance, but can also be very stressful to some hardware.
         //// You may also need to configure GPU drivers to fully disable Vsync; this can cause screen tearing.
 
-        configuration.setWindowedMode(screenWidth, screenHeight);
+
+        configuration.setWindowedMode(1366, 768);
+
+        //configuration.setWindowedMode(screenWidth, screenHeight);
+
         //// You can change these files; they are in lwjgl3/src/main/resources/ .
         //// They can also be loaded from the root of assets/ .
         configuration.setWindowIcon("SonicIcon.png");

@@ -1,5 +1,6 @@
 package com.JSonic.uneg;
 
+import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.Animation;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
@@ -9,9 +10,11 @@ import java.util.EnumMap;
 
 public abstract class Entity {
     //Atributos
+   // public int id; // Identificador único para la red
     private int tileSize;
-    protected int positionX;
-    protected int positionY;
+    public PlayerState estado;
+   // protected float positionX;
+   // protected float positionY;
     protected int speed;
 
     //Atributos para dibujar las animaciones de entidades
@@ -50,10 +53,9 @@ public abstract class Entity {
     protected EstadoPlayer estadoActual; // El estado actual del jugador
 
     //Constructor
-    Entity() { //Constructor default
+    Entity(PlayerState estadoInicial) { //Constructor default
+        this.estado = estadoInicial;
         tileSize = 48; //Tamaño de las entidades
-        positionX = 0;
-        positionY = 0;
         speed = 0;
         animacion = null;
         spriteSheet = null;
@@ -79,14 +81,6 @@ public abstract class Entity {
         this.tileSize = tileSize;
     }
 
-    public void setPositionX(int positionX) {
-        this.positionX += positionX;
-    }
-
-    public void setPositionY(int positionY) {
-        this.positionY += positionY;
-    }
-
     public void setSpeed(int speed) {
         this.speed = speed;
     }
@@ -104,6 +98,14 @@ public abstract class Entity {
         // La línea de depuración es útil, la mantenemos durante el desarrollo.
         // System.out.println("DEBUG: Tipo de objeto recibido en setFrameActual: " + frameActual.getClass().getName());
         this.frameActual = frameActual;
+    }
+
+    public PlayerState getEstado() {
+        return estado;
+    }
+
+    public void setEstado(PlayerState estado) {
+        this.estado = estado;
     }
 
     public void setFrameIdleRight(TextureRegion[] frameIdleRight) {
@@ -152,19 +154,16 @@ public abstract class Entity {
 
     public void setEstadoActual(EstadoPlayer estadoActual) {
         this.estadoActual = estadoActual;
+        if (this.estadoActual != estadoActual) {
+            Gdx.app.log("StateMachine", "Cambiando estado de " + this.estadoActual + " a " + estadoActual);
+        }
     }
 
     //Getters
+
+
     public int getTileSize() {
         return tileSize;
-    }
-
-    public int getPositionX() {
-        return positionX;
-    }
-
-    public int getPositionY() {
-        return positionY;
     }
 
     public int getSpeed() {

@@ -6,7 +6,7 @@ import com.badlogic.gdx.Gdx;
 
 public class SoundManager {
 
-    private AssetManager assetManager;
+    private final AssetManager assetManager;
     private Music backgroundMusic; // Objeto Music para la música de fondo
     private String currentMusicPath; // Para recordar qué música está sonando
 
