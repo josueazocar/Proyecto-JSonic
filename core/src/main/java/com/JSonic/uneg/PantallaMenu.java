@@ -14,8 +14,14 @@ import com.badlogic.gdx.scenes.scene2d.utils.TextureRegionDrawable;
 
 public class PantallaMenu extends PantallaBase{
 
+    private JSonicJuego juegoApp;
     private Texture texturaBotonJugar;
     private Texture texturaFondo;
+
+    public PantallaMenu(JSonicJuego juegoApp) {
+        super(); // Llama al constructor de PantallaBase (que llama a inicializar())
+        this.juegoApp = juegoApp;
+    }
 
 
     @Override
@@ -48,7 +54,7 @@ public class PantallaMenu extends PantallaBase{
                     if (inputEvent.getType().equals(InputEvent.Type.touchDown)) {
                         System.out.println("Botón Jugar presionado");
                         // Aquí puedes cambiar a la pantalla del juego
-                        JuegoBase.setPantallaActiva(new PantallaJuego());
+                        JSonicJuego.setPantallaActiva(new PantallaDeJuego(juegoApp));
                         return true; // Indica que el evento fue manejado
                     }
                 }
