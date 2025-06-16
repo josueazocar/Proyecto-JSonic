@@ -1,7 +1,7 @@
 // paquete/network/GameClient.java
 package network;
 
-import com.JSonic.uneg.Main;
+import com.JSonic.uneg.PantallaDeJuego;
 import com.esotericsoftware.kryonet.Client;
 import com.esotericsoftware.kryonet.Connection;
 import com.esotericsoftware.kryonet.Listener;
@@ -11,10 +11,10 @@ import java.io.IOException;
 public class GameClient {
 
     public Client cliente;
-    private Main juego;
+    private final PantallaDeJuego juego;
     public ConcurrentLinkedQueue<Object> paquetesRecibidos = new ConcurrentLinkedQueue<>();
 
-    public GameClient(Main juego) {
+    public GameClient(PantallaDeJuego juego) {
         this.juego= juego;
         cliente = new Client();
 

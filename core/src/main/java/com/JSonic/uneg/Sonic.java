@@ -59,62 +59,52 @@ public class Sonic extends Player {
         // Inicializar los arreglos de frames y llenarlos con las regiones correctas
         // IDLE
         frameIdleRight = new TextureRegion[4]; // 4 frames para IDLE_RIGHT
-        for (int i = 0; i < 4; i++) {
-            frameIdleRight[i] = matrizDeSprites[0][i]; // Fila 0, Columnas 0-3
-        }
+        // Fila 0, Columnas 0-3
+        System.arraycopy(matrizDeSprites[0], 0, frameIdleRight, 0, 4);
 
         frameIdleLeft = new TextureRegion[4]; // 4 frames para IDLE_LEFT
-        for (int i = 0; i < 4; i++) {
-            frameIdleLeft[i] = matrizDeSprites[1][i]; // Fila 1, Columnas 0-3
-        }
+        // Fila 1, Columnas 0-3
+        System.arraycopy(matrizDeSprites[1], 0, frameIdleLeft, 0, 4);
 
         // UP (moviéndose hacia arriba)
         frameUp = new TextureRegion[6]; // 6 frames para UP
-        for (int i = 0; i < 6; i++) {
-            frameUp[i] = matrizDeSprites[2][i]; // Fila 2, Columnas 0-5
-        }
+        // Fila 2, Columnas 0-5
+        System.arraycopy(matrizDeSprites[2], 0, frameUp, 0, 6);
 
         // DOWN (moviéndose hacia abajo)
         frameDown = new TextureRegion[6]; // 6 frames para DOWN
-        for (int i = 0; i < 6; i++) {
-            frameDown[i] = matrizDeSprites[3][i]; // Fila 3, Columnas 0-5
-        }
+        // Fila 3, Columnas 0-5
+        System.arraycopy(matrizDeSprites[3], 0, frameDown, 0, 6);
 
         // LEFT (moviéndose a la izquierda)
         frameLeft = new TextureRegion[6]; // 6 frames para LEFT
-        for (int i = 0; i < 6; i++) {
-            frameLeft[i] = matrizDeSprites[4][i]; // Fila 4, Columnas 0-5
-        }
+        // Fila 4, Columnas 0-5
+        System.arraycopy(matrizDeSprites[4], 0, frameLeft, 0, 6);
 
         // RIGHT (moviéndose a la derecha)
         frameRight = new TextureRegion[6]; // 6 frames para RIGHT
-        for (int i = 0; i < 6; i++) {
-            frameRight[i] = matrizDeSprites[5][i]; // Fila 5, Columnas 0-5
-        }
+        // Fila 5, Columnas 0-5
+        System.arraycopy(matrizDeSprites[5], 0, frameRight, 0, 6);
 
         // HIT_RIGHT (golpeando a la derecha)
         frameHitRight = new TextureRegion[3]; // 3 frames para HIT_RIGHT
-        for (int i = 0; i < 3; i++) {
-            frameHitRight[i] = matrizDeSprites[6][i]; // Fila 6, Columnas 0-2
-        }
+        // Fila 6, Columnas 0-2
+        System.arraycopy(matrizDeSprites[6], 0, frameHitRight, 0, 3);
 
         // HIT_LEFT (golpeando a la izquierda)
         frameHitLeft = new TextureRegion[3]; // 3 frames para HIT_LEFT
-        for (int i = 0; i < 3; i++) {
-            frameHitLeft[i] = matrizDeSprites[7][i]; // Fila 7, Columnas 0-2
-        }
+        // Fila 7, Columnas 0-2
+        System.arraycopy(matrizDeSprites[7], 0, frameHitLeft, 0, 3);
 
         // KICK_RIGHT (pateando a la derecha)
         frameKickRight = new TextureRegion[4]; // 4 frames para KICK_RIGHT
-        for (int i = 0; i < 4; i++) {
-            frameKickRight[i] = matrizDeSprites[8][i]; // Fila 8, Columnas 0-3
-        }
+        // Fila 8, Columnas 0-3
+        System.arraycopy(matrizDeSprites[8], 0, frameKickRight, 0, 4);
 
         // KICK_LEFT (pateando a la izquierda)
         frameKickLeft = new TextureRegion[4]; // 4 frames para KICK_LEFT
-        for (int i = 0; i < 4; i++) {
-            frameKickLeft[i] = matrizDeSprites[9][i]; // Fila 9, Columnas 0-3
-        }
+        // Fila 9, Columnas 0-3
+        System.arraycopy(matrizDeSprites[9], 0, frameKickLeft, 0, 4);
 
         // SPIN_RIGHT (girando a la derecha) - Asumimos 24 frames
         frameSpinRight = new TextureRegion[24];
@@ -163,69 +153,74 @@ public class Sonic extends Player {
         }
     }
 
+    // En tu clase Sonic.java
+
     @Override
     public void update(float deltaTime) {
-        // Manejo de la entrada del teclado y actualización de la posición
-        // Esta parte se llama en PantallaDeJuego para el jugador local.
-        KeyHandler();
+        // --- FASE 1: LÓGICA DE DECISIÓN DE ESTADO ---
+        // Esta sección entera es el nuevo "cerebro" que decide la animación.
 
-        // Obtener la animación actual basada en el estado
-        Animation<TextureRegion> currentAnimation = animations.get(estadoActual);
+        // Primero, comprobamos si una acción como GOLPEAR o PATEAR está en curso y no ha terminado.
+        boolean accionEnCurso = (animacion != null && animacion.getPlayMode() == Animation.PlayMode.NORMAL && !animacion.isAnimationFinished(tiempoXFrame));
 
-        // Aumentamos el tiempo del fotograma solo si la animación actual no es nula.
-        if (currentAnimation != null) {
-            // Si la animación actual es diferente de la que se estaba reproduciendo, resetea tiempoXFrame
-            if (animacion != currentAnimation) {
-                tiempoXFrame = 0; // Reinicia el tiempo cuando la animación cambia
-            }
-            animacion = currentAnimation; // Actualiza la referencia a la animación actual
+        // Si una acción está en curso, no leemos ninguna nueva tecla para cambiar el estado.
+        // Dejamos que la animación termine.
+        if (!accionEnCurso) {
+            // Si no hay acción en curso, leemos el teclado para decidir el nuevo estado.
+            boolean quiereGolpear = Gdx.input.isKeyJustPressed(Keys.J);
+            boolean quierePatear = Gdx.input.isKeyJustPressed(Keys.K);
+            boolean quiereGirar = Gdx.input.isKeyPressed(Keys.L); // O la tecla que uses para SPIN
+            boolean seEstaMoviendo = (estado.x != lastPosX || estado.y != lastPosY); // Comprobamos si la posición cambió
 
-            // Lógica de transición de estado después de que una animación de acción termina
-            if ((estadoActual == EstadoPlayer.HIT_RIGHT || estadoActual == EstadoPlayer.HIT_LEFT ||
-                estadoActual == EstadoPlayer.KICK_RIGHT || estadoActual == EstadoPlayer.KICK_LEFT) &&
-                animacion.isAnimationFinished(tiempoXFrame)) {
-                // Si la animación de acción terminó, volvemos a IDLE según la última dirección horizontal guardada
-                if (lastDirection == EstadoPlayer.LEFT || lastDirection == EstadoPlayer.IDLE_LEFT) {
-                    setEstadoActual(EstadoPlayer.IDLE_LEFT);
+            // Actualizamos las posiciones anteriores para el siguiente frame
+            lastPosX = estado.x;
+            lastPosY = estado.y;
+
+            // Sistema de Prioridades para decidir el estado de la animación:
+            if (quiereGolpear) {
+                setEstadoActual((lastDirection == EstadoPlayer.IDLE_LEFT) ? EstadoPlayer.HIT_LEFT : EstadoPlayer.HIT_RIGHT);
+            } else if (quierePatear) {
+                setEstadoActual((lastDirection == EstadoPlayer.IDLE_LEFT) ? EstadoPlayer.KICK_LEFT : EstadoPlayer.KICK_RIGHT);
+            } else if (quiereGirar) {
+                setEstadoActual((lastDirection == EstadoPlayer.IDLE_LEFT) ? EstadoPlayer.SPIN_LEFT : EstadoPlayer.SPIN_RIGHT);
+            } else if (seEstaMoviendo) {
+                // Si no hay acción pero el personaje se movió (gracias a KeyHandler), decidimos la animación de movimiento.
+                // Esta lógica es un ejemplo, puedes ajustarla a la tuya.
+                if (lastDirection == EstadoPlayer.IDLE_LEFT) { // Usamos lastDirection que KeyHandler actualiza
+                    setEstadoActual(EstadoPlayer.LEFT);
                 } else {
-                    setEstadoActual(EstadoPlayer.IDLE_RIGHT);
+                    setEstadoActual(EstadoPlayer.RIGHT);
                 }
-                tiempoXFrame = 0; // Reseteamos el tiempo para la nueva animación IDLE
-                // Asegurar que la animación de IDLE se actualice.
-                animacion = animations.get(estadoActual);
-                if (animacion == null) {
-                    Gdx.app.error("Sonic", "Animación IDLE nula después de una acción.");
-                }
-            } else if ((estadoActual == EstadoPlayer.SPIN_RIGHT || estadoActual == EstadoPlayer.SPIN_LEFT) &&
-                !Gdx.input.isKeyPressed(Keys.SPACE)) { // Asumiendo que SPACE es para Spin
-                // Si estaba en SPIN y la tecla de SPIN ya no está presionada
-                if (lastDirection == EstadoPlayer.LEFT || lastDirection == EstadoPlayer.IDLE_LEFT) {
-                    setEstadoActual(EstadoPlayer.IDLE_LEFT);
-                } else {
-                    setEstadoActual(EstadoPlayer.IDLE_RIGHT);
-                }
-                tiempoXFrame = 0; // Reseteamos el tiempo
-                animacion = animations.get(estadoActual);
-                if (animacion == null) {
-                    Gdx.app.error("Sonic", "Animación IDLE nula después de salir de SPIN.");
-                }
+            } else {
+                // Si no pasó nada de lo anterior, el personaje está quieto.
+                setEstadoActual((lastDirection == EstadoPlayer.IDLE_LEFT) ? EstadoPlayer.IDLE_LEFT : EstadoPlayer.IDLE_RIGHT);
             }
-        } else {
-            Gdx.app.log("Sonic", "Advertencia: No hay animación para el estado actual: " + estadoActual);
-            // Si no hay animación, al menos intenta mostrar el primer frame del IDLE_RIGHT por defecto
-            animacion = animations.get(EstadoPlayer.IDLE_RIGHT);
-            if (animacion != null) {
-                setFrameActual(animacion.getKeyFrame(0));
-            }
-            return; // No podemos avanzar si no hay animación
         }
 
-        // Acumular tiempo para la animación
-        tiempoXFrame += deltaTime;
+        // --- FASE 2: ACTUALIZACIÓN DE LA ANIMACIÓN ---
+        // Esta sección toma el estado que decidimos arriba y calcula el frame a dibujar.
 
-        // Obtener el frame actual de la animación
-        TextureRegion currentFrame = animacion.getKeyFrame(tiempoXFrame);
-        setFrameActual(currentFrame);
+        // Obtenemos la animación para el estado actual
+        Animation<TextureRegion> targetAnimation = animations.get(getEstadoActual());
+
+        // Si la animación del estado actual es diferente a la que se estaba reproduciendo,
+        // significa que acabamos de cambiar de estado (ej: de IDLE a RIGHT),
+        // así que reiniciamos el tiempo para que la nueva animación empiece desde el principio.
+        if (this.animacion != targetAnimation) {
+            this.tiempoXFrame = 0;
+        }
+
+        this.animacion = targetAnimation;
+
+        // Avanzamos el tiempo de la animación y obtenemos el fotograma correcto
+        if (animacion != null) {
+            tiempoXFrame += deltaTime;
+            frameActual = animacion.getKeyFrame(tiempoXFrame);
+        } else {
+            // Código de seguridad por si un estado no tiene animación asignada
+            Gdx.app.log("Sonic_update", "Advertencia: No hay animación para el estado: " + getEstadoActual());
+            frameActual = null;
+        }
     }
 
     @Override
@@ -238,8 +233,5 @@ public class Sonic extends Player {
         }
     }
 
-    @Override
-    public void dispose() {
 
-    }
 }

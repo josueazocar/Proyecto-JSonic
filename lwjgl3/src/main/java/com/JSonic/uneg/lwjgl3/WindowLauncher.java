@@ -6,7 +6,7 @@ import com.JSonic.uneg.Main;
 
 /** Launches the desktop (LWJGL3) application. */
 public class WindowLauncher {
-    private static  int tile = 48;
+    private static final int tile = 48;
     private static final int maxScreenCol = 16;//Numero de tiles horizontales en pantalla
     private static final int maxScreenRow = 12; //Numero de tiles verticales en la pantalla
     private static final int screenWidth = tile * maxScreenCol;//768 pixels

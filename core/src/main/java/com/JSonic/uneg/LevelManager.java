@@ -12,7 +12,7 @@ public class LevelManager {
 
     private TiledMap mapaActual;
     private OrthogonalTiledMapRenderer renderizadorMapa;
-    private OrthographicCamera camaraJuego; // Referencia a la cámara principal del juego
+    private final OrthographicCamera camaraJuego; // Referencia a la cámara principal del juego
 
     // --- NUEVAS VARIABLES PARA DIMENSIONES DEL MAPA ---
     private float anchoMapaPixels;

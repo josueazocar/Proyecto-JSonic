@@ -1,5 +1,6 @@
 package com.JSonic.uneg;
 
+import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.Animation;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
@@ -99,6 +100,14 @@ public abstract class Entity {
         this.frameActual = frameActual;
     }
 
+    public PlayerState getEstado() {
+        return estado;
+    }
+
+    public void setEstado(PlayerState estado) {
+        this.estado = estado;
+    }
+
     public void setFrameIdleRight(TextureRegion[] frameIdleRight) {
         this.frameIdleRight = frameIdleRight;
     }
@@ -145,6 +154,9 @@ public abstract class Entity {
 
     public void setEstadoActual(EstadoPlayer estadoActual) {
         this.estadoActual = estadoActual;
+        if (this.estadoActual != estadoActual) {
+            Gdx.app.log("StateMachine", "Cambiando estado de " + this.estadoActual + " a " + estadoActual);
+        }
     }
 
     //Getters

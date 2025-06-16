@@ -2,142 +2,153 @@ package com.JSonic.uneg;
 
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Screen;
-import com.badlogic.gdx.assets.AssetManager;
 import com.badlogic.gdx.graphics.GL20;
 import com.badlogic.gdx.graphics.OrthographicCamera;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.utils.viewport.FitViewport;
 import com.badlogic.gdx.utils.viewport.Viewport;
-import com.badlogic.gdx.audio.Music;
 import network.GameClient;
+import network.Network;
 
 import java.util.HashMap;
 
 public class PantallaDeJuego implements Screen {
 
-    // Constantes para el tamaño virtual de la pantalla
-    public static final float VIRTUAL_WIDTH = 1366; // Ancho virtual del juego
-    public static final float VIRTUAL_HEIGHT = 768; // Alto virtual del juego
-
-    // Objetos globales del juego, inyectados desde Main
-    private SpriteBatch batchSprites;
-    private AssetManager assetManager;
-    private SoundManager soundManager;
-    private PlayerState sonicEstado;
-    // Componentes del juego
+    // Constantes y cámara (tu compañera lo hizo bien)
+    public static final float VIRTUAL_WIDTH = 1280;
+    public static final float VIRTUAL_HEIGHT = 720;
     private OrthographicCamera camaraJuego;
     private Viewport viewport;
+
+    // Referencia a la clase principal para acceder a recursos compartidos
+    private final Main juegoPrincipal;
+
+    // Recursos compartidos
+    private final SpriteBatch batch;
+
+    // Objetos y Lógica de esta pantalla
     private LevelManager manejadorNivel;
-    private Sonic sonic; // Instancia del personaje Sonic
+    private GameClient gameClient;
+    private Sonic sonic; // Jugador local
+    private PlayerState sonicEstado; // Estado del jugador local
+    private final HashMap<Integer, Player> otrosJugadores = new HashMap<>(); // Mapa de jugadores remotos
 
-    // Música
-    private Music currentBackgroundMusic;
-
-    // Constructor que recibe las instancias de Batch, AssetManager y SoundManager
-    public PantallaDeJuego(SpriteBatch batchSprites, AssetManager assetManager, SoundManager soundManager, GameClient gameClient, Sonic sonic, HashMap<Integer, Player> otrosJugadores) {
-        this.batchSprites = batchSprites;
-        this.assetManager = assetManager;
-        this.soundManager = soundManager;
+    // Constructor corregido: solo recibe la referencia a Main
+    public PantallaDeJuego(Main juego) {
+        this.juegoPrincipal = juego;
+        this.batch = juego.batch; // Usamos el SpriteBatch de la clase principal
     }
 
     @Override
     public void show() {
+        // Inicialización de la cámara y el viewport
         camaraJuego = new OrthographicCamera();
-        // Inicializa la cámara en el centro de tu mundo virtual
-        camaraJuego.position.set(VIRTUAL_WIDTH / 2, VIRTUAL_HEIGHT / 2, 0);
         viewport = new FitViewport(VIRTUAL_WIDTH, VIRTUAL_HEIGHT, camaraJuego);
-        viewport.apply(); // Aplica el viewport al inicio
 
-        manejadorNivel = new LevelManager(camaraJuego, batchSprites); // Pasa la cámara y el batch al LevelManager
+        // Inicialización de los objetos del juego DENTRO de la pantalla
+        manejadorNivel = new LevelManager(camaraJuego, batch);
         manejadorNivel.cargarNivel("maps/Zona1N1.tmx");
-        // Carga tu mapa aquí
-        sonicEstado = new PlayerState(); // Estado inicial por defecto, se actualizará con el ID del servidor
-        sonicEstado.x = 100; // Posición inicial
-        sonicEstado.y = 100;
-        // Crea el objeto Sonic local con el estado inicial.
-        // El LevelManager se le asignará en PantallaDeJuego cuando se inicialice.
-        // --- CÓDIGO MODIFICADO AQUÍ ---
-        sonic = new Sonic(sonicEstado, manejadorNivel); // Pasa el LevelManager al constructor de Sonic
-        // --- FIN CÓDIGO MODIFICADO ---
 
-        // Configurar y reproducir música
-        soundManager.loadMusic("SoundsBackground/Dating Fight.mp3"); // Asegúrate de que el AssetManager la cargue
-        assetManager.finishLoadingAsset("SoundsBackground/Dating Fight.mp3"); // Cargar de inmediato
-        currentBackgroundMusic = assetManager.get("SoundsBackground/Dating Fight.mp3", Music.class);
-        if (currentBackgroundMusic != null) {
-            soundManager.playBackgroundMusic("SoundsBackground/Dating Fight.mp3", 0.5f, true);
-        } else {
-            Gdx.app.log("PantallaDeJuego", "No se pudo cargar la música Dating Fight.mp3");
-        }
+        // Creamos el estado y el jugador local
+        sonicEstado = new PlayerState();
+        sonicEstado.x = 100;
+        sonicEstado.y = 100;
+        sonic = new Sonic(sonicEstado, manejadorNivel); // Le pasamos el manejador de nivel para colisiones
+
+        // Creamos el cliente de red
+        gameClient = new GameClient(this);
     }
 
     @Override
     public void render(float delta) {
-        // Limpia la pantalla
+        // --- 1. PROCESAR PAQUETES DE RED (Lógica recuperada) ---
+        if (gameClient != null) {
+            while (!gameClient.paquetesRecibidos.isEmpty()) {
+                Object paquete = gameClient.paquetesRecibidos.poll();
+
+                if (paquete instanceof Network.RespuestaAccesoPaquete p) {
+                    if (p.tuEstado != null) inicializarJugadorLocal(p.tuEstado);
+                } else if (paquete instanceof Network.PaqueteJugadorConectado p) {
+                    if (sonicEstado != null && p.nuevoJugador.id != sonicEstado.id) {
+                        agregarOActualizarOtroJugador(p.nuevoJugador);
+                    }
+                } else if (paquete instanceof Network.PaquetePosicionJugador p) {
+                    if (sonicEstado != null && p.id != sonicEstado.id) {
+                        actualizarPosicionOtroJugador(p.id, p.x, p.y, p.estadoAnimacion);
+                    }
+                }
+            }
+        }
+
+        // --- 2. ACTUALIZAR LÓGICA (Lógica recuperada y corregida) ---
+        sonic.KeyHandler(); // SOLO el jugador local procesa el teclado
+        sonic.update(delta); // TODOS actualizan su animación
+        for (Player otro : otrosJugadores.values()) {
+            otro.update(delta);
+        }
+
+        // --- 3. ACTUALIZAR CÁMARA ---
+        camaraJuego.position.x = sonic.estado.x;
+        camaraJuego.position.y = sonic.estado.y;
+        manejadorNivel.limitarCamaraAMapa(camaraJuego);
+        camaraJuego.update();
+
+        // --- 4. DIBUJAR TODO ---
         Gdx.gl.glClearColor(0, 0, 0, 1);
         Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
 
-        // Actualización de todos los elementos del juego
-        if (sonic != null) {
-            sonic.update(delta); // Actualiza la lógica de Sonic (movimiento, etc.)
+        manejadorNivel.dibujar(); // Dibuja el mapa
 
-            // --- CÓDIGO MODIFICADO AQUÍ ---
-            // Centrar la cámara en la posición de Sonic (centrada en el medio del sprite).
-            camaraJuego.position.x = sonicEstado.x + sonic.getTileSize() / 2;
-            camaraJuego.position.y = sonicEstado.y + sonic.getTileSize() / 2;
-
-            // Limita la cámara a los bordes del mapa.
-            manejadorNivel.limitarCamaraAMapa(camaraJuego);
-            // --- FIN CÓDIGO MODIFICADO ---
+        batch.setProjectionMatrix(camaraJuego.combined);
+        batch.begin();
+        sonic.draw(batch); // Dibuja el jugador local
+        for (Player otro : otrosJugadores.values()) {
+            otro.draw(batch); // Dibuja a los otros jugadores
         }
+        batch.end();
 
-        camaraJuego.update(); // Siempre actualiza la cámara después de modificar su posición
-
-        // Dibuja el nivel primero
-        manejadorNivel.actualizar(delta);
-        manejadorNivel.dibujar();
-
-        // Dibuja tus sprites (personaje, enemigos, etc.)
-        batchSprites.setProjectionMatrix(camaraJuego.combined); // Usa la matriz de proyección de la cámara
-        batchSprites.begin();
-        if (sonic != null) {
-            sonic.draw(batchSprites); // Sonic ahora solo dibuja, no inicia/finaliza el batch
+        // --- 5. ENVIAR DATOS DE RED (Lógica recuperada) ---
+        if (gameClient != null && sonic.estado.id != 0) {
+            Network.PaquetePosicionJugador paquete = new Network.PaquetePosicionJugador();
+            paquete.id = sonic.estado.id;
+            paquete.x = sonic.estado.x;
+            paquete.y = sonic.estado.y;
+            paquete.estadoAnimacion = sonic.getEstadoActual();
+            gameClient.cliente.sendTCP(paquete);
         }
-        batchSprites.end();
     }
 
-    @Override
-    public void resize(int width, int height) {
-        viewport.update(width, height);
-        // La cámara ya no necesita centrarse aquí, lo hace en render() siguiendo a Sonic.
+    // --- MÉTODOS HELPER (Ahora pertenecen a esta pantalla) ---
+    public void inicializarJugadorLocal(PlayerState estadoRecibido) {
+        this.sonic.estado = estadoRecibido;
+        System.out.println("[CLIENT] ID asignado por el servidor: " + this.sonic.estado.id);
     }
 
-    @Override
-    public void pause() {
-        soundManager.pauseBackgroundMusic();
-    }
-
-    @Override
-    public void resume() {
-        soundManager.resumeBackgroundMusic();
-    }
-
-    @Override
-    public void hide() {
-        // Nada específico que hacer aquí por ahora
-    }
-
-    @Override
-    public void dispose() {
-        // Libera los recursos que son propiedad de esta pantalla
-        // Los recursos compartidos (batchSprites, assetManager, soundManager)
-        // se liberan en la clase Main.
-        if (manejadorNivel != null) {
-            manejadorNivel.dispose();
+    public void agregarOActualizarOtroJugador(PlayerState estadoRecibido) {
+        Player jugadorVisual = otrosJugadores.get(estadoRecibido.id);
+        if (jugadorVisual == null) {
+            System.out.println("Creando nuevo jugador gráfico con ID: " + estadoRecibido.id);
+            jugadorVisual = new Sonic(estadoRecibido); // Remotos no necesitan el LevelManager
+            otrosJugadores.put(estadoRecibido.id, jugadorVisual);
+        } else {
+            jugadorVisual.estado.x = estadoRecibido.x;
+            jugadorVisual.estado.y = estadoRecibido.y;
+            jugadorVisual.setEstadoActual(estadoRecibido.estadoAnimacion);
         }
-        if (sonic != null) {
-            sonic.dispose(); // Llama al dispose de Sonic (que libera su spriteSheet)
-        }
-        // No liberar batchSprites, assetManager, soundManager aquí
     }
+
+    public void actualizarPosicionOtroJugador(int id, float x, float y, Entity.EstadoPlayer estadoAnim) {
+        Player jugador = otrosJugadores.get(id);
+        if (jugador != null) {
+            jugador.estado.x = x;
+            jugador.estado.y = y;
+            jugador.setEstadoActual(estadoAnim);
+        }
+    }
+
+    @Override public void resize(int width, int height) { viewport.update(width, height, true); }
+    @Override public void dispose() { manejadorNivel.dispose(); sonic.dispose(); }
+    @Override public void pause() { }
+    @Override public void resume() { }
+    @Override public void hide() { }
 }

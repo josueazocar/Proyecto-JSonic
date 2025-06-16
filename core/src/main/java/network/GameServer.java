@@ -13,9 +13,9 @@ import java.util.HashMap;
 
 public class GameServer {
 
-    private Server servidor;
+    private final Server servidor;
     // Este mapa guardará a cada jugador, usando el ID de su conexión como clave.
-    private HashMap<Integer, PlayerState> jugadores = new HashMap<>();
+    private final HashMap<Integer, PlayerState> jugadores = new HashMap<>();
 
     public GameServer() throws IOException {
         servidor = new Server();
@@ -57,8 +57,7 @@ public class GameServer {
             // Este metodo se ejecuta cuando recibimos un paquete de un cliente
             public void received(Connection conexion, Object objeto) {
 
-                if (objeto instanceof Network.PaquetePosicionJugador) {
-                    Network.PaquetePosicionJugador paquete = (Network.PaquetePosicionJugador) objeto;
+                if (objeto instanceof Network.PaquetePosicionJugador paquete) {
 
                     // Actualizamos el estado del jugador en el mapa del servidor
                     PlayerState estadoJugador = jugadores.get(paquete.id);
@@ -74,8 +73,7 @@ public class GameServer {
                     }
                 }
                 // Comprobamos si el paquete recibido es una petición de login
-                if (objeto instanceof Network.SolicitudAccesoPaquete) {
-                    Network.SolicitudAccesoPaquete solicitud = (Network.SolicitudAccesoPaquete) objeto;
+                if (objeto instanceof Network.SolicitudAccesoPaquete solicitud) {
                     System.out.println("[SERVER] Peticion de login recibida de: " + solicitud.nombreJugador);
 
                     // Preparamos una respuesta para el cliente
