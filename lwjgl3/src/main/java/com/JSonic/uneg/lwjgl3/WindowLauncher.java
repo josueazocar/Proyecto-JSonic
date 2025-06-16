@@ -35,7 +35,7 @@ public class WindowLauncher {
         //// You may also need to configure GPU drivers to fully disable Vsync; this can cause screen tearing.
 
 
-        configuration.setWindowedMode(1366, 768);
+        configuration.setWindowedMode(1280, 720);
 
         //configuration.setWindowedMode(screenWidth, screenHeight);
 

@@ -2,6 +2,7 @@ package com.JSonic.uneg;
 
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Screen;
+import com.badlogic.gdx.assets.AssetManager;
 import com.badlogic.gdx.graphics.GL20;
 import com.badlogic.gdx.graphics.OrthographicCamera;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
@@ -31,7 +32,11 @@ public class PantallaDeJuego extends PantallaBase {
     private GameClient gameClient;
     private Sonic sonic; // Jugador local
     private PlayerState sonicEstado; // Estado del jugador local
-    private final HashMap<Integer, Player> otrosJugadores = new HashMap<>(); // Mapa de jugadores remotos
+    private final HashMap<Integer, Player> otrosJugadores = new HashMap<>();
+    private SoundManager soundManager; // Instancia de nuestro SoundManager
+    private static final String BACKGROUND_MUSIC_PATH2 = "SoundsBackground/Dating Fight.mp3";
+    private AssetManager assetManager; // Para gestionar assets
+   // Mapa de jugadores remotos
 
     // Constructor corregido: solo recibe la referencia a Main
     public PantallaDeJuego(JSonicJuego juego) {
@@ -55,9 +60,16 @@ public class PantallaDeJuego extends PantallaBase {
         sonicEstado.x = 100;
         sonicEstado.y = 100;
         sonic = new Sonic(sonicEstado, manejadorNivel); // Le pasamos el manejador de nivel para colisiones
+        assetManager = new AssetManager();
+        soundManager = new SoundManager(assetManager);
+
+        soundManager.loadMusic(BACKGROUND_MUSIC_PATH2);
 
         // Creamos el cliente de red
         gameClient = new GameClient(this);
+
+        soundManager.playBackgroundMusic(BACKGROUND_MUSIC_PATH2, 0.5f, true); // Volumen al 50%, en bucle
+        assetManager.finishLoading(); // Espera a que todos los assets en cola se carguen
     }
 
     @Override
@@ -148,6 +160,19 @@ public class PantallaDeJuego extends PantallaBase {
 
     }
 
+    @Override
+    public void pause() {
+        if (soundManager != null) {
+            soundManager.pauseBackgroundMusic();
+        }
+    }
+
+    @Override
+    public void resume() {
+        if (soundManager != null) {
+            soundManager.resumeBackgroundMusic();
+        }
+    }
     // --- MÉTODOS HELPER (Ahora pertenecen a esta pantalla) ---
     public void inicializarJugadorLocal(PlayerState estadoRecibido) {
         this.sonic.estado = estadoRecibido;
@@ -184,6 +209,12 @@ public class PantallaDeJuego extends PantallaBase {
         super.dispose();
         manejadorNivel.dispose();
         sonic.dispose();
+        if (assetManager != null) {
+            assetManager.dispose(); // Esto liberará la música y cualquier otro asset que hayas cargado con él.
+        }
+        if (soundManager != null) {
+            soundManager.dispose();
+        }
     }
 
 }
