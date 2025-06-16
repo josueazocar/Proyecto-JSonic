@@ -91,8 +91,6 @@ public abstract class Entity {
     }
 
     public void setFrameActual(TextureRegion frameActual) {
-        // La línea de depuración es útil, la mantenemos durante el desarrollo.
-        // System.out.println("DEBUG: Tipo de objeto recibido en setFrameActual: " + frameActual.getClass().getName());
         this.frameActual = frameActual;
     }
 
@@ -145,7 +143,7 @@ public abstract class Entity {
     }
 
     public void setTiempoXFrame(float tiempoXFrame) {
-        this.tiempoXFrame = tiempoXFrame; // Cambiado de += a =. Esto establece el tiempo, no lo acumula.
+        this.tiempoXFrame = tiempoXFrame;
     }
 
     public void setEstadoActual(EstadoPlayer estadoActual) {

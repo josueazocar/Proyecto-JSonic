@@ -8,87 +8,163 @@ import com.badlogic.gdx.utils.Disposable;
 import com.badlogic.gdx.math.MathUtils; // Importar para MathUtils.clamp
 
 public abstract class Player extends Entity implements Disposable {
-    // Stores the last horizontal direction to know which IDLE state to return to
-    // and the orientation of attacks.
-    protected EstadoPlayer lastDirection = EstadoPlayer.IDLE_RIGHT; // Default
+    protected EstadoPlayer lastDirection = EstadoPlayer.IDLE_RIGHT;
     protected float lastPosX, lastPosY;
-    protected LevelManager levelManager; // Referencia al LevelManager para obtener límites del mapa
+    protected LevelManager levelManager;
 
-    // Constructor para jugadores remotos (o local inicial)
     public Player(PlayerState estadoInicial) {
-        super(estadoInicial); // Llama al constructor de la superclase Entity con PlayerState
-        setDefaultValues(); // Establece valores lógicos por defecto
+        super(estadoInicial);
+        setDefaultValues();
     }
 
-    // Constructor para el jugador local, que necesita acceso al LevelManager
-    // Aunque Sonic tiene su propio constructor que llama a este, lo mantenemos aquí si Player
-    // fuera a ser instanciado directamente con un LevelManager.
     public Player(PlayerState estadoInicial, LevelManager levelManager) {
-        this(estadoInicial); // Llama al constructor de arriba
-        this.levelManager = levelManager; // Asigna el LevelManager
+        this(estadoInicial);
+        this.levelManager = levelManager;
     }
 
-    // Setter para LevelManager (necesario si Sonic se crea en Main sin LevelManager)
     public void setLevelManager(LevelManager levelManager) {
         this.levelManager = levelManager;
     }
 
-
-    // Métodos (se implementan en subclases o se definen aquí)
     @Override
-    protected void setDefaultValues() { // Metodo para establecer valores por defecto
-        // Asegúrate de que this.estado ya ha sido inicializado por el constructor de Entity
-        // Si el estado inicial viene de la red, sus x,y pueden ser diferentes de 100,100
-        if (this.estado == null) { // Solo si Entity no lo inicializó ya
-            this.estado = new PlayerState(); // Crea un nuevo PlayerState si es nulo
-            this.estado.x = 100; // Posición inicial por defecto
+    protected void setDefaultValues() {
+        if (this.estado == null) {
+            this.estado = new PlayerState();
+            this.estado.x = 100;
             this.estado.y = 100;
         }
-        speed = 4;
+        speed = 4; // Asegúrate de que 'speed' esté declarado en Entity o aquí
         setEstadoActual(EstadoPlayer.IDLE_RIGHT);
     }
 
-    @Override
-    public void KeyHandler() {
-        // Estas variables ahora son solo para registrar la intención de este frame
-        boolean quiereMoverse = false;
+    // NUEVO MÉTODO para verificar si una acción bloqueante está en curso
+    /**
+     * Verifica si el jugador está actualmente en una animación de acción
+     * (como HIT o KICK) que debería impedir el movimiento.
+     * Las animaciones de SPIN (si son LOOP) no se consideran bloqueantes aquí.
+     * @return true si una acción bloqueante está en curso, false de lo contrario.
+     */
+    public boolean isActionBlockingMovement() {
+        if (animacion == null) return false;
+        // Considera acciones bloqueantes aquellas que son PlayMode.NORMAL y no han terminado.
+        // SPIN, si es LOOP, no entra aquí. Si SPIN fuera NORMAL y quieres que bloquee,
+        // no necesitarías una condición especial para ello aquí.
+        boolean isNormalAction = animacion.getPlayMode() == Animation.PlayMode.NORMAL;
+        boolean isSpinning = getEstadoActual() == EstadoPlayer.SPIN_LEFT || getEstadoActual() == EstadoPlayer.SPIN_RIGHT;
 
-        // --- LÓGICA DE POSICIÓN ---
-        // Solo actualizamos las coordenadas X e Y y la última dirección.
-        if (Gdx.input.isKeyPressed(Keys.W)) {
-            estado.y += speed;
-            quiereMoverse = true;
-        }
-        if (Gdx.input.isKeyPressed(Keys.S)) {
-            estado.y -= speed;
-            quiereMoverse = true;
-        }
-        if (Gdx.input.isKeyPressed(Keys.A)) {
-            estado.x -= speed;
-            lastDirection = EstadoPlayer.IDLE_LEFT;
-            quiereMoverse = true;
-        }
-        if (Gdx.input.isKeyPressed(Keys.D)) {
-            estado.x += speed;
-            lastDirection = EstadoPlayer.IDLE_RIGHT;
-            quiereMoverse = true;
+        if (isSpinning && animacion.getPlayMode() == Animation.PlayMode.LOOP) {
+            return false; // El Spin en modo LOOP no bloquea el *procesamiento* de teclas de movimiento,
+            // aunque la lógica de estado en Sonic.update() podría anular el movimiento.
+            // Lo importante es que KeyHandler SÍ registre el intento de moverse.
         }
 
-        // Lógica de clamp (límites del mapa)
-        if (levelManager != null && levelManager.getMapaActual() != null) {
-            float minX = 0, minY = 0;
-            float maxX = levelManager.getAnchoMapaPixels() - getTileSize();
-            float maxY = levelManager.getAltoMapaPixels() - getTileSize();
-            estado.x = MathUtils.clamp(estado.x, minX, maxX);
-            estado.y = MathUtils.clamp(estado.y, minY, maxY);
-        }
+        return isNormalAction && !animacion.isAnimationFinished(tiempoXFrame);
     }
 
 
-     @Override
-     public void dispose() {
-         if (spriteSheet != null) {
-             spriteSheet.dispose();
-       }
+    @Override
+    public void KeyHandler() {
+        // 1. Handle non-interruptible actions (hit and kick).
+        // If the player is in a hit or kick animation, no other input is processed.
+        if (estado.estadoAnimacion == EstadoPlayer.HIT_RIGHT || estado.estadoAnimacion == EstadoPlayer.HIT_LEFT ||
+            estado.estadoAnimacion == EstadoPlayer.KICK_RIGHT || estado.estadoAnimacion == EstadoPlayer.KICK_LEFT) {
+            return; // Do not process further input while these actions play
+        }
+
+        // Flag to track if any WASD movement was detected.
+        boolean isMoving = false;
+        // Stores the proposed movement state (UP, DOWN, LEFT, RIGHT) before applying actions.
+        EstadoPlayer proposedMovementState = null;
+
+        // 2. Process movement input (WASD). This updates the player's position.
+        // Position updates occur independently of the current animation,
+        // allowing movement while spinning.
+        if (Gdx.input.isKeyPressed(Keys.W)) {
+            estado.y += speed;
+            proposedMovementState = EstadoPlayer.UP;
+            isMoving = true;
+        }
+        if (Gdx.input.isKeyPressed(Keys.S)) {
+            estado.y -= speed;
+            proposedMovementState = EstadoPlayer.DOWN;
+            isMoving = true;
+        }
+        if (Gdx.input.isKeyPressed(Keys.A)) { // Left
+            estado.x -= speed;
+            lastDirection = EstadoPlayer.LEFT; // Update the last HORIZONTAL direction
+            proposedMovementState = EstadoPlayer.LEFT;
+            isMoving = true;
+        }
+        if (Gdx.input.isKeyPressed(Keys.D)) { // Right
+            estado.x += speed;
+            lastDirection = EstadoPlayer.RIGHT; // Update the last HORIZONTAL direction
+            proposedMovementState = EstadoPlayer.RIGHT;
+            isMoving = true;
+        }
+
+        // 3. Process action inputs (J, K, L). These determine the animation state.
+        // Actions take precedence over simple movement animations (walk/run).
+        boolean actionStateSet = false; // Flag to know if an action state has been set.
+
+        // Handle hit (punch - J)
+        // Hit has priority if just pressed.
+        if (Gdx.input.isKeyJustPressed(Keys.J)) {
+            // The direction of the hit is based on the last horizontal direction.
+            if (lastDirection == EstadoPlayer.LEFT) {
+                setEstadoActual(EstadoPlayer.HIT_LEFT);
+            } else {
+                setEstadoActual(EstadoPlayer.HIT_RIGHT);
+            }
+            tiempoXFrame = 0; // Reset time so the hit animation starts from the beginning
+            actionStateSet = true;
+        }
+        // Handle kick (K)
+        // Kick has priority if just pressed.
+        else if (Gdx.input.isKeyJustPressed(Keys.K)) {
+            // The direction of the kick is based on the last horizontal direction.
+            if (lastDirection == EstadoPlayer.LEFT) {
+                setEstadoActual(EstadoPlayer.KICK_LEFT);
+            } else {
+                setEstadoActual(EstadoPlayer.KICK_RIGHT);
+            }
+            tiempoXFrame = 0; // Reset time for kick animation
+            actionStateSet = true;
+        }
+        // Handle SPIN (L)
+        // Spin can be held down and combines with WASD movement.
+        else if (Gdx.input.isKeyPressed(Keys.L) && Gdx.input.isKeyPressed(Keys.D) ) {
+            estado.x += speed;
+            setEstadoActual(EstadoPlayer.SPIN_LEFT);
+            actionStateSet = true;
+        }
+        else if (Gdx.input.isKeyPressed(Keys.L) && Gdx.input.isKeyPressed(Keys.A) ) {
+            estado.x -= speed;
+            setEstadoActual(EstadoPlayer.SPIN_RIGHT);
+            actionStateSet = true;
+        }
+
+
+        // 4. If no action state was set (J, K, L), determine the state based on movement or IDLE.
+        if (!actionStateSet) {
+            if (isMoving) {
+                // If there's movement (WASD), set the current state to the detected movement state.
+                setEstadoActual(proposedMovementState);
+            } else {
+                // If there's no movement and no action key was pressed, return to the IDLE state.
+                // The IDLE direction is based on the last saved HORIZONTAL direction.
+                if (lastDirection == EstadoPlayer.LEFT) {
+                    setEstadoActual(EstadoPlayer.IDLE_LEFT);
+                } else {
+                    setEstadoActual(EstadoPlayer.IDLE_RIGHT);
+                }
+            }
+        }
+    }
+
+    @Override
+    public void dispose() {
+        if (spriteSheet != null) {
+            spriteSheet.dispose();
+        }
     }
 }
