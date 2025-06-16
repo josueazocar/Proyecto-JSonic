@@ -10,11 +10,8 @@ import java.util.EnumMap;
 
 public abstract class Entity {
     //Atributos
-   // public int id; // Identificador único para la red
     private int tileSize;
     public PlayerState estado;
-   // protected float positionX;
-   // protected float positionY;
     protected int speed;
 
     //Atributos para dibujar las animaciones de entidades
@@ -50,7 +47,6 @@ public abstract class Entity {
 
     // Mapa para almacenar diferentes animaciones por estado
     protected EnumMap<EstadoPlayer, Animation<TextureRegion>> animations;
-    protected EstadoPlayer estadoActual; // El estado actual del jugador
 
     //Constructor
     Entity(PlayerState estadoInicial) { //Constructor default
@@ -70,7 +66,7 @@ public abstract class Entity {
         frameKickRight = null;
         frameKickLeft = null;
         tiempoXFrame = 0.0f;
-        estadoActual = EstadoPlayer.IDLE_RIGHT; // Establecer un estado por defecto es útil
+        this.estado.estadoAnimacion = EstadoPlayer.IDLE_RIGHT; // Establecer un estado por defecto es útil
         // Inicializar el mapa de animaciones
         animations = new EnumMap<>(EstadoPlayer.class);
     }
@@ -153,10 +149,7 @@ public abstract class Entity {
     }
 
     public void setEstadoActual(EstadoPlayer estadoActual) {
-        this.estadoActual = estadoActual;
-        if (this.estadoActual != estadoActual) {
-            Gdx.app.log("StateMachine", "Cambiando estado de " + this.estadoActual + " a " + estadoActual);
-        }
+        this.estado.estadoAnimacion = estadoActual;
     }
 
     //Getters
@@ -229,7 +222,7 @@ public abstract class Entity {
     }
 
     public EstadoPlayer getEstadoActual() {
-        return estadoActual;
+        return this.estado.estadoAnimacion;
     }
 
     //Methods

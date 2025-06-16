@@ -14,169 +14,185 @@ public class Sonic extends Player {
     protected TextureRegion[] frameSpinRight; // Arreglo para almacenar los sprites de girar a la derecha
     protected TextureRegion[] frameSpinLeft;  // Arreglo para almacenar los sprites de girar a la izquierda
 
-    // Constructor unificado: recibe el estado inicial (de red) y el LevelManager
     public Sonic(PlayerState estadoInicial) {
-        super(estadoInicial); // Llama al constructor de la superclase (Player) con PlayerState
-        CargarSprites(); // Carga los sprites específicos de Sonic después de la inicialización base
-        // Establecer la animación inicial basada en el estado actual del jugador
+        super(estadoInicial);
+        CargarSprites();
         animacion = animations.get(getEstadoActual());
         if (animacion != null) {
-            animacion.setPlayMode(Animation.PlayMode.LOOP);
+            // El PlayMode se establecerá específicamente en CargarSprites
         }
     }
 
-    // Nuevo constructor que también permite pasar el LevelManager (para el jugador local en PantallaDeJuego)
     public Sonic(PlayerState estadoInicial, LevelManager levelManager) {
-        super(estadoInicial); // Llama al constructor de arriba
-        CargarSprites(); // Carga los sprites específicos de Sonic después de la inicialización base
-        // Establecer la animación inicial basada en el estado actual del jugador
+        super(estadoInicial);
+        CargarSprites();
         animacion = animations.get(getEstadoActual());
         if (animacion != null) {
-            animacion.setPlayMode(Animation.PlayMode.LOOP);
+            // El PlayMode se establecerá específicamente en CargarSprites
         }
-        this.levelManager = levelManager; // Asigna el LevelManager
+        this.levelManager = levelManager;
     }
-
-
-    // --- NUEVO MÉTODO para obtener la ruta del SpriteSheet (implementa un método abstracto que podrías añadir a Player) ---
 
     protected String getSpriteSheetPath() {
         return "Entidades/Player/Sonic/sonic.png";
     }
-    // --- FIN NUEVO MÉTODO ---
 
     @Override
     protected void CargarSprites() {
-        // Carga la Texture principal para Sonic
         Texture coleccionDeSprites = new Texture(Gdx.files.internal(getSpriteSheetPath()));
-        setSpriteSheet(coleccionDeSprites); // Establece la Texture en la superclase
+        setSpriteSheet(coleccionDeSprites);
 
-        // Dividir el sprite sheet en una matriz de TextureRegion
-        // Asegúrate de que las dimensiones de tu sprite sheet coincidan con esta división
-        // (ancho total / 8 columnas, alto total / 30 filas)
         TextureRegion[][] matrizDeSprites = TextureRegion.split(getSpriteSheet(), getSpriteSheet().getWidth() / 8, getSpriteSheet().getHeight() / 30);
 
-        // Inicializar los arreglos de frames y llenarlos con las regiones correctas
-        // IDLE
-        frameIdleRight = new TextureRegion[4]; // 4 frames para IDLE_RIGHT
-        // Fila 0, Columnas 0-3
-        System.arraycopy(matrizDeSprites[0], 0, frameIdleRight, 0, 4);
-
-        frameIdleLeft = new TextureRegion[4]; // 4 frames para IDLE_LEFT
-        // Fila 1, Columnas 0-3
-        System.arraycopy(matrizDeSprites[1], 0, frameIdleLeft, 0, 4);
-
-        // UP (moviéndose hacia arriba)
-        frameUp = new TextureRegion[6]; // 6 frames para UP
-        // Fila 2, Columnas 0-5
-        System.arraycopy(matrizDeSprites[2], 0, frameUp, 0, 6);
-
-        // DOWN (moviéndose hacia abajo)
-        frameDown = new TextureRegion[6]; // 6 frames para DOWN
-        // Fila 3, Columnas 0-5
-        System.arraycopy(matrizDeSprites[3], 0, frameDown, 0, 6);
-
-        // LEFT (moviéndose a la izquierda)
-        frameLeft = new TextureRegion[6]; // 6 frames para LEFT
-        // Fila 4, Columnas 0-5
-        System.arraycopy(matrizDeSprites[4], 0, frameLeft, 0, 6);
-
-        // RIGHT (moviéndose a la derecha)
-        frameRight = new TextureRegion[6]; // 6 frames para RIGHT
-        // Fila 5, Columnas 0-5
-        System.arraycopy(matrizDeSprites[5], 0, frameRight, 0, 6);
-
-        // HIT_RIGHT (golpeando a la derecha)
-        frameHitRight = new TextureRegion[3]; // 3 frames para HIT_RIGHT
-        // Fila 6, Columnas 0-2
-        System.arraycopy(matrizDeSprites[6], 0, frameHitRight, 0, 3);
-
-        // HIT_LEFT (golpeando a la izquierda)
-        frameHitLeft = new TextureRegion[3]; // 3 frames para HIT_LEFT
-        // Fila 7, Columnas 0-2
-        System.arraycopy(matrizDeSprites[7], 0, frameHitLeft, 0, 3);
-
-        // KICK_RIGHT (pateando a la derecha)
-        frameKickRight = new TextureRegion[4]; // 4 frames para KICK_RIGHT
-        // Fila 8, Columnas 0-3
-        System.arraycopy(matrizDeSprites[8], 0, frameKickRight, 0, 4);
-
-        // KICK_LEFT (pateando a la izquierda)
-        frameKickLeft = new TextureRegion[4]; // 4 frames para KICK_LEFT
-        // Fila 9, Columnas 0-3
-        System.arraycopy(matrizDeSprites[9], 0, frameKickLeft, 0, 4);
-
-        // SPIN_RIGHT (girando a la derecha) - Asumimos 24 frames
+        // Tamaños de SandboxThiago
+        frameIdleRight = new TextureRegion[8];
+        frameIdleLeft = new TextureRegion[8];
+        frameUp = new TextureRegion[8];
+        frameDown = new TextureRegion[8];
+        frameLeft = new TextureRegion[8];
+        frameRight = new TextureRegion[8];
+        frameHitRight = new TextureRegion[8];
+        frameHitLeft = new TextureRegion[8];
+        frameKickRight = new TextureRegion[8];
+        frameKickLeft = new TextureRegion[8];
         frameSpinRight = new TextureRegion[24];
-        for (int i = 0; i < 24; i++) {
-            // Asegura que toma los frames de las filas correctas y las columnas que existen
-            frameSpinRight[i] = matrizDeSprites[10 + (i / 8)][i % 8]; // Filas 10, 11, 12; Columnas 0-7
-        }
-
-        // SPIN_LEFT (girando a la izquierda) - Asumimos 24 frames
         frameSpinLeft = new TextureRegion[24];
-        for (int i = 0; i < 24; i++) {
-            frameSpinLeft[i] = matrizDeSprites[13 + (i / 8)][i % 8]; // Filas 13, 14, 15; Columnas 0-7
+
+        // Llenado de arreglos como en SandboxThiago
+        // --- IDLE LEFT (matriz[0][0-7]) con efecto "respiración" ---
+        for (int i = 0; i < 4; i++) { // Primeros 4 frames
+            frameIdleLeft[i] = matrizDeSprites[0][i];
+        }
+        for (int i = 0; i < 4; i++) { // Siguientes 4 frames (inversos)
+            frameIdleLeft[i + 4] = matrizDeSprites[0][3 - i];
         }
 
-        // Crear animaciones y asignarlas al mapa
-        animations.put(EstadoPlayer.IDLE_RIGHT, new Animation<TextureRegion>(0.1f, frameIdleRight));
-        animations.put(EstadoPlayer.IDLE_LEFT, new Animation<TextureRegion>(0.1f, frameIdleLeft));
-        animations.put(EstadoPlayer.UP, new Animation<TextureRegion>(0.08f, frameUp));
-        animations.put(EstadoPlayer.DOWN, new Animation<TextureRegion>(0.08f, frameDown));
-        animations.put(EstadoPlayer.LEFT, new Animation<TextureRegion>(0.08f, frameLeft));
-        animations.put(EstadoPlayer.RIGHT, new Animation<TextureRegion>(0.08f, frameRight));
+        // --- IDLE RIGHT (volteando IDLE LEFT) ---
+        for (int i = 0; i < 8; i++) {
+            frameIdleRight[i] = new TextureRegion(frameIdleLeft[i]);
+            frameIdleRight[i].flip(true, false);
+        }
+
+        // --- UP (matriz[5][0-7]) ---
+        for (int i = 0; i < 8; i++) {
+            frameUp[i] = matrizDeSprites[5][i];
+        }
+
+        // --- DOWN (matriz[1][0-7]) ---
+        for (int i = 0; i < 8; i++) {
+            frameDown[i] = matrizDeSprites[1][i];
+        }
+
+        // --- LEFT (matriz[1][0-7]) ---
+        for (int i = 0; i < 8; i++) {
+            frameLeft[i] = matrizDeSprites[1][i];
+        }
+
+        // --- RIGHT (volteando LEFT) ---
+        for (int i = 0; i < 8; i++) {
+            frameRight[i] = new TextureRegion(frameLeft[i]);
+            frameRight[i].flip(true, false);
+        }
+
+        // --- HIT LEFT (matriz[7][0-7]) ---
+        for (int i = 0; i < 8; i++) {
+            frameHitLeft[i] = matrizDeSprites[7][i];
+        }
+
+        // --- HIT RIGHT (volteando HIT LEFT) ---
+        for (int i = 0; i < 8; i++) {
+            frameHitRight[i] = new TextureRegion(frameHitLeft[i]);
+            frameHitRight[i].flip(true, false);
+        }
+
+        // --- KICK LEFT (matriz[8][0-7]) ---
+        // Nota: SandboxThiago tenía un comentario "¡RUTA DE EJEMPLO!" aquí.
+        // Se asume que la fila 8 es la correcta según la lógica de SandboxThiago.
+        for (int i = 0; i < 8; i++) {
+            frameKickLeft[i] = matrizDeSprites[8][i];
+        }
+
+        // --- KICK RIGHT (volteando KICK LEFT) ---
+        for (int i = 0; i < 8; i++) {
+            frameKickRight[i] = new TextureRegion(frameKickLeft[i]);
+            frameKickRight[i].flip(true, false);
+        }
+
+        // --- SPIN LEFT (matriz[18][i % 8] para 24 frames) ---
+        // Nota: SandboxThiago tenía un comentario "¡RUTA DE EJEMPLO!" aquí.
+        // Se asume que la fila 18 es la correcta según la lógica de SandboxThiago.
+        for (int i = 0; i < 24; i++) {
+            frameSpinLeft[i] = matrizDeSprites[18][i % 8];
+        }
+
+        // --- SPIN RIGHT (volteando SPIN LEFT) ---
+        for (int i = 0; i < 24; i++) {
+            frameSpinRight[i] = new TextureRegion(frameSpinLeft[i]);
+            frameSpinRight[i].flip(true, false);
+        }
+
+        // Llenado del mapa de animaciones y PlayModes como en SandboxThiago
+        animations.put(EstadoPlayer.IDLE_RIGHT, new Animation<TextureRegion>(0.12f, frameIdleRight));
+        animations.put(EstadoPlayer.IDLE_LEFT, new Animation<TextureRegion>(0.12f, frameIdleLeft));
+        animations.put(EstadoPlayer.UP, new Animation<TextureRegion>(0.1f, frameUp));
+        animations.put(EstadoPlayer.DOWN, new Animation<TextureRegion>(0.26f, frameDown));
+        animations.put(EstadoPlayer.LEFT, new Animation<TextureRegion>(0.2f, frameLeft));
+        animations.put(EstadoPlayer.RIGHT, new Animation<TextureRegion>(0.2f, frameRight));
         animations.put(EstadoPlayer.HIT_RIGHT, new Animation<TextureRegion>(0.08f, frameHitRight));
         animations.put(EstadoPlayer.HIT_LEFT, new Animation<TextureRegion>(0.08f, frameHitLeft));
-        animations.put(EstadoPlayer.KICK_RIGHT, new Animation<TextureRegion>(0.08f, frameKickRight));
-        animations.put(EstadoPlayer.KICK_LEFT, new Animation<TextureRegion>(0.08f, frameKickLeft));
-        animations.put(EstadoPlayer.SPIN_RIGHT, new Animation<TextureRegion>(0.05f, frameSpinRight));
-        animations.put(EstadoPlayer.SPIN_LEFT, new Animation<TextureRegion>(0.05f, frameSpinLeft));
+        animations.put(EstadoPlayer.KICK_RIGHT, new Animation<TextureRegion>(0.1f, frameKickRight));
+        animations.put(EstadoPlayer.KICK_LEFT, new Animation<TextureRegion>(0.1f, frameKickLeft));
+        animations.put(EstadoPlayer.SPIN_RIGHT, new Animation<TextureRegion>(0.07f, frameSpinRight));
+        animations.put(EstadoPlayer.SPIN_LEFT, new Animation<TextureRegion>(0.07f, frameSpinLeft));
 
-        // Establecer el modo de reproducción para cada animación
         animations.get(EstadoPlayer.IDLE_RIGHT).setPlayMode(Animation.PlayMode.LOOP);
         animations.get(EstadoPlayer.IDLE_LEFT).setPlayMode(Animation.PlayMode.LOOP);
         animations.get(EstadoPlayer.UP).setPlayMode(Animation.PlayMode.LOOP);
         animations.get(EstadoPlayer.DOWN).setPlayMode(Animation.PlayMode.LOOP);
         animations.get(EstadoPlayer.LEFT).setPlayMode(Animation.PlayMode.LOOP);
         animations.get(EstadoPlayer.RIGHT).setPlayMode(Animation.PlayMode.LOOP);
-        animations.get(EstadoPlayer.HIT_RIGHT).setPlayMode(Animation.PlayMode.NORMAL); // Acción de un solo disparo
+        animations.get(EstadoPlayer.HIT_RIGHT).setPlayMode(Animation.PlayMode.NORMAL);
         animations.get(EstadoPlayer.HIT_LEFT).setPlayMode(Animation.PlayMode.NORMAL);
         animations.get(EstadoPlayer.KICK_RIGHT).setPlayMode(Animation.PlayMode.NORMAL);
         animations.get(EstadoPlayer.KICK_LEFT).setPlayMode(Animation.PlayMode.NORMAL);
-        animations.get(EstadoPlayer.SPIN_RIGHT).setPlayMode(Animation.PlayMode.LOOP); // Spin es continuo
-        animations.get(EstadoPlayer.SPIN_LEFT).setPlayMode(Animation.PlayMode.LOOP);
+        animations.get(EstadoPlayer.SPIN_RIGHT).setPlayMode(Animation.PlayMode.NORMAL); // Como en SandboxThiago
+        animations.get(EstadoPlayer.SPIN_LEFT).setPlayMode(Animation.PlayMode.NORMAL); // Como en SandboxThiago
 
-        // Inicializa el frame actual. Podrías tomar el primer frame del estado por defecto (IDLE_RIGHT).
-        if (animations.get(getEstadoActual()) != null) {
-            setFrameActual(animations.get(getEstadoActual()).getKeyFrame(0));
+        // Establecer la animación inicial basada en el estado actual.
+        // Esto asegura que si el estado inicial es, por ejemplo, IDLE_LEFT, se use su PlayMode.LOOP.
+        Animation<TextureRegion> initialAnimation = animations.get(getEstadoActual());
+        if (initialAnimation != null) {
+            setFrameActual(initialAnimation.getKeyFrame(0));
+            // El PlayMode ya está configurado arriba para cada animación específica.
+            // this.animacion se asignará en el constructor o en update().
         }
     }
-
-    // En tu clase Sonic.java
 
     @Override
     public void update(float deltaTime) {
         // --- FASE 1: LÓGICA DE DECISIÓN DE ESTADO ---
-        // Esta sección entera es el nuevo "cerebro" que decide la animación.
+        // (Se mantiene la lógica de la sugerencia anterior, que intenta manejar el movimiento correctamente)
 
-        // Primero, comprobamos si una acción como GOLPEAR o PATEAR está en curso y no ha terminado.
-        boolean accionEnCurso = (animacion != null && animacion.getPlayMode() == Animation.PlayMode.NORMAL && !animacion.isAnimationFinished(tiempoXFrame));
+        // Comprobar si una acción de un solo disparo (NORMAL) está en curso.
+        boolean accionNormalEnCurso = (animacion != null && animacion.getPlayMode() == Animation.PlayMode.NORMAL && !animacion.isAnimationFinished(tiempoXFrame));
 
-        // Si una acción está en curso, no leemos ninguna nueva tecla para cambiar el estado.
-        // Dejamos que la animación termine.
-        if (!accionEnCurso) {
-            // Si no hay acción en curso, leemos el teclado para decidir el nuevo estado.
+        if (!accionNormalEnCurso) {
             boolean quiereGolpear = Gdx.input.isKeyJustPressed(Keys.J);
             boolean quierePatear = Gdx.input.isKeyJustPressed(Keys.K);
-            boolean quiereGirar = Gdx.input.isKeyPressed(Keys.L); // O la tecla que uses para SPIN
-            boolean seEstaMoviendo = (estado.x != lastPosX || estado.y != lastPosY); // Comprobamos si la posición cambió
+            boolean quiereGirar = Gdx.input.isKeyPressed(Keys.L); // SPIN ahora es NORMAL, así que isKeyJustPressed podría ser mejor si no quieres que se reinicie si se mantiene L.
 
-            // Actualizamos las posiciones anteriores para el siguiente frame
-            lastPosX = estado.x;
-            lastPosY = estado.y;
+            // Si SPIN es PlayMode.NORMAL, es mejor usar isKeyJustPressed para iniciarlo.
+            // Si se mantiene L, se reiniciará la animación de SPIN cada frame si usamos isKeyPressed.
+            // Vamos a cambiarlo a isKeyJustPressed para SPIN para que coincida con el comportamiento de HIT/KICK.
+            if (animations.get(EstadoPlayer.SPIN_LEFT).getPlayMode() == Animation.PlayMode.NORMAL) {
+                quiereGirar = Gdx.input.isKeyJustPressed(Keys.L);
+            }
 
-            // Sistema de Prioridades para decidir el estado de la animación:
+
+            boolean seEstaMoviendo = (estado.x != lastPosX || estado.y != lastPosY);
+            float dx = estado.x - lastPosX;
+            float dy = estado.y - lastPosY;
+
             if (quiereGolpear) {
                 setEstadoActual((lastDirection == EstadoPlayer.IDLE_LEFT) ? EstadoPlayer.HIT_LEFT : EstadoPlayer.HIT_RIGHT);
             } else if (quierePatear) {
@@ -184,54 +200,66 @@ public class Sonic extends Player {
             } else if (quiereGirar) {
                 setEstadoActual((lastDirection == EstadoPlayer.IDLE_LEFT) ? EstadoPlayer.SPIN_LEFT : EstadoPlayer.SPIN_RIGHT);
             } else if (seEstaMoviendo) {
-                // Si no hay acción pero el personaje se movió (gracias a KeyHandler), decidimos la animación de movimiento.
-                // Esta lógica es un ejemplo, puedes ajustarla a la tuya.
-                if (lastDirection == EstadoPlayer.IDLE_LEFT) { // Usamos lastDirection que KeyHandler actualiza
-                    setEstadoActual(EstadoPlayer.LEFT);
+                if (Math.abs(dy) > Math.abs(dx)) {
+                    if (dy > 0) {
+                        setEstadoActual(EstadoPlayer.UP);
+                    } else {
+                        setEstadoActual(EstadoPlayer.DOWN);
+                    }
                 } else {
-                    setEstadoActual(EstadoPlayer.RIGHT);
+                    if (dx < 0) {
+                        setEstadoActual(EstadoPlayer.LEFT);
+                    } else if (dx > 0) {
+                        setEstadoActual(EstadoPlayer.RIGHT);
+                    } else {
+                        setEstadoActual((lastDirection == EstadoPlayer.IDLE_LEFT) ? EstadoPlayer.IDLE_LEFT : EstadoPlayer.IDLE_RIGHT);
+                    }
                 }
             } else {
-                // Si no pasó nada de lo anterior, el personaje está quieto.
                 setEstadoActual((lastDirection == EstadoPlayer.IDLE_LEFT) ? EstadoPlayer.IDLE_LEFT : EstadoPlayer.IDLE_RIGHT);
             }
-        }
+        } // Fin de if (!accionNormalEnCurso)
 
         // --- FASE 2: ACTUALIZACIÓN DE LA ANIMACIÓN ---
-        // Esta sección toma el estado que decidimos arriba y calcula el frame a dibujar.
-
-        // Obtenemos la animación para el estado actual
         Animation<TextureRegion> targetAnimation = animations.get(getEstadoActual());
 
-        // Si la animación del estado actual es diferente a la que se estaba reproduciendo,
-        // significa que acabamos de cambiar de estado (ej: de IDLE a RIGHT),
-        // así que reiniciamos el tiempo para que la nueva animación empiece desde el principio.
         if (this.animacion != targetAnimation) {
-            this.tiempoXFrame = 0;
+            this.tiempoXFrame = 0; // Reiniciar tiempo para la nueva animación.
+            // Si la animación anterior era NORMAL y no había terminado, y la nueva es diferente,
+            // esto la cortará. Esto es generalmente el comportamiento deseado si una nueva acción interrumpe.
         }
-
         this.animacion = targetAnimation;
 
-        // Avanzamos el tiempo de la animación y obtenemos el fotograma correcto
         if (animacion != null) {
             tiempoXFrame += deltaTime;
             frameActual = animacion.getKeyFrame(tiempoXFrame);
+
+            // Si una animación NORMAL ha terminado, volver a IDLE (lógica de SandboxThiago)
+            if (animacion.getPlayMode() == Animation.PlayMode.NORMAL && animacion.isAnimationFinished(tiempoXFrame)) {
+                if (lastDirection == EstadoPlayer.IDLE_LEFT) { // Usa la lastDirection de Player.java
+                    setEstadoActual(EstadoPlayer.IDLE_LEFT);
+                } else {
+                    setEstadoActual(EstadoPlayer.IDLE_RIGHT);
+                }
+                // Al cambiar a IDLE, el siguiente frame en update() reiniciará tiempoXFrame porque targetAnimation será diferente.
+                // Y se asignará la animación IDLE correcta.
+            }
         } else {
-            // Código de seguridad por si un estado no tiene animación asignada
             Gdx.app.log("Sonic_update", "Advertencia: No hay animación para el estado: " + getEstadoActual());
             frameActual = null;
         }
+
+        // Actualizamos lastPosX y lastPosY aquí, después de toda la lógica de decisión Y actualización de animación del frame actual.
+        lastPosX = estado.x;
+        lastPosY = estado.y;
     }
 
     @Override
     public void draw(SpriteBatch batch) {
-        // Dibujamos el frame actual en la posición actual del jugador (usando estado.x/y)
         if (frameActual != null) {
             batch.draw(frameActual, estado.x, estado.y, getTileSize(), getTileSize());
         } else {
-            Gdx.app.log("Sonic", "Advertencia: 'frameActual' es nulo en el método draw(). No se puede dibujar a Sonic.");
+            Gdx.app.log("Sonic", "Advertencia: \'frameActual\' es nulo en el método draw(). No se puede dibujar a Sonic.");
         }
     }
-
-
 }
