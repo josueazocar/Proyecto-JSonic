@@ -11,7 +11,10 @@ import com.badlogic.gdx.utils.viewport.Viewport;
 import network.GameClient;
 import network.Network;
 
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.Iterator;
+
 
 public class PantallaDeJuego extends PantallaBase {
 
@@ -38,6 +41,14 @@ public class PantallaDeJuego extends PantallaBase {
     private AssetManager assetManager; // Para gestionar assets
    // Mapa de jugadores remotos
 
+    // --- NUEVAS VARIABLES PARA EL MANEJO DE ENEMIGOS ---
+    private ArrayList<RobotVisual> enemigosEnPantalla;
+    private float tiempoGeneracionEnemigo = 0f;
+    private final float INTERVALO_GENERACION_ENEMIGO = 5.0f;
+    private int proximoIdEnemigo = 0;
+    // --- FIN NUEVAS VARIABLES ---
+
+
     // Constructor corregido: solo recibe la referencia a Main
     public PantallaDeJuego(JSonicJuego juego) {
         super();
@@ -63,6 +74,15 @@ public class PantallaDeJuego extends PantallaBase {
         assetManager = new AssetManager();
         soundManager = new SoundManager(assetManager);
 
+        // --- IMPORTANTE: PASAR LA INSTANCIA DE SONIC AL LEVELMANAGER ---
+        manejadorNivel.setPlayer(sonic); // <-- Add this line
+        // --- FIN IMPORTANTE ---
+
+        // --- INICIALIZACIÓN DE ENEMIGOS ---
+        enemigosEnPantalla = new ArrayList<>();
+        crearNuevoEnemigo(200, 300); // Create an initial enemy
+        // --- FIN INICIALIZACIÓN DE ENEMIGOS ---
+
         soundManager.loadMusic(BACKGROUND_MUSIC_PATH2);
 
         // Creamos el cliente de red
@@ -71,6 +91,16 @@ public class PantallaDeJuego extends PantallaBase {
         soundManager.playBackgroundMusic(BACKGROUND_MUSIC_PATH2, 0.5f, true); // Volumen al 50%, en bucle
         assetManager.finishLoading(); // Espera a que todos los assets en cola se carguen
     }
+
+    // --- MÉTODO PARA CREAR ENEMIGOS ---
+    private void crearNuevoEnemigo(float x, float y) {
+        EnemigoState nuevoEstadoEnemigo = new EnemigoState(proximoIdEnemigo++, x, y, 100, EnemigoState.EnemigoType.ROBOT);
+        // Asegúrate de pasar el manejadorNivel al constructor de RobotVisual
+        RobotVisual nuevoRobot = new RobotVisual(nuevoEstadoEnemigo, manejadorNivel);
+        enemigosEnPantalla.add(nuevoRobot);
+        Gdx.app.log("PantallaDeJuego", "Enemigo #" + nuevoEstadoEnemigo.id + " creado en (" + x + ", " + y + ")");
+    }
+    // --- FIN MÉTODO ---
 
     @Override
     public void actualizar(float deltat) {
@@ -93,6 +123,31 @@ public class PantallaDeJuego extends PantallaBase {
             }
         }
 
+
+        // --- ACTUALIZAR Y GENERAR ENEMIGOS ---
+        tiempoGeneracionEnemigo += deltat;
+        if (tiempoGeneracionEnemigo >= INTERVALO_GENERACION_ENEMIGO) {
+            // Spawn enemies relative to Sonic's position
+            float spawnX = sonic.estado.x + (Math.random() > 0.5 ? 400 : -400); // 400 pixels left/right
+            float spawnY = sonic.estado.y + (Math.random() > 0.5 ? 200 : -200); // 200 pixels up/down
+            crearNuevoEnemigo(spawnX, spawnY);
+            tiempoGeneracionEnemigo = 0;
+        }
+
+        Iterator<RobotVisual> iterator = enemigosEnPantalla.iterator();
+        while (iterator.hasNext()) {
+            RobotVisual enemigo = iterator.next();
+            enemigo.update(deltat);
+            // Example: Remove enemy if its health is zero (implement health in EnemigoState if not already)
+            // if (enemigo.estado.vida <= 0) {
+            //     enemigo.dispose(); // Dispose enemy resources
+            //     iterator.remove();
+            // }
+        }
+        // --- FIN ACTUALIZAR Y GENERAR ENEMIGOS ---
+
+
+
         // --- 2. ACTUALIZAR LÓGICA (Lógica recuperada y corregida) ---
         sonic.KeyHandler(); // SOLO el jugador local procesa el teclado
         sonic.update(deltat); // TODOS actualizan su animación
@@ -113,6 +168,74 @@ public class PantallaDeJuego extends PantallaBase {
 
     }
 
+
+// NUEVO RENDER Dentro de PantallaDeJuego.java
+    @Override
+    public void render(float delta) {
+        // Llama al render de la clase base (PantallaBase), que se encarga de:
+        // 1. Actualizar los stages (uiStage, mainStage) con deltat.
+        // 2. Llamar a this.actualizar(delta) de PantallaDeJuego.
+        // 3. Limpiar la pantalla (Gdx.gl.glClearColor, Gdx.gl.glClear).
+        // 4. Dibujar los stages (mainStage.draw(), uiStage.draw()).
+        // IMPORTANTE: Si PantallaBase.render ya limpia la pantalla, no es necesario limpiarla de nuevo aquí.
+        super.render(delta); // Mantiene la lógica de actualización y dibujado de UI/stages de PantallaBase
+
+        // Aplica el viewport de la cámara del juego.
+        // Esto asegura que lo que dibujemos se vea correctamente escalado y centrado.
+        if (viewport != null) {
+            viewport.apply();
+        }
+
+        // Configura la matriz de proyección del batch para que use la cámara del juego.
+        // Esto es vital para que todo lo que se dibuje con este batch (Sonic, enemigos)
+        // se posicione y escale según la vista de la cámara.
+        batch.setProjectionMatrix(camaraJuego.combined);
+
+        // Dibuja el nivel del mapa.
+        // OrthogonalTiledMapRenderer (usado por LevelManager) gestiona su propio "batching" interno.
+        // Por lo tanto, NO necesita estar dentro de TU bloque batch.begin()/end().
+        // Se dibuja primero para que los sprites (Sonic, enemigos) queden encima.
+        manejadorNivel.dibujar();
+
+        // --- INICIO DEL BLOQUE DE DIBUJADO DE SPRITES ---
+        // Este 'begin()' es crucial y debe ir antes de CUALQUIER llamada a batch.draw()
+        batch.begin();
+
+        // Dibuja a Sonic
+        sonic.draw(batch);
+
+        // Dibuja a otros jugadores remotos
+        for (Player otro : otrosJugadores.values()) {
+            otro.draw(batch);
+        }
+
+        // Dibuja a los enemigos (RobotVisual)
+        for (RobotVisual enemigo : enemigosEnPantalla) {
+            enemigo.draw(batch);
+        }
+
+        // Este 'end()' es crucial y debe ir después de TODAS las llamadas a batch.draw()
+        batch.end();
+        // --- FIN DEL BLOQUE DE DIBUJADO DE SPRITES ---
+
+        // Lógica para enviar datos de red (no es una operación de dibujado)
+        if (gameClient != null && sonic != null && sonic.estado != null && sonic.estado.id != 0) {
+            Network.PaquetePosicionJugador paquete = new Network.PaquetePosicionJugador();
+            paquete.id = sonic.estado.id;
+            paquete.x = sonic.estado.x;
+            paquete.y = sonic.estado.y;
+            paquete.estadoAnimacion = sonic.getEstadoActual();
+            if (gameClient.cliente != null && gameClient.cliente.isConnected()) {
+                gameClient.cliente.sendTCP(paquete);
+            }
+        }
+    }
+
+
+
+
+
+/*Antiguo Render:
     @Override
     public void render(float delta) {
 
@@ -157,9 +280,15 @@ public class PantallaDeJuego extends PantallaBase {
             }
         }
 
+        // --- DIBUJAR ENEMIGOS ---
+        for (RobotVisual enemigo : enemigosEnPantalla) {
+            enemigo.draw(batch);
+        }
+        // --- FIN DIBUJAR ENEMIGOS ---
+
 
     }
-
+*/
     @Override
     public void pause() {
         if (soundManager != null) {
@@ -215,6 +344,11 @@ public class PantallaDeJuego extends PantallaBase {
         if (soundManager != null) {
             soundManager.dispose();
         }
+        // --- IMPORTANTE: DISPOSE DE ENEMIGOS ---
+        for (RobotVisual enemigo : enemigosEnPantalla) {
+            enemigo.dispose();
+        }
+        // --- FIN IMPORTANTE ---
     }
 
 }

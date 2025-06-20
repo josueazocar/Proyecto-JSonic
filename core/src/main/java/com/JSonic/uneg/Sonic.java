@@ -1,12 +1,12 @@
 package com.JSonic.uneg;
 
 import com.badlogic.gdx.Gdx;
-import com.badlogic.gdx.Input.Keys; // Importa Keys
+//Importa Keys
 import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.Animation;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.graphics.g2d.TextureRegion;
-import com.badlogic.gdx.math.MathUtils; // Importar para MathUtils.clamp
+
 
 
 public class Sonic extends Player {
@@ -61,7 +61,7 @@ public class Sonic extends Player {
             frameIdleRight[i].flip(true, false);
         }
         for (int i = 0; i < 8; i++) {
-            frameUp[i] = matrizDeSprites[5][i];
+            frameUp[i] = matrizDeSprites[1][i];
         }
         for (int i = 0; i < 8; i++) {
             frameDown[i] = matrizDeSprites[1][i];

@@ -1,0 +1,37 @@
+package com.JSonic.uneg;
+
+public class EnemigoState {
+    public int id;
+    public float x;
+    public float y;
+    public int vida;
+    public EnemigoType tipo;
+    public boolean mirandoDerecha; // Para la dirección del sprite y el movimiento
+    public EstadoEnemigo estadoAnimacion; // Nuevo: Para controlar la animación del enemigo
+
+    public enum EnemigoType {
+        ROBOT,
+        // Puedes añadir más tipos de enemigos aquí
+    }
+
+    public enum EstadoEnemigo {
+        IDLE_RIGHT,
+        IDLE_LEFT,
+        RUN_RIGHT,
+        RUN_LEFT,
+        HIT_RIGHT,
+        HIT_LEFT,
+        // Puedes añadir más estados específicos para enemigos si los necesitas
+    }
+
+    // Constructor para facilitar la inicialización
+    public EnemigoState(int id, float x, float y, int vida, EnemigoType tipo) {
+        this.id = id;
+        this.x = x;
+        this.y = y;
+        this.vida = vida;
+        this.tipo = tipo;
+        this.mirandoDerecha = true; // Por defecto mirará a la derecha
+        this.estadoAnimacion = EstadoEnemigo.IDLE_RIGHT; // Estado inicial por defecto
+    }
+}
