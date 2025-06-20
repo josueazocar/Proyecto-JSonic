@@ -50,17 +50,17 @@ public class RobotVisual {
     }
 
     protected String getSpriteSheetPath() {
-        return "Entidades/Enemy/chao.png"; // Asegúrate de que esta ruta es correcta para los sprites del robot.
+        return "Entidades/Enemy/Robots/robot.png"; // Asegúrate de que esta ruta es correcta para los sprites del robot.
     }
 
     protected void CargarSprites() {
         spriteSheet = new Texture(Gdx.files.internal(getSpriteSheetPath()));
-        TextureRegion[][] matrizDeSprites = TextureRegion.split(spriteSheet, spriteSheet.getWidth() / 8, spriteSheet.getHeight() / 28);
+        TextureRegion[][] matrizDeSprites = TextureRegion.split(spriteSheet, spriteSheet.getWidth() / 9, spriteSheet.getHeight() / 26);
 
         frameIdleRight = new TextureRegion[8];
         frameIdleLeft = new TextureRegion[8];
-        frameRunRight = new TextureRegion[8];
-        frameRunLeft = new TextureRegion[8];
+        frameRunRight = new TextureRegion[6];
+        frameRunLeft = new TextureRegion[6];
         frameHitRight = new TextureRegion[8];
         frameHitLeft = new TextureRegion[8];
 
@@ -75,16 +75,16 @@ public class RobotVisual {
             frameIdleRight[i].flip(true, false);
         }
 
-        for (int i = 0; i < 8; i++) {
+        for (int i = 0; i < 6; i++) {
             frameRunLeft[i] = matrizDeSprites[1][i];
         }
-        for (int i = 0; i < 8; i++) {
+        for (int i = 0; i < 6; i++) {
             frameRunRight[i] = new TextureRegion(frameRunLeft[i]);
             frameRunRight[i].flip(true, false);
         }
 
         for (int i = 0; i < 8; i++) {
-            frameHitLeft[i] = matrizDeSprites[8][i];
+            frameHitLeft[i] = matrizDeSprites[6][i];
         }
         for (int i = 0; i < 8; i++) {
             frameHitRight[i] = new TextureRegion(frameHitLeft[i]);
