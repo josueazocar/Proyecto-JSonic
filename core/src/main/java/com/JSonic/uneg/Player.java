@@ -6,11 +6,21 @@ import com.badlogic.gdx.graphics.g2d.Animation;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.utils.Disposable;
 import com.badlogic.gdx.math.MathUtils; // Importar para MathUtils.clamp
+import com.badlogic.gdx.math.Rectangle;
+import com.badlogic.gdx.maps.objects.RectangleMapObject;
+import com.badlogic.gdx.maps.MapObject;
 
 public abstract class Player extends Entity implements Disposable {
     protected EstadoPlayer lastDirection = EstadoPlayer.IDLE_RIGHT;
     protected float lastPosX, lastPosY;
     protected LevelManager levelManager;
+    //Nuevas varialbles para las colisiones
+    protected Rectangle bounds; // Rectángulo de colisión del jugador
+    protected float collisionWidth;
+    protected float collisionHeight;
+    protected float collisionOffsetX;
+    protected float collisionOffsetY;
+//hasta aqui
 
     public Player(PlayerState estadoInicial) {
         super(estadoInicial);
@@ -36,6 +46,56 @@ public abstract class Player extends Entity implements Disposable {
         speed = 4; // Asegúrate de que 'speed' esté declarado en Entity o aquí
         setEstadoActual(EstadoPlayer.IDLE_RIGHT);
     }
+//Para las colisiones
+public Rectangle getBounds() {
+    if (bounds == null) {
+        Gdx.app.log("Player", "ERROR CRÍTICO: bounds es nulo. ¡La inicialización del hitbox debe ocurrir en la subclase Sonic!");
+        // Fallback: Usar el tileSize de la entidad (48) para el hitbox si no se inicializó.
+        this.collisionWidth = getTileSize(); // Se mantiene usando getTileSize() (48)
+        this.collisionHeight = getTileSize(); // Se mantiene usando getTileSize() (48)
+        this.collisionOffsetX = 0;
+        this.collisionOffsetY = 0;
+        this.bounds = new Rectangle(estado.x, estado.y, collisionWidth, collisionHeight);
+    }
+    bounds.set(estado.x + collisionOffsetX, estado.y + collisionOffsetY, collisionWidth, collisionHeight);
+    return bounds;
+}
+//colisiones
+
+    /**
+     * CAMBIO: Nuevo método privado para verificar colisiones con los objetos del mapa.
+     * @param newX La coordenada X tentativa para el movimiento.
+     * @param newY La coordenada Y tentativa para el movimiento.
+     * @return true si hay colisión, false de lo contrario.
+     */
+    private boolean checkCollision(float newX, float newY) {
+        if (levelManager == null || levelManager.getMapaActual() == null) {
+            return false;
+        }
+        if (bounds == null) {
+            Gdx.app.log("Player", "Error: getBounds() no inicializado antes de checkCollision.");
+            return false;
+        }
+
+        // CAMBIO: Crea un rectángulo de colisión en la posición tentativa.
+        Rectangle futureBounds = new Rectangle(newX + collisionOffsetX, newY + collisionOffsetY, collisionWidth, collisionHeight);
+
+        // CAMBIO: Itera sobre los objetos de la capa de colisiones del mapa.
+        if (levelManager.getCollisionObjects() != null) {
+            for (MapObject object : levelManager.getCollisionObjects()) {
+                if (object instanceof RectangleMapObject) {
+                    Rectangle rectObject = ((RectangleMapObject) object).getRectangle();
+
+                    // CAMBIO: Si el hitbox futuro del jugador se superpone con un objeto del mapa, hay colisión.
+                    if (futureBounds.overlaps(rectObject)) {
+                        return true;
+                    }
+                }
+            }
+        }
+        return false;
+    }
+//colisiones fin
 
     // NUEVO MÉTODO para verificar si una acción bloqueante está en curso
     /**
@@ -76,6 +136,13 @@ public abstract class Player extends Entity implements Disposable {
         // Stores the proposed movement state (UP, DOWN, LEFT, RIGHT) before applying actions.
         EstadoPlayer proposedMovementState = null;
 
+        //Para las colisiones
+        // CAMBIO: Declarar e inicializar oldX, oldY, targetX, targetY al inicio
+        float oldX = estado.x;
+        float oldY = estado.y;
+        float targetX = estado.x;
+        float targetY = estado.y;
+
         // 2. Process movement input (WASD). This updates the player's position.
         // Position updates occur independently of the current animation,
         // allowing movement while spinning.
@@ -100,6 +167,29 @@ public abstract class Player extends Entity implements Disposable {
             lastDirection = EstadoPlayer.RIGHT; // Update the last HORIZONTAL direction
             proposedMovementState = EstadoPlayer.RIGHT;
             isMoving = true;
+        }
+
+        // 2. Aplicar el movimiento en el eje X si no hay colisión
+        if (targetX != oldX) { // Solo si hubo intento de movimiento en X
+            if (!checkCollision(targetX, oldY)) { // Chequea colisión solo en X
+                estado.x = targetX;
+            }
+        }
+        // 3. Aplicar el movimiento en el eje Y si no hay colisión
+        if (targetY != oldY) { // Solo si hubo intento de movimiento en Y
+            // CAMBIO: Chequear colisión en Y usando la nueva X (potencialmente actualizada)
+            if (!checkCollision(estado.x, targetY)) {
+                estado.y = targetY;
+            }
+        }
+
+        // CAMBIO: Limitar al personaje a los bordes del mapa usando getTileSize() (que es 48).
+        if (levelManager != null) {
+            float mapWidth = levelManager.getAnchoMapaPixels();
+            float mapHeight = levelManager.getAltoMapaPixels();
+
+            estado.x = MathUtils.clamp(estado.x, 0, mapWidth - getTileSize());
+            estado.y = MathUtils.clamp(estado.y, 0, mapHeight - getTileSize());
         }
 
         // 3. Process action inputs (J, K, L). These determine the animation state.

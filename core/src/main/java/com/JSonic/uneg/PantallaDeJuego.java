@@ -10,6 +10,10 @@ import com.badlogic.gdx.utils.viewport.FitViewport;
 import com.badlogic.gdx.utils.viewport.Viewport;
 import network.GameClient;
 import network.Network;
+import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
+import com.badlogic.gdx.maps.MapObject; // Importar MapObject
+import com.badlogic.gdx.maps.objects.RectangleMapObject; // Importar RectangleMapObject
+import com.badlogic.gdx.math.Rectangle;
 
 import java.util.HashMap;
 
@@ -36,8 +40,11 @@ public class PantallaDeJuego extends PantallaBase {
     private SoundManager soundManager; // Instancia de nuestro SoundManager
     private static final String BACKGROUND_MUSIC_PATH2 = "SoundsBackground/Dating Fight.mp3";
     private AssetManager assetManager; // Para gestionar assets
-   // Mapa de jugadores remotos
 
+   // Mapa de jugadores remotos
+//para las colisiones
+    private ShapeRenderer shapeRenderer;
+    
     // Constructor corregido: solo recibe la referencia a Main
     public PantallaDeJuego(JSonicJuego juego) {
         super();
@@ -68,8 +75,13 @@ public class PantallaDeJuego extends PantallaBase {
         // Creamos el cliente de red
         gameClient = new GameClient(this);
 
-        soundManager.playBackgroundMusic(BACKGROUND_MUSIC_PATH2, 0.5f, true); // Volumen al 50%, en bucle
-        assetManager.finishLoading(); // Espera a que todos los assets en cola se carguen
+        /*soundManager.playBackgroundMusic(BACKGROUND_MUSIC_PATH2, 0.5f, true); // Volumen al 50%, en bucle
+        assetManager.finishLoading(); // Espera a que todos los assets en cola se carguen*/
+        soundManager.playBackgroundMusic(BACKGROUND_MUSIC_PATH2, 0.5f, true);
+        assetManager.finishLoading();
+
+        // NUEVO: Inicializar ShapeRenderer
+        shapeRenderer = new ShapeRenderer();
     }
 
     @Override
@@ -132,6 +144,7 @@ public class PantallaDeJuego extends PantallaBase {
 
         batch.setProjectionMatrix(camaraJuego.combined);
 
+
         manejadorNivel.dibujar(); // Asumiendo que LevelManager gestiona su dibujado
         batch.begin();
         sonic.draw(batch);
@@ -140,7 +153,30 @@ public class PantallaDeJuego extends PantallaBase {
             otro.draw(batch);
         }
         batch.end();
+    //Cambio para las coliciones
+        // INICIO DIBUJO DE HITBOXES PARA DEPURACIÓN (ShapeRenderer)
+        shapeRenderer.setProjectionMatrix(camaraJuego.combined);
+        shapeRenderer.begin(ShapeRenderer.ShapeType.Line); // Dibuja solo el contorno
+        shapeRenderer.setColor(1, 0, 0, 1); // Rojo para el hitbox del jugador local
 
+        // Dibuja el hitbox del jugador local
+        Rectangle playerBounds = sonic.getBounds();
+        shapeRenderer.rect(playerBounds.x, playerBounds.y, playerBounds.width, playerBounds.height);
+
+        // Dibuja los objetos de colisión del mapa
+        shapeRenderer.setColor(0, 1, 0, 1); // Verde para los objetos del mapa
+        if (manejadorNivel != null && manejadorNivel.getCollisionObjects() != null) {
+            for (MapObject object : manejadorNivel.getCollisionObjects()) {
+                // Aquí solo dibujamos RectangleMapObject, ya que tu lógica de colisión actual solo los maneja.
+                // Si decides implementar polígonos/elipses, deberías dibujarlos aquí también.
+                if (object instanceof RectangleMapObject) {
+                    Rectangle rectObject = ((RectangleMapObject) object).getRectangle();
+                    shapeRenderer.rect(rectObject.x, rectObject.y, rectObject.width, rectObject.height);
+                }
+            }
+        }
+        shapeRenderer.end();
+//-------------------------------------------------------------------------
         // 4. Dibujar los Stages de PantallaBase (UI encima del juego)
         if (mainStage != null) mainStage.draw(); // Dibuja actores en el stage principal (si los hay)
         if (uiStage != null) uiStage.draw();   // Dibuja actores en el stage de UI (botones, etc.)
@@ -159,6 +195,8 @@ public class PantallaDeJuego extends PantallaBase {
 
 
     }
+
+
 
     @Override
     public void pause() {

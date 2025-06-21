@@ -7,6 +7,7 @@ import com.badlogic.gdx.graphics.g2d.Animation;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.graphics.g2d.TextureRegion;
 import com.badlogic.gdx.math.MathUtils; // Importar para MathUtils.clamp
+import com.badlogic.gdx.math.Rectangle;
 
 
 public class Sonic extends Player {
@@ -14,15 +15,22 @@ public class Sonic extends Player {
     protected TextureRegion[] frameSpinRight;
     protected TextureRegion[] frameSpinLeft;
 
+
     public Sonic(PlayerState estadoInicial) {
         super(estadoInicial);
         CargarSprites();
+        //para que sonic pueda hacer las coliciones
+        inicializarHitbox();
+        //------------------
         animacion = animations.get(getEstadoActual());
     }
 
     public Sonic(PlayerState estadoInicial, LevelManager levelManager) {
         super(estadoInicial, levelManager); // Pasa levelManager al constructor de Player
         CargarSprites();
+        //inicializar para colisiones
+        inicializarHitbox();
+        //-------------------
         animacion = animations.get(getEstadoActual());
     }
 
@@ -127,6 +135,36 @@ public class Sonic extends Player {
             setFrameActual(initialAnimation.getKeyFrame(0));
         }
     }
+
+    //Colisiones
+    /**
+     * CAMBIO: Este método ahora calcula el hitbox en relación al getTileSize() de la Entity (48),
+     * y asume que el sprite visual de Sonic (que podría ser más pequeño) está dentro de ese "slot".
+     * AJUSTA LOS VALORES DE 0.6f y los offsets segun el tamaño real de Sonic dentro de tu tile de 48x48.
+     */
+    private void inicializarHitbox() {
+        float baseTileSize = getTileSize(); // Esto será 48, el tamaño del "slot" donde se dibuja Sonic.
+
+        // CAMBIO: Ajusta estos valores para reflejar el tamaño real del cuerpo de Sonic
+        // dentro de su frame de 48x48.
+        // Por ejemplo, si Sonic es visualmente 32x32 y está centrado en un tile de 48x48:
+        this.collisionWidth = baseTileSize * 0.6f; // Un 60% de 48 = 28.8px (ajusta este porcentaje)
+        this.collisionHeight = baseTileSize * 0.75f; // Un 75% de 48 = 36px (ajusta este porcentaje)
+
+        // CAMBIO: Calcula los offsets para centrar el hitbox dentro del tile de 48x48
+        // y posicionarlo correctamente (ej. en la parte inferior para colisiones con el suelo).
+        this.collisionOffsetX = (baseTileSize - collisionWidth) / 2f; // Centra horizontalmente
+        this.collisionOffsetY = 0; // Coloca el hitbox en la base del tile
+
+        this.bounds = new Rectangle(estado.x + collisionOffsetX, estado.y + collisionOffsetY, collisionWidth, collisionHeight);
+
+        Gdx.app.log("Sonic", "Hitbox inicializado (basado en Entity.tileSize): " + this.bounds.toString());
+        Gdx.app.log("Sonic", "Entity.tileSize usado para hitbox: " + baseTileSize);
+        Gdx.app.log("Sonic", "Offsets del hitbox: x=" + collisionOffsetX + ", y=" + collisionOffsetY);
+    }
+
+
+    //fin de el hixbox
 
     @Override
     public void update(float deltaTime) {

@@ -4,9 +4,11 @@ import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.graphics.OrthographicCamera;
 import com.badlogic.gdx.maps.tiled.TiledMap;
 import com.badlogic.gdx.maps.tiled.TmxMapLoader;
+import com.badlogic.gdx.maps.MapObjects;
 import com.badlogic.gdx.maps.tiled.renderers.OrthogonalTiledMapRenderer;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch; // Necesario para el constructor, aunque no se usa directamente en dibujar()
 import com.badlogic.gdx.math.MathUtils; // Importar para MathUtils.clamp
+import com.badlogic.gdx.math.Rectangle;
 
 public class LevelManager {
 
@@ -40,7 +42,7 @@ public class LevelManager {
 
         mapaActual = new TmxMapLoader().load(rutaMapa);
 
-        // --- CÓDIGO NUEVO AQUÍ ---
+
         // Obtener dimensiones del mapa en píxeles virtuales.
         // Asumiendo que todos los tiles del mapa tienen el mismo tamaño.
         tileWidth = mapaActual.getProperties().get("tilewidth", Integer.class);
@@ -134,4 +136,13 @@ public class LevelManager {
     public int getTileHeight() {
         return tileHeight;
     }
+
+    public MapObjects getCollisionObjects() {
+        if (mapaActual == null) {
+            return null;
+        }
+        // Asumiendo que tu capa de colisiones se llama "Colisiones"
+        return mapaActual.getLayers().get("Colisiones").getObjects();
+    }
+
 }
