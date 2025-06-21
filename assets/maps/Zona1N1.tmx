@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<map version="1.10" tiledversion="1.11.2" orientation="orthogonal" renderorder="right-down" width="60" height="40" tilewidth="32" tileheight="32" infinite="0" nextlayerid="13" nextobjectid="34">
+<map version="1.10" tiledversion="1.11.2" orientation="orthogonal" renderorder="right-down" width="60" height="40" tilewidth="32" tileheight="32" infinite="0" nextlayerid="13" nextobjectid="74">
  <tileset firstgid="1" source="terreno2.tsx"/>
  <tileset firstgid="286" source="Agua.tsx"/>
  <tileset firstgid="290" source="Palnta.tsx"/>
@@ -181,21 +181,6 @@
 </data>
  </layer>
  <objectgroup id="11" name="Colisiones">
-  <object id="1" x="240" y="252">
-   <polygon points="0,0 4,-108 -128,-112 -122,-16"/>
-  </object>
-  <object id="2" x="114" y="354">
-   <polygon points="0,0 -38,-2 -50,-32 -42,-64 -26,-76 -10,-78 8,-58 14,-40 12,-24"/>
-  </object>
-  <object id="5" x="260" y="196" width="62" height="58">
-   <ellipse/>
-  </object>
-  <object id="6" x="804" y="132" width="56" height="66">
-   <ellipse/>
-  </object>
-  <object id="7" x="1216" y="148" width="64" height="82">
-   <ellipse/>
-  </object>
   <object id="8" x="1326" y="126" width="44" height="156"/>
   <object id="9" x="1136" y="452" width="90" height="140"/>
   <object id="10" x="372" y="190" width="86" height="146"/>
@@ -206,42 +191,49 @@
   <object id="15" x="872" y="838" width="578" height="38"/>
   <object id="16" x="1066" y="1160" width="78" height="34"/>
   <object id="17" x="1566" y="270" width="362" height="24"/>
-  <object id="18" x="1918" y="328">
-   <polygon points="0,0 -56,-6 -64,48 -26,56 -26,82 -64,88 -60,112 -30,122 -26,178 -92,184 -98,306 -54,314 -62,506 -100,504 -100,590 -64,598 -60,726 -96,728 -98,778 -132,802 -128,838 -102,860 -96,918 -60,920 -60,944 4,954"/>
-  </object>
-  <object id="19" x="646" y="1282">
-   <polygon points="0,0 -12,-38 -70,-34 -74,-66 -98,-68 -102,-104 -164,-104 -168,-76 -188,-70 -206,-34 -286,-40 -294,-12"/>
-  </object>
-  <object id="20" x="268" y="794" width="48" height="80">
-   <ellipse/>
-  </object>
-  <object id="21" x="638" y="654" width="66" height="88">
-   <ellipse/>
-  </object>
-  <object id="22" x="644" y="1048" width="54" height="82">
-   <ellipse/>
-  </object>
-  <object id="23" x="716" y="1092" width="42" height="60">
-   <ellipse/>
-  </object>
-  <object id="24" x="770" y="1044" width="64" height="82">
-   <ellipse/>
-  </object>
-  <object id="25" x="1618" y="1020" width="38" height="68">
-   <ellipse/>
-  </object>
-  <object id="26" x="1670" y="642" width="54" height="60">
-   <ellipse/>
-  </object>
   <object id="28" x="394" y="728" width="144" height="18"/>
   <object id="29" x="528" y="742" width="14" height="76"/>
   <object id="30" x="392" y="810" width="142" height="14"/>
   <object id="31" x="386" y="732" width="18" height="88"/>
-  <object id="32" x="1832" y="6">
-   <polygon points="0,0 -8,26 -70,20 -74,50 -154,56 -164,26 -200,26 -194,50 -354,56 -354,24 -388,26 -396,64 -646,60 -648,30 -674,28 -682,56 -930,56 -938,26 -964,26 -972,54 -1258,52 -1256,28 -1282,28 -1282,50 -1550,56 -1548,34 -1568,24 -1580,54 -1762,54 -1766,-8"/>
-  </object>
-  <object id="33" x="54" y="2">
-   <polygon points="0,0 -54,-6 -52,1276 12,1278 12,1244 -16,1244 -18,1050 8,1050 8,954 40,956 38,894 8,894 12,792 40,794 38,720 16,728 12,540 -14,534 -20,510 0,512 2,442 -22,438 -18,414 14,414 10,346 -24,350 -14,286 8,280 10,124 -16,122 -16,90 14,90 12,60 -22,58 -20,28 14,26"/>
-  </object>
+  <object id="34" x="814" y="134" width="44" height="56"/>
+  <object id="35" x="1224" y="162" width="38" height="56"/>
+  <object id="36" x="264" y="196" width="42" height="58"/>
+  <object id="37" x="78" y="292" width="36" height="64"/>
+  <object id="38" x="650" y="676" width="40" height="62"/>
+  <object id="39" x="266" y="802" width="42" height="58"/>
+  <object id="40" x="656" y="1056" width="40" height="62"/>
+  <object id="41" x="716" y="1096" width="44" height="58"/>
+  <object id="42" x="780" y="1062" width="44" height="54"/>
+  <object id="43" x="1610" y="1030" width="42" height="52"/>
+  <object id="44" x="1678" y="646" width="40" height="50"/>
+  <object id="45" x="6" y="8" width="1816" height="18"/>
+  <object id="46" x="10" y="30" width="28" height="1250"/>
+  <object id="47" x="1890" y="326" width="30" height="950"/>
+  <object id="48" x="358" y="1246" width="284" height="28"/>
+  <object id="49" x="436" y="1210" width="148" height="32"/>
+  <object id="50" x="476" y="1178" width="74" height="32"/>
+  <object id="51" x="1860" y="322" width="32" height="66"/>
+  <object id="52" x="1860" y="420" width="30" height="26"/>
+  <object id="53" x="1830" y="584" width="60" height="58"/>
+  <object id="54" x="1866" y="654" width="20" height="206"/>
+  <object id="55" x="1866" y="908" width="22" height="212"/>
+  <object id="56" x="1832" y="1056" width="22" height="58"/>
+  <object id="57" x="1826" y="1156" width="58" height="96"/>
+  <object id="58" x="1862" y="1264" width="30" height="22"/>
+  <object id="59" x="68" y="34" width="184" height="32"/>
+  <object id="60" x="292" y="40" width="246" height="26"/>
+  <object id="61" x="586" y="34" width="282" height="26"/>
+  <object id="62" x="908" y="38" width="246" height="24"/>
+  <object id="63" x="1194" y="36" width="246" height="24"/>
+  <object id="64" x="1478" y="30" width="146" height="32"/>
+  <object id="65" x="1668" y="38" width="86" height="28"/>
+  <object id="66" x="46" y="68" width="20" height="30"/>
+  <object id="67" x="44" y="128" width="20" height="162"/>
+  <object id="68" x="40" y="352" width="22" height="70"/>
+  <object id="69" x="46" y="456" width="16" height="62"/>
+  <object id="70" x="48" y="552" width="16" height="216"/>
+  <object id="71" x="40" y="814" width="22" height="228"/>
+  <object id="72" x="42" y="1254" width="22" height="22"/>
+  <object id="73" x="104" y="130" width="136" height="118"/>
  </objectgroup>
 </map>
