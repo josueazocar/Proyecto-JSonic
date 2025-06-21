@@ -95,7 +95,7 @@ public class PantallaDeJuego extends PantallaBase {
         float randomY = MathUtils.random(0, manejadorNivel.getAltoMapaPixels());
         ItemState nuevoEstado = new ItemState(proximoIdItem++, randomX, randomY, tipo);
         ItemVisual nuevoItem = null;
-
+        // Aquí creamos el ítem según su tipo
         switch (tipo) {
             case ANILLO:
                 nuevoItem = new AnillosVisual(nuevoEstado);

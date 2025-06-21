@@ -146,34 +146,36 @@ public Rectangle getBounds() {
         // 2. Process movement input (WASD). This updates the player's position.
         // Position updates occur independently of the current animation,
         // allowing movement while spinning.
+        // Calcula los valores tentativos sin modificar la posición real
         if (Gdx.input.isKeyPressed(Keys.W)) {
-            estado.y += speed;
+            targetY += speed;
             proposedMovementState = EstadoPlayer.UP;
             isMoving = true;
         }
         if (Gdx.input.isKeyPressed(Keys.S)) {
-            estado.y -= speed;
+            targetY -= speed;
             proposedMovementState = EstadoPlayer.DOWN;
             isMoving = true;
         }
-        if (Gdx.input.isKeyPressed(Keys.A)) { // Left
-            estado.x -= speed;
-            lastDirection = EstadoPlayer.LEFT; // Update the last HORIZONTAL direction
+        if (Gdx.input.isKeyPressed(Keys.A)) {
+            targetX -= speed;
+            lastDirection = EstadoPlayer.LEFT;
             proposedMovementState = EstadoPlayer.LEFT;
             isMoving = true;
         }
-        if (Gdx.input.isKeyPressed(Keys.D)) { // Right
-            estado.x += speed;
-            lastDirection = EstadoPlayer.RIGHT; // Update the last HORIZONTAL direction
+        if (Gdx.input.isKeyPressed(Keys.D)) {
+            targetX += speed;
+            lastDirection = EstadoPlayer.RIGHT;
             proposedMovementState = EstadoPlayer.RIGHT;
             isMoving = true;
         }
 
-        // 2. Aplicar el movimiento en el eje X si no hay colisión
-        if (targetX != oldX) { // Solo si hubo intento de movimiento en X
-            if (!checkCollision(targetX, oldY)) { // Chequea colisión solo en X
-                estado.x = targetX;
-            }
+// Aplica el movimiento solo si no hay colisión
+        if (!checkCollision(targetX, estado.y)) {
+            estado.x = targetX;
+        }
+        if (!checkCollision(estado.x, targetY)) {
+            estado.y = targetY;
         }
         // 3. Aplicar el movimiento en el eje Y si no hay colisión
         if (targetY != oldY) { // Solo si hubo intento de movimiento en Y
