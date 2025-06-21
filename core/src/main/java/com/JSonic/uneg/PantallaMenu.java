@@ -30,7 +30,7 @@ public class PantallaMenu extends PantallaBase{
         System.out.println("Inicializando pantalla de menú");
 
         //Logica Imagen de Fondo
-        texturaFondo = new Texture(Gdx.files.internal("assets/Fondos/Sonic-Tails-Knuckles.png"));
+        texturaFondo = new Texture(Gdx.files.internal("Fondos/Sonic-Tails-Knuckles.png"));
 
         Image imagenFondo = new Image(texturaFondo);
         imagenFondo.setSize(mainStage.getWidth(), mainStage.getHeight());
@@ -39,7 +39,7 @@ public class PantallaMenu extends PantallaBase{
 
         //Logica del Boton para Jugar
         ButtonStyle botonEstilo = new ButtonStyle();
-        texturaBotonJugar = new Texture(Gdx.files.internal("assets/Botones/boton_jugar.png"));
+        texturaBotonJugar = new Texture(Gdx.files.internal("Botones/boton_jugar.png"));
 
         TextureRegion botonRegion = new TextureRegion(texturaBotonJugar);
         botonEstilo.up = new TextureRegionDrawable(botonRegion);

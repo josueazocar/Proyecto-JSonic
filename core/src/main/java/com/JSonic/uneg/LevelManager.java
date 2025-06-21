@@ -23,12 +23,27 @@ public class LevelManager {
     private int tileHeight;
     // --- FIN NUEVAS VARIABLES ---
 
+    // --- CAMBIO CLAVE AQUÍ: AÑADIR VARIABLE PARA EL JUGADOR ---
+    private Player player; // <-- Add this line to hold the player instance
+    // --- FIN CAMBIO CLAVE ---
+
     // Constructor que recibe la cámara y el SpriteBatch (aunque el batch no se use directamente aquí para dibujar el mapa)
     public LevelManager(OrthographicCamera camara, SpriteBatch batch) {
         this.camaraJuego = camara;
         this.renderizadorMapa = null;
         this.mapaActual = null;
     }
+
+    // --- NUEVO MÉTODO PARA ESTABLECER EL JUGADOR ---
+    public void setPlayer(Player player) {
+        this.player = player;
+    }
+
+    // --- NUEVO MÉTODO PARA OBTENER EL JUGADOR ---
+    public Player getPlayer() {
+        return player;
+    }
+    // --- FIN NUEVOS MÉTODOS ---
 
     // Método para cargar un nivel (mapa Tiled)
     public void cargarNivel(String rutaMapa) {

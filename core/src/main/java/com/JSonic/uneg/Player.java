@@ -43,7 +43,7 @@ public abstract class Player extends Entity implements Disposable {
             this.estado.x = 100;
             this.estado.y = 100;
         }
-        speed = 4; // Asegúrate de que 'speed' esté declarado en Entity o aquí
+        speed = 6; // Asegúrate de que 'speed' esté declarado en Entity o aquí
         setEstadoActual(EstadoPlayer.IDLE_RIGHT);
     }
 //Para las colisiones

@@ -15,7 +15,10 @@ import com.badlogic.gdx.maps.MapObject; // Importar MapObject
 import com.badlogic.gdx.maps.objects.RectangleMapObject; // Importar RectangleMapObject
 import com.badlogic.gdx.math.Rectangle;
 
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.Iterator;
+
 
 public class PantallaDeJuego extends PantallaBase {
 
@@ -41,10 +44,21 @@ public class PantallaDeJuego extends PantallaBase {
     private static final String BACKGROUND_MUSIC_PATH2 = "SoundsBackground/Dating Fight.mp3";
     private AssetManager assetManager; // Para gestionar assets
 
+
    // Mapa de jugadores remotos
 //para las colisiones
     private ShapeRenderer shapeRenderer;
-    
+
+
+    // --- NUEVAS VARIABLES PARA EL MANEJO DE ENEMIGOS ---
+    private ArrayList<RobotVisual> enemigosEnPantalla;
+    private float tiempoGeneracionEnemigo = 0f;
+    private final float INTERVALO_GENERACION_ENEMIGO = 5.0f;
+    private int proximoIdEnemigo = 0;
+    // --- FIN NUEVAS VARIABLES ---
+
+
+
     // Constructor corregido: solo recibe la referencia a Main
     public PantallaDeJuego(JSonicJuego juego) {
         super();
@@ -70,6 +84,15 @@ public class PantallaDeJuego extends PantallaBase {
         assetManager = new AssetManager();
         soundManager = new SoundManager(assetManager);
 
+        // --- IMPORTANTE: PASAR LA INSTANCIA DE SONIC AL LEVELMANAGER ---
+        manejadorNivel.setPlayer(sonic); // <-- Add this line
+        // --- FIN IMPORTANTE ---
+
+        // --- INICIALIZACIÓN DE ENEMIGOS ---
+        enemigosEnPantalla = new ArrayList<>();
+        crearNuevoEnemigo(200, 300); // Create an initial enemy
+        // --- FIN INICIALIZACIÓN DE ENEMIGOS ---
+
         soundManager.loadMusic(BACKGROUND_MUSIC_PATH2);
 
         // Creamos el cliente de red
@@ -83,6 +106,16 @@ public class PantallaDeJuego extends PantallaBase {
         // NUEVO: Inicializar ShapeRenderer
         shapeRenderer = new ShapeRenderer();
     }
+
+    // --- MÉTODO PARA CREAR ENEMIGOS ---
+    private void crearNuevoEnemigo(float x, float y) {
+        EnemigoState nuevoEstadoEnemigo = new EnemigoState(proximoIdEnemigo++, x, y, 100, EnemigoState.EnemigoType.ROBOT);
+        // Asegúrate de pasar el manejadorNivel al constructor de RobotVisual
+        RobotVisual nuevoRobot = new RobotVisual(nuevoEstadoEnemigo, manejadorNivel);
+        enemigosEnPantalla.add(nuevoRobot);
+        Gdx.app.log("PantallaDeJuego", "Enemigo #" + nuevoEstadoEnemigo.id + " creado en (" + x + ", " + y + ")");
+    }
+    // --- FIN MÉTODO ---
 
     @Override
     public void actualizar(float deltat) {
@@ -105,6 +138,31 @@ public class PantallaDeJuego extends PantallaBase {
             }
         }
 
+
+        // --- ACTUALIZAR Y GENERAR ENEMIGOS ---
+        tiempoGeneracionEnemigo += deltat;
+        if (tiempoGeneracionEnemigo >= INTERVALO_GENERACION_ENEMIGO) {
+            // Spawn enemies relative to Sonic's position
+            float spawnX = sonic.estado.x + (Math.random() > 0.5 ? 400 : -400); // 400 pixels left/right
+            float spawnY = sonic.estado.y + (Math.random() > 0.5 ? 200 : -200); // 200 pixels up/down
+            crearNuevoEnemigo(spawnX, spawnY);
+            tiempoGeneracionEnemigo = 0;
+        }
+
+        Iterator<RobotVisual> iterator = enemigosEnPantalla.iterator();
+        while (iterator.hasNext()) {
+            RobotVisual enemigo = iterator.next();
+            enemigo.update(deltat);
+            // Example: Remove enemy if its health is zero (implement health in EnemigoState if not already)
+            // if (enemigo.estado.vida <= 0) {
+            //     enemigo.dispose(); // Dispose enemy resources
+            //     iterator.remove();
+            // }
+        }
+        // --- FIN ACTUALIZAR Y GENERAR ENEMIGOS ---
+
+
+
         // --- 2. ACTUALIZAR LÓGICA (Lógica recuperada y corregida) ---
         sonic.KeyHandler(); // SOLO el jugador local procesa el teclado
         sonic.update(deltat); // TODOS actualizan su animación
@@ -125,6 +183,72 @@ public class PantallaDeJuego extends PantallaBase {
 
     }
 
+
+// NUEVO RENDER Dentro de PantallaDeJuego.java
+@Override
+public void render(float delta) {
+    super.render(delta);
+
+    if (viewport != null) {
+        viewport.apply();
+    }
+
+    batch.setProjectionMatrix(camaraJuego.combined);
+    manejadorNivel.dibujar();
+
+    batch.begin();
+    sonic.draw(batch);
+    for (Player otro : otrosJugadores.values()) {
+        otro.draw(batch);
+    }
+    for (RobotVisual enemigo : enemigosEnPantalla) {
+        enemigo.draw(batch);
+    }
+    batch.end();
+
+    // --- INICIO DIBUJO DE HITBOXES PARA DEPURACIÓN (ShapeRenderer) ---
+    // Asegúrate de que shapeRenderer se inicialice en inicializar() y se haga dispose() en dispose().
+    if (shapeRenderer != null) {
+        shapeRenderer.setProjectionMatrix(camaraJuego.combined);
+        shapeRenderer.begin(ShapeRenderer.ShapeType.Line);
+        shapeRenderer.setColor(1, 0, 0, 1); // Rojo para el hitbox del jugador local
+
+        // Dibuja el hitbox del jugador local
+        // Asumiendo que sonic.getBounds() existe y devuelve un Rectangle
+        Rectangle playerBounds = sonic.getBounds();
+        shapeRenderer.rect(playerBounds.x, playerBounds.y, playerBounds.width, playerBounds.height);
+
+        // Dibuja los objetos de colisión del mapa
+        shapeRenderer.setColor(0, 1, 0, 1); // Verde para los objetos del mapa
+        if (manejadorNivel != null && manejadorNivel.getCollisionObjects() != null) {
+            for (MapObject object : manejadorNivel.getCollisionObjects()) {
+                if (object instanceof RectangleMapObject) {
+                    Rectangle rectObject = ((RectangleMapObject) object).getRectangle();
+                    shapeRenderer.rect(rectObject.x, rectObject.y, rectObject.width, rectObject.height);
+                }
+            }
+        }
+        shapeRenderer.end();
+    }
+    // --- FIN DIBUJO DE HITBOXES ---
+
+    // Lógica para enviar datos de red
+    if (gameClient != null && sonic != null && sonic.estado != null && sonic.estado.id != 0) {
+        Network.PaquetePosicionJugador paquete = new Network.PaquetePosicionJugador();
+        paquete.id = sonic.estado.id;
+        paquete.x = sonic.estado.x;
+        paquete.y = sonic.estado.y;
+        paquete.estadoAnimacion = sonic.getEstadoActual();
+        if (gameClient.cliente != null && gameClient.cliente.isConnected()) {
+            gameClient.cliente.sendTCP(paquete);
+        }
+    }
+}
+
+
+
+
+/*Antiguo Render:
     @Override
     public void render(float delta) {
 
@@ -193,10 +317,15 @@ public class PantallaDeJuego extends PantallaBase {
             }
         }
 
+        // --- DIBUJAR ENEMIGOS ---
+        for (RobotVisual enemigo : enemigosEnPantalla) {
+            enemigo.draw(batch);
+        }
+        // --- FIN DIBUJAR ENEMIGOS ---
+
 
     }
-
-
+*/
 
     @Override
     public void pause() {
@@ -243,15 +372,23 @@ public class PantallaDeJuego extends PantallaBase {
         if (viewport != null) {
             viewport.update(width, height, true); // Actualiza el viewport específico del juego
         } }
-    @Override public void dispose() {
+    @Override
+    public void dispose() {
         super.dispose();
         manejadorNivel.dispose();
         sonic.dispose();
         if (assetManager != null) {
-            assetManager.dispose(); // Esto liberará la música y cualquier otro asset que hayas cargado con él.
+            assetManager.dispose();
         }
         if (soundManager != null) {
             soundManager.dispose();
+        }
+        // Asegúrate de liberar el ShapeRenderer
+        if (shapeRenderer != null) {
+            shapeRenderer.dispose();
+        }
+        for (RobotVisual enemigo : enemigosEnPantalla) {
+            enemigo.dispose();
         }
     }
 
