@@ -7,6 +7,7 @@ import com.badlogic.gdx.graphics.g2d.Animation;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.graphics.g2d.TextureRegion;
 
+import java.awt.*;
 import java.util.EnumMap;
 
 public class RobotVisual {
@@ -111,9 +112,24 @@ public class RobotVisual {
         }
     }
 
+    // Aquí puedes poner getBounds()
+    public com.badlogic.gdx.math.Rectangle getBounds() {
+        return new com.badlogic.gdx.math.Rectangle(estado.x, estado.y, 48, 48);
+    }
+
     public void update(float deltaTime) {
         tiempoXFrame += deltaTime;
+        //Para la apricion de los robot y las colisiones
+        float nuevaX = estado.x;
+        float nuevaY = estado.y;
 
+
+        //Para verificar colision antes de mover
+        com.badlogic.gdx.math.Rectangle nextBounds = new com.badlogic.gdx.math.Rectangle(nuevaX, nuevaY, 48, 48);//usar el tama;o real del robot
+        if(levelManager != null && !levelManager.colisionaConMapa(nextBounds)){
+            estado.x = nuevaX;
+            estado.y = nuevaY;
+        }
         // Si LevelManager o el jugador no están disponibles, el enemigo se queda inactivo.
         if (levelManager == null || levelManager.getPlayer() == null) {
             if (estado.mirandoDerecha) {

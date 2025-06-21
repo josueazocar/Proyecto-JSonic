@@ -53,6 +53,10 @@ public abstract class ItemVisual {
         return bounds;
     }
 
+    public void onCollect(Player player){
+        //se puede dejar vacio o hacer una logica diferente para cada items
+    }
+
     // Libera la memoria de la hoja de sprites.
     public void dispose() {
         if (spriteSheet != null) {

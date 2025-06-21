@@ -91,25 +91,38 @@ public class PantallaDeJuego extends PantallaBase {
 
     private void spawnItem(ItemState.ItemType tipo) {
         if (manejadorNivel == null || manejadorNivel.getAnchoMapaPixels() == 0) return;
-        float randomX = MathUtils.random(0, manejadorNivel.getAnchoMapaPixels());
-        float randomY = MathUtils.random(0, manejadorNivel.getAltoMapaPixels());
-        ItemState nuevoEstado = new ItemState(proximoIdItem++, randomX, randomY, tipo);
-        ItemVisual nuevoItem = null;
-        // Aquí creamos el ítem según su tipo
-        switch (tipo) {
-            case ANILLO:
-                nuevoItem = new AnillosVisual(nuevoEstado);
-                break;
-            case BASURA:
-                nuevoItem = new BasuraVisual(nuevoEstado);
-                break;
-            case PIEZA_PLASTICO:
-                nuevoItem = new PiezaDePlasticoVisual(nuevoEstado);
-                break;
-        }
 
-        if (nuevoItem != null) {
-            itemsEnPantalla.add(nuevoItem);
+        int intentos = 0;
+        final int MAX_INTENTOS = 20;
+        boolean colocado = false;
+
+        while (!colocado && intentos < MAX_INTENTOS) {
+            float randomX = MathUtils.random(0, manejadorNivel.getAnchoMapaPixels());
+            float randomY = MathUtils.random(0, manejadorNivel.getAltoMapaPixels());
+            Rectangle nuevoBounds = new Rectangle(randomX, randomY, 32, 32); // Ajusta tamaño según el ítem
+
+            boolean superpuesto = false;
+            for (ItemVisual item : itemsEnPantalla) {
+                if (item.getBounds() != null && item.getBounds().overlaps(nuevoBounds)) {
+                    superpuesto = true;
+                    break;
+                }
+            }
+
+            if (!superpuesto && !manejadorNivel.colisionaConMapa(nuevoBounds)) {
+                ItemState nuevoEstado = new ItemState(proximoIdItem++, randomX, randomY, tipo);
+                ItemVisual nuevoItem = null;
+                switch (tipo) {
+                    case ANILLO: nuevoItem = new AnillosVisual(nuevoEstado); break;
+                    case BASURA: nuevoItem = new BasuraVisual(nuevoEstado); break;
+                    case PIEZA_PLASTICO: nuevoItem = new PiezaDePlasticoVisual(nuevoEstado); break;
+                }
+                if (nuevoItem != null) {
+                    itemsEnPantalla.add(nuevoItem);
+                    colocado = true;
+                }
+            }
+            intentos++;
         }
     }
 
@@ -159,6 +172,13 @@ public class PantallaDeJuego extends PantallaBase {
         for (RobotVisual enemigo : enemigosEnPantalla) {
             enemigo.update(deltat);
         }
+        //genera enemigos periodicamente
+        tiempoGeneracionEnemigo += deltat;
+        if(tiempoGeneracionEnemigo >= INTERVALO_GENERACION_ENEMIGO){
+            crearNuevoEnemigo(MathUtils.random(0, manejadorNivel.getAnchoMapaPixels()),
+                MathUtils.random(0, manejadorNivel.getAltoMapaPixels()));
+            tiempoGeneracionEnemigo = 0f;
+        }
 
         // Actualizar cámara
         camaraJuego.position.x = sonic.estado.x;
@@ -188,7 +208,7 @@ public class PantallaDeJuego extends PantallaBase {
         }
         // --- FIN: DIBUJAR ÍTEMS ---
         batch.end();
-
+/*
         // --- DIBUJO DE DEPURACIÓN (MUY RECOMENDADO) ---
         if (shapeRenderer != null) {
             shapeRenderer.setProjectionMatrix(camaraJuego.combined);
@@ -204,28 +224,12 @@ public class PantallaDeJuego extends PantallaBase {
             shapeRenderer.end();
         }
         // --- FIN DIBUJO DEPURACIÓN ---
-
+    */
         // --- Lógica original ---
         if (gameClient != null && sonic != null && sonic.estado != null) { /* ... */ }
     }
 
-    // Tu método dispose original (CON MODIFICACIONES)
-    @Override
-    public void dispose() {
-        super.dispose();
-        manejadorNivel.dispose();
-        sonic.dispose();
-        if (assetManager != null) assetManager.dispose();
-        if (soundManager != null) soundManager.dispose();
-        if (shapeRenderer != null) shapeRenderer.dispose();
-        for (RobotVisual enemigo : enemigosEnPantalla) enemigo.dispose();
 
-        // --- INICIO: LIMPIAR ÍTEMS ---
-        for (ItemVisual item : itemsEnPantalla) {
-            item.dispose();
-        }
-        // --- FIN: LIMPIAR ÍTEMS ---
-    }
 
     @Override
     public void resize(int width, int height) {
@@ -252,11 +256,13 @@ public class PantallaDeJuego extends PantallaBase {
     }
 
     private void crearNuevoEnemigo(float x, float y) {
-        EnemigoState nuevoEstadoEnemigo = new EnemigoState(proximoIdEnemigo++, x, y, 100, EnemigoState.EnemigoType.ROBOT);
-        RobotVisual nuevoRobot = new RobotVisual(nuevoEstadoEnemigo, manejadorNivel);
-        enemigosEnPantalla.add(nuevoRobot);
+        Rectangle bounds = new Rectangle(x, y, 48, 48); // Ajusta el tamaño según el sprite del robot
+        if (!manejadorNivel.colisionaConMapa(bounds)) {
+            EnemigoState nuevoEstadoEnemigo = new EnemigoState(proximoIdEnemigo++, x, y, 100, EnemigoState.EnemigoType.ROBOT);
+            RobotVisual nuevoRobot = new RobotVisual(nuevoEstadoEnemigo, manejadorNivel);
+            enemigosEnPantalla.add(nuevoRobot);
+        }
     }
-
     public void inicializarJugadorLocal(PlayerState estadoRecibido) {
         this.sonic.estado = estadoRecibido;
         System.out.println("[CLIENT] ID asignado por el servidor: " + this.sonic.estado.id);
@@ -282,5 +288,23 @@ public class PantallaDeJuego extends PantallaBase {
             jugador.estado.y = y;
             jugador.setEstadoActual(estadoAnim);
         }
+    }
+
+    // Tu método dispose original (CON MODIFICACIONES)
+    @Override
+    public void dispose() {
+        super.dispose();
+        manejadorNivel.dispose();
+        sonic.dispose();
+        if (assetManager != null) assetManager.dispose();
+        if (soundManager != null) soundManager.dispose();
+        if (shapeRenderer != null) shapeRenderer.dispose();
+        for (RobotVisual enemigo : enemigosEnPantalla) enemigo.dispose();
+
+        // --- INICIO: LIMPIAR ÍTEMS ---
+        for (ItemVisual item : itemsEnPantalla) {
+            item.dispose();
+        }
+        // --- FIN: LIMPIAR ÍTEMS ---
     }
 }

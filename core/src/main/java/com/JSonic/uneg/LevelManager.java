@@ -160,4 +160,18 @@ public class LevelManager {
         return mapaActual.getLayers().get("Colisiones").getObjects();
     }
 
+    public boolean colisionaConMapa(Rectangle bounds) {
+        MapObjects objetosColision = getCollisionObjects();
+        if (objetosColision == null) return false;
+        for (com.badlogic.gdx.maps.MapObject obj : objetosColision) {
+            if (obj instanceof com.badlogic.gdx.maps.objects.RectangleMapObject) {
+                Rectangle rect = ((com.badlogic.gdx.maps.objects.RectangleMapObject) obj).getRectangle();
+                if (rect.overlaps(bounds)) {
+                    return true; // hay colisión
+                }
+            }
+        }
+        return false; // no hay colisión
+    }
+
 }

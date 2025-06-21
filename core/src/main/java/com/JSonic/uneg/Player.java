@@ -9,6 +9,7 @@ import com.badlogic.gdx.math.MathUtils; // Importar para MathUtils.clamp
 import com.badlogic.gdx.math.Rectangle;
 import com.badlogic.gdx.maps.objects.RectangleMapObject;
 import com.badlogic.gdx.maps.MapObject;
+import com.badlogic.gdx.utils.Array;
 
 public abstract class Player extends Entity implements Disposable {
     protected EstadoPlayer lastDirection = EstadoPlayer.IDLE_RIGHT;
@@ -252,6 +253,20 @@ public Rectangle getBounds() {
             }
         }
     }
+
+    //Para que todos los personajes puedan recolectar anillos, basura..
+
+    public void recolectarItems(Array<ItemVisual> items) {
+        Rectangle playerBounds = getBounds();
+        for (int i = items.size - 1; i >= 0; i--) {
+            ItemVisual item = items.get(i);
+            if (playerBounds.overlaps(item.getBounds())) {
+                item.onCollect(this); // Método a definir en ItemVisual
+                items.removeIndex(i);
+            }
+        }
+    }
+
 
     @Override
     public void dispose() {
