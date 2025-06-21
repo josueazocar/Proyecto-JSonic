@@ -23,9 +23,10 @@ public class PantallaMenu extends PantallaBase{
         this.juegoApp = juegoApp;
     }
 
-
+//Tuve que cambiar aqui por show
     @Override
     public void inicializar() {
+
         // Aquí puedes inicializar los elementos de la pantalla de menú, como botones, fondos, etc.
         System.out.println("Inicializando pantalla de menú");
 
