@@ -19,6 +19,9 @@ import com.badlogic.gdx.maps.objects.RectangleMapObject;
 import com.badlogic.gdx.math.Rectangle;
 import java.util.ArrayList;
 import java.util.HashMap;
+import com.badlogic.gdx.scenes.scene2d.ui.Table;
+import com.badlogic.gdx.scenes.scene2d.ui.Image;
+import com.badlogic.gdx.graphics.Texture;
 
 public class PantallaDeJuego extends PantallaBase {
 
@@ -42,6 +45,11 @@ public class PantallaDeJuego extends PantallaBase {
     private float tiempoGeneracionEnemigo = 0f;
     private final float INTERVALO_GENERACION_ENEMIGO = 5.0f;
     private int proximoIdEnemigo = 0;
+    private ContadorUI contadorAnillos;
+    private ContadorUI contadorBasura;
+    private int anillosRecogidos = 0;
+    private int basuraRecogida = 0;
+    private AnillosVisual anilloVisual;
 
     // --- VARIABLES PARA ÍTEMS (AHORA COMPLETAS) ---
     private ArrayList<ItemVisual> itemsEnPantalla = new ArrayList<>();
@@ -85,6 +93,31 @@ public class PantallaDeJuego extends PantallaBase {
         soundManager.playBackgroundMusic(BACKGROUND_MUSIC_PATH2, 0.5f, true);
         assetManager.finishLoading();
         shapeRenderer = new ShapeRenderer();
+
+        // --- INICIO: CONFIGURACIÓN UI ---
+        // La textura para los números es la misma para ambos contadores
+        String numerosTexturaPath = "Fondos/numerosContadorAnillos.png";
+        contadorAnillos = new ContadorUI(numerosTexturaPath);
+        contadorBasura = new ContadorUI(numerosTexturaPath);
+
+        Table tablaUI = new Table();
+        tablaUI.top().right();
+        tablaUI.setFillParent(true);
+        tablaUI.pad(10);
+
+        // Iconos y contadores
+       // Texture anilloIcono = new Texture("Items/anillo.png");
+        anilloVisual = new AnillosVisual(new ItemState(0, 0, 0, ItemState.ItemType.ANILLO));
+        Image anilloIcono = new Image(anilloVisual.animacion.getKeyFrame(0));
+        Texture basuraIcono = new Texture("Items/basura.png");
+
+        tablaUI.add(anilloIcono).size(45, 45);
+        tablaUI.add(contadorAnillos.getTabla()).padLeft(5);
+        tablaUI.add(new Image(basuraIcono)).size(55, 55).padLeft(20);
+        tablaUI.add(contadorBasura.getTabla()).padLeft(5);
+
+        mainStage.addActor(tablaUI);
+        // --- FIN: CONFIGURACIÓN UI ---
     }
 
     private void spawnItem(ItemState.ItemType tipo) {
@@ -175,6 +208,19 @@ public class PantallaDeJuego extends PantallaBase {
             ItemVisual item = iter.next();
             item.update(deltat);
             if (sonic.getBounds() != null && item.getBounds() != null && Intersector.overlaps(sonic.getBounds(), item.getBounds())) {
+                // --- INICIO: LÓGICA DE COLECCIÓN ---
+                switch (item.estado.tipo) {
+                    case ANILLO:
+                        anillosRecogidos++;
+                        contadorAnillos.setValor(anillosRecogidos);
+                        break;
+                    case BASURA:
+                    case PIEZA_PLASTICO:
+                        basuraRecogida++;
+                        contadorBasura.setValor(basuraRecogida);
+                        break;
+                }
+                // --- FIN: LÓGICA DE COLECCIÓN ---
                 iter.remove();
                 item.dispose();
             }
@@ -183,7 +229,7 @@ public class PantallaDeJuego extends PantallaBase {
         // --- LÓGICA DE JUGADOR Y ENEMIGOS ---
         sonic.KeyHandler(); // Esto ahora maneja el movimiento Y la colisión con el mapa
         sonic.update(deltat);
-        
+
         for (Player otro : otrosJugadores.values()) {
             otro.update(deltat);
         }
@@ -204,6 +250,7 @@ public class PantallaDeJuego extends PantallaBase {
         camaraJuego.position.y = sonic.estado.y;
         manejadorNivel.limitarCamaraAMapa(camaraJuego);
         camaraJuego.update();
+        mainStage.act(Math.min(deltat, 1 / 30f));
     }
 
     // El resto de la clase (render, dispose, etc.) se queda igual que la última versión que te dí.
@@ -227,6 +274,11 @@ public class PantallaDeJuego extends PantallaBase {
         }
         // --- FIN: DIBUJAR ÍTEMS ---
         batch.end();
+
+        // --- INICIO: DIBUJAR UI ---
+        mainStage.getViewport().apply();
+        mainStage.draw();
+        // --- FIN: DIBUJAR UI ---
 
         if (gameClient != null && sonic != null && sonic.estado != null && sonic.estado.id != 0) {
             Network.PaquetePosicionJugador paquete = new Network.PaquetePosicionJugador();
@@ -317,5 +369,10 @@ public class PantallaDeJuego extends PantallaBase {
             item.dispose();
         }
         // --- FIN: LIMPIAR ÍTEMS ---
+
+        // --- INICIO: LIMPIAR UI ---
+        if (contadorAnillos != null) contadorAnillos.dispose();
+        if (contadorBasura != null) contadorBasura.dispose();
+        // --- FIN: LIMPIAR UI ---
     }
 }
