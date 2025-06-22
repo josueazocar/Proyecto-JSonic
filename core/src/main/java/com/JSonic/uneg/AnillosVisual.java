@@ -15,13 +15,13 @@ public class AnillosVisual extends ItemVisual {
     @Override
     public void cargarAnimacion() {
         // 1. Cargar la hoja de sprites
-        spriteSheet = new Texture(Gdx.files.internal("Items/anillo.png"));
+        spriteSheet = new Texture(Gdx.files.internal("Items/ring.png"));
 
         // 2. Definir el tamaño de cada frame.
         // Tu imagen tiene 12 anillos. Asumamos que cada uno mide 32x32 píxeles.
         // Si no, ajusta estos valores. AnchoTotal / numFrames = AnchoFrame
         // Ejemplo: si la imagen mide 384px de ancho -> 384 / 12 = 32px por frame.
-         int frameCount = 12;
+         int frameCount = 4;
          int frameWidth = spriteSheet.getWidth() / frameCount;
          int frameHeight = spriteSheet.getHeight();
 
@@ -37,7 +37,7 @@ public class AnillosVisual extends ItemVisual {
         }
 
         // Creamos la animación con una velocidad agradable (puedes ajustar 0.1f)
-        animacion = new Animation<TextureRegion>(0.05f, framesAnimacion);
+        animacion = new Animation<TextureRegion>(0.1f, framesAnimacion);
         animacion.setPlayMode(Animation.PlayMode.LOOP_PINGPONG); // <-- Ping-Pong para que vaya y vuelva suavemente
     }
 }

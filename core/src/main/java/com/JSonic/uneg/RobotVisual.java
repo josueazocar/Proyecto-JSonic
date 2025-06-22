@@ -176,36 +176,38 @@ public class RobotVisual {
         // Paso 2: Si Sonic está fuera del rango de ataque pero DENTRO del rango de detección
         else if (distance > attackRange && distance <= detectionRange) {
             // El enemigo persigue a Sonic.
-            if (dx > 0) { // Si Sonic está a la derecha del enemigo
-                estado.x += speed; // Mueve al enemigo hacia la derecha
-                estado.mirandoDerecha = true; // El enemigo mira a la derecha
-                if (estado.estadoAnimacion != EstadoEnemigo.RUN_RIGHT) {
-                    setEstadoActual(EstadoEnemigo.RUN_RIGHT); // Cambia a animación de correr a la derecha
-                }
-            } else if (dx < 0) { // Si Sonic está a la izquierda del enemigo
-                estado.x -= speed; // Mueve al enemigo hacia la izquierda
-                estado.mirandoDerecha = false; // El enemigo mira a la izquierda
-                if (estado.estadoAnimacion != EstadoEnemigo.RUN_LEFT) {
-                    setEstadoActual(EstadoEnemigo.RUN_LEFT); // Cambia a animación de correr a la izquierda
-                }
-            }else if(dx == 0){
-                estado.mirandoDerecha = false; // El enemigo mira a la izquierda
-                if (estado.estadoAnimacion != EstadoEnemigo.RUN_LEFT) {
-                    setEstadoActual(EstadoEnemigo.RUN_LEFT); // Cambia a animación de correr a la izquierda
-                }
-            } else { // Si Sonic está en la misma X horizontalmente (o muy cerca)
-                // No hay movimiento horizontal, se mantiene la dirección y estado IDLE o RUN
-                if (estado.mirandoDerecha) {
-                    setEstadoActual(EstadoEnemigo.IDLE_RIGHT);
+            // Dentro del else if (distance > attackRange && distance <= detectionRange)
+            float nextX = estado.x;
+            float nextY = estado.y;
+
+            if (dx > 0) nextX += speed;
+            else if (dx < 0) nextX -= speed;
+
+            if (dy > 0) nextY += speed;
+            else if (dy < 0) nextY -= speed;
+
+// 1. Intenta mover en diagonal (X e Y)
+            com.badlogic.gdx.math.Rectangle boundsXY = new com.badlogic.gdx.math.Rectangle(nextX, nextY, 48, 48);
+            if (levelManager != null && !levelManager.colisionaConMapa(boundsXY)) {
+                estado.x = nextX;
+                estado.y = nextY;
+                estado.mirandoDerecha = dx > 0;
+                setEstadoActual(dx > 0 ? EstadoEnemigo.RUN_RIGHT : EstadoEnemigo.RUN_LEFT);
+            } else {
+                // 2. Intenta solo en X
+                com.badlogic.gdx.math.Rectangle boundsX = new com.badlogic.gdx.math.Rectangle(nextX, estado.y, 48, 48);
+                if (levelManager != null && !levelManager.colisionaConMapa(boundsX)) {
+                    estado.x = nextX;
+                    estado.mirandoDerecha = dx > 0;
+                    setEstadoActual(dx > 0 ? EstadoEnemigo.RUN_RIGHT : EstadoEnemigo.RUN_LEFT);
                 } else {
-                    setEstadoActual(EstadoEnemigo.IDLE_LEFT);
+                    // 3. Intenta solo en Y
+                    com.badlogic.gdx.math.Rectangle boundsY = new com.badlogic.gdx.math.Rectangle(estado.x, nextY, 48, 48);
+                    if (levelManager != null && !levelManager.colisionaConMapa(boundsY)) {
+                        estado.y = nextY;
+                    }
+                    // Si tampoco puede en Y, el robot se detiene
                 }
-            }
-            // Ajustar la posición vertical (Y) para seguir a Sonic
-            if (dy > 0) { // Si Sonic está arriba del enemigo
-                estado.y += speed; // Mueve al enemigo hacia arriba
-            } else if (dy < 0) { // Si Sonic está abajo del enemigo
-                estado.y -= speed; // Mueve al enemigo hacia abajo
             }
         }
         // Paso 3: Si Sonic está FUERA del rango de detección
