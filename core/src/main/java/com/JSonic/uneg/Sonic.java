@@ -173,6 +173,7 @@ public class Sonic extends Player {
     public void update(float deltaTime) {
     //Para las colisiones
         bounds.setPosition(estado.x + collisionOffsetX, estado.y + collisionOffsetY);
+
         // Obtenemos la animación que DEBERÍA estar activa según el estado actual
         Animation<TextureRegion> targetAnimation = animations.get(getEstadoActual());
 

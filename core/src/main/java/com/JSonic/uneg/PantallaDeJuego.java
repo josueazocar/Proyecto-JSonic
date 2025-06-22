@@ -80,9 +80,7 @@ public class PantallaDeJuego extends PantallaBase {
         crearNuevoEnemigo(200, 300);
         soundManager.loadMusic(BACKGROUND_MUSIC_PATH2);
 
-        // Si esta línea te da problemas de conexión, coméntala.
-        // Si no, déjala como estaba.
-        //  gameClient = new GameClient(this);
+       gameClient = new GameClient(this);
 
         soundManager.playBackgroundMusic(BACKGROUND_MUSIC_PATH2, 0.5f, true);
         assetManager.finishLoading();
@@ -128,6 +126,23 @@ public class PantallaDeJuego extends PantallaBase {
 
     @Override
     public void actualizar(float deltat) {
+        if (gameClient != null) {
+            while (!gameClient.paquetesRecibidos.isEmpty()) {
+                Object paquete = gameClient.paquetesRecibidos.poll();
+
+                if (paquete instanceof Network.RespuestaAccesoPaquete p) {
+                    if (p.tuEstado != null) inicializarJugadorLocal(p.tuEstado);
+                } else if (paquete instanceof Network.PaqueteJugadorConectado p) {
+                    if (sonicEstado != null && p.nuevoJugador.id != sonicEstado.id) {
+                        agregarOActualizarOtroJugador(p.nuevoJugador);
+                    }
+                } else if (paquete instanceof Network.PaquetePosicionJugador p) {
+                    if (sonicEstado != null && p.id != sonicEstado.id) {
+                        actualizarPosicionOtroJugador(p.id, p.x, p.y, p.estadoAnimacion);
+                    }
+                }
+            }
+        }
         // --- LÓGICA DE SPAWNING (AHORA COMPLETA) ---
         int anillos = 0, basura = 0, plastico = 0;
         for(ItemVisual item : itemsEnPantalla) {
@@ -168,6 +183,10 @@ public class PantallaDeJuego extends PantallaBase {
         // --- LÓGICA DE JUGADOR Y ENEMIGOS ---
         sonic.KeyHandler(); // Esto ahora maneja el movimiento Y la colisión con el mapa
         sonic.update(deltat);
+        
+        for (Player otro : otrosJugadores.values()) {
+            otro.update(deltat);
+        }
 
         for (RobotVisual enemigo : enemigosEnPantalla) {
             enemigo.update(deltat);
@@ -188,7 +207,7 @@ public class PantallaDeJuego extends PantallaBase {
     }
 
     // El resto de la clase (render, dispose, etc.) se queda igual que la última versión que te dí.
-    // Tu método render original (CON MODIFICACIONES)
+    // Tu metodo render original (CON MODIFICACIONES)
     @Override
     public void render(float delta) {
         super.render(delta);
@@ -208,25 +227,17 @@ public class PantallaDeJuego extends PantallaBase {
         }
         // --- FIN: DIBUJAR ÍTEMS ---
         batch.end();
-/*
-        // --- DIBUJO DE DEPURACIÓN (MUY RECOMENDADO) ---
-        if (shapeRenderer != null) {
-            shapeRenderer.setProjectionMatrix(camaraJuego.combined);
-            shapeRenderer.begin(ShapeRenderer.ShapeType.Line);
-            // Dibuja hitbox de sonic
-            shapeRenderer.setColor(1, 0, 0, 1);
-            shapeRenderer.rect(sonic.getBounds().x, sonic.getBounds().y, sonic.getBounds().width, sonic.getBounds().height);
-            // Dibuja hitbox de ítems
-            shapeRenderer.setColor(0, 0, 1, 1);
-            for (ItemVisual item : itemsEnPantalla) {
-                if (item.getBounds() != null) shapeRenderer.rect(item.getBounds().x, item.getBounds().y, item.getBounds().width, item.getBounds().height);
+
+        if (gameClient != null && sonic != null && sonic.estado != null && sonic.estado.id != 0) {
+            Network.PaquetePosicionJugador paquete = new Network.PaquetePosicionJugador();
+            paquete.id = sonic.estado.id;
+            paquete.x = sonic.estado.x;
+            paquete.y = sonic.estado.y;
+            paquete.estadoAnimacion = sonic.getEstadoActual();
+            if (gameClient.cliente != null && gameClient.cliente.isConnected()) {
+                gameClient.cliente.sendTCP(paquete);
             }
-            shapeRenderer.end();
         }
-        // --- FIN DIBUJO DEPURACIÓN ---
-    */
-        // --- Lógica original ---
-        if (gameClient != null && sonic != null && sonic.estado != null) { /* ... */ }
     }
 
 
