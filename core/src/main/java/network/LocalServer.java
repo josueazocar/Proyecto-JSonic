@@ -1,15 +1,10 @@
 package network;
 
 import com.JSonic.uneg.*;
-import com.badlogic.gdx.Gdx;
-import com.badlogic.gdx.graphics.g2d.Animation;
-import com.badlogic.gdx.graphics.g2d.TextureRegion;
 import com.badlogic.gdx.math.MathUtils;
 import com.badlogic.gdx.math.Rectangle;
 import network.interfaces.IGameClient;
 import network.interfaces.IGameServer;
-
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Queue;
 import java.util.concurrent.ConcurrentLinkedQueue;
@@ -39,11 +34,10 @@ public class LocalServer implements IGameServer {
     private float tiempoSpawnAnillo = 0f;
     private float tiempoSpawnBasura = 0f;
     private float tiempoSpawnPlastico = 0f;
-    private final float speed = 1.0f; // Velocidad del robot
-    private final float detectionRange = 300f; // Rango para empezar a perseguir
-    private final float attackRange = 50f; // Rango para atacar (un poco mayor que el tamaño del sprite)
+
     // Cola para paquetes que vienen "desde el cliente" hacia el servidor
     private final Queue<Object> paquetesEntrantes = new ConcurrentLinkedQueue<>();
+
     // Referencia directa al único cliente que existirá en este modo
     private LocalClient clienteLocal;
     private int proximoIdJugador = 1; // En modo local, siempre empezamos en 1
@@ -85,7 +79,6 @@ public class LocalServer implements IGameServer {
      */
     @Override
     public void update(float deltaTime, LevelManager manejadorNivel) {
-        // if (manejadorNivel == null) return;
         // --- 1. PROCESAR PAQUETES DEL CLIENTE ---
         while (!paquetesEntrantes.isEmpty()) {
             Object objeto = paquetesEntrantes.poll();
@@ -231,7 +224,6 @@ public class LocalServer implements IGameServer {
     }
 
     private void spawnNuevoEnemigo(LevelManager manejadorNivel) {
-        // (Esta es tu lógica de 'crearNuevoEnemigo' comentada, ahora en su lugar correcto)
         int intentos = 0;
         boolean colocado = false;
         while (!colocado && intentos < 20) {
@@ -252,7 +244,6 @@ public class LocalServer implements IGameServer {
     }
 
     private void spawnNuevoItem(ItemState.ItemType tipo, LevelManager manejadorNivel) {
-        // (Esta es tu lógica de 'spawnItem' comentada, ahora en su lugar correcto)
         int intentos = 0;
         boolean colocado = false;
         while (!colocado && intentos < 20) {
@@ -302,12 +293,4 @@ public class LocalServer implements IGameServer {
         return this.clienteLocal;
     }
 
-    /**
-     * Permite que la PantallaDeJuego "enseñe" el mapa al servidor local.
-     * @param manejador El LevelManager ya inicializado.
-     */
-//    public void setManejadorNivel(LevelManager manejador) {
-//        this.manejadorNivel = manejador;
-//        System.out.println("[LOCAL SERVER] He recibido el mapa. Ahora puedo ver.");
-//    }
 }

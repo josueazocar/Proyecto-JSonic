@@ -36,7 +36,7 @@ public class GameServer implements IGameServer {
     private static final float ROBOT_SPEED = 1.0f;
     private static final float ROBOT_DETECTION_RANGE = 300f;
     private static final float ROBOT_ATTACK_RANGE = 10f;
-    private static final float DURACION_ANIM_GOLPE = 0.64f;
+
 
 
     public GameServer() {
@@ -208,10 +208,8 @@ public class GameServer implements IGameServer {
             if (jugadorMasCercano == null) {
                 continue;
             }
-            // --- Fin de la lógica del jugador más cercano ---
 
 
-            // El resto del código es IDÉNTICO al que ya probamos, pero usando "jugadorMasCercano".
             float dx = jugadorMasCercano.x - enemigo.x;
             float dy = jugadorMasCercano.y - enemigo.y;
             float distance = distanciaMinima; // Ya la calculamos
@@ -242,8 +240,6 @@ public class GameServer implements IGameServer {
                 if (dx > 0) nextX += ROBOT_SPEED; else if (dx < 0) nextX -= ROBOT_SPEED;
                 if (dy > 0) nextY += ROBOT_SPEED; else if (dy < 0) nextY -= ROBOT_SPEED;
 
-                // Aquí puedes añadir tu lógica de colisión con el mapa si la tienes disponible en el servidor.
-                // Por ahora, actualizamos la posición directamente.
                 enemigo.x = nextX;
                 enemigo.y = nextY;
             }
@@ -252,11 +248,9 @@ public class GameServer implements IGameServer {
     private void updateServerLogic(float deltaTime) {
         actualizarEnemigosAI(deltaTime);
 
-        // --- 2. Generar nuevas entidades (tu código existente) ---
         generarNuevosItems(deltaTime);
         generarNuevosEnemigos(deltaTime);
 
-        // --- 3. Enviar el paquete de actualización ---
         // Creamos un nuevo paquete y le metemos la lista completa de enemigos.
         Network.PaqueteActualizacionEnemigos paqueteUpdate = new Network.PaqueteActualizacionEnemigos();
         paqueteUpdate.estadosEnemigos = this.enemigosActivos;
@@ -289,16 +283,7 @@ public class GameServer implements IGameServer {
 
     private void generarNuevosEnemigos(float deltaTime) {
         tiempoGeneracionEnemigo += deltaTime;
-        // --- ESPÍA #1 ---
-        // Vamos a ver si el cronómetro está avanzando. Descomenta esta línea si quieres ver un log muy verboso.
-         System.out.println("[SERVER_DEBUG] Tiempo para enemigo: " + tiempoGeneracionEnemigo);
-
         if (tiempoGeneracionEnemigo >= INTERVALO_GENERACION_ENEMIGO) {
-
-            // --- ESPÍA #2 ---
-            // Si vemos este mensaje, significa que la condición del tiempo se cumplió.
-            System.out.println("[SERVER_DEBUG] ¡Tiempo cumplido! Intentando generar un enemigo...");
-
             spawnNuevoEnemigo();
             tiempoGeneracionEnemigo = 0f;
         }
@@ -309,20 +294,6 @@ public class GameServer implements IGameServer {
         }
     }
 
-//    private void spawnNuevoEnemigo() {
-//        System.out.println("[SERVER_DEBUG] Dentro de spawnNuevoEnemigo(). Creando paquete...");
-//
-//        float x = (float) (Math.random() * 1920);
-//        float y = (float) (Math.random() * 1280);
-//        EnemigoState nuevoEstado = new EnemigoState(proximoIdEnemigo++, x, y, 100, EnemigoState.EnemigoType.ROBOT);
-//        enemigosActivos.put(nuevoEstado.id, nuevoEstado);
-//
-//        System.out.println("[SERVER] Generando nuevo enemigo con ID: " + nuevoEstado.id); // Log de depuración
-//
-//        Network.PaqueteEnemigoNuevo paquete = new Network.PaqueteEnemigoNuevo();
-//        paquete.estadoEnemigo = nuevoEstado;
-//        servidor.sendToAllTCP(paquete); // Esta es la línea clave que asegura la notificación
-//    }
 
     private void spawnNuevoEnemigo() {
         // Si todavía no hemos recibido el plano del mapa, no generamos nada.
@@ -359,15 +330,6 @@ public class GameServer implements IGameServer {
         }
     }
 
-//    private void spawnNuevoItem(ItemState.ItemType tipo) {
-//        float x = (float) (Math.random() * 1920);
-//        float y = (float) (Math.random() * 1280);
-//        ItemState nuevoEstado = new ItemState(proximoIdItem++, x, y, tipo);
-//        itemsActivos.put(nuevoEstado.id, nuevoEstado);
-//        Network.PaqueteItemNuevo paquete = new Network.PaqueteItemNuevo();
-//        paquete.estadoItem = nuevoEstado;
-//        servidor.sendToAllTCP(paquete);
-//    }
 
     private void spawnNuevoItem(ItemState.ItemType tipo) {
         // Si todavía no hemos recibido el plano del mapa, no generamos nada.
@@ -415,7 +377,7 @@ public class GameServer implements IGameServer {
 
     @Override
     public void update(float deltaTime, com.JSonic.uneg.LevelManager manejadorNivel) {
-        // Correcto: se deja vacío para cumplir la interfaz.
+
     }
 
     @Override

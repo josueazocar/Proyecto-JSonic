@@ -47,13 +47,6 @@ public class GameClient implements IGameClient {
 
        cliente.start(); // El cliente se inicia en un nuevo hilo
 
-//         Intentamos conectarnos al servidor
-//        try {
-//            // "127.0.0.1" es la dirección para conectarse a la misma máquina (localhost)
-//            cliente.connect(5000, "localhost", Network.PORT);
-//        } catch (IOException e) {
-//            e.printStackTrace();
-//        }
     }
 
     @Override

@@ -13,7 +13,7 @@ public class JSonicJuego extends JuegoBase {
 
     // true  -> Inicia en modo multijugador online.
     // false -> Inicia en modo de un jugador offline.
-    public static boolean modoOnline = true;
+    public static boolean modoOnline = false;
 
     public JSonicJuego() {
         super();
@@ -37,14 +37,14 @@ public class JSonicJuego extends JuegoBase {
      */
     public void iniciarJuegoLocal() {
         System.out.println(">>> INICIANDO EN MODO LOCAL (UN JUGADOR)");
-        // 1. Crear el servidor local que manejará la lógica del juego.
+        // Crear el servidor local que manejará la lógica del juego.
         LocalServer server = new LocalServer();
         server.start();
 
-        // 2. Obtener el cliente asociado a ese servidor local.
+        // Obtener el cliente asociado a ese servidor local.
         IGameClient client = server.getClient();
 
-        // 3. Crear la pantalla de juego, inyectando el cliente y servidor locales.
+        // Crear la pantalla de juego, inyectando el cliente y servidor locales.
         setPantallaActiva(new PantallaDeJuego(this, client, server));
     }
 
@@ -54,12 +54,12 @@ public class JSonicJuego extends JuegoBase {
      */
     public void iniciarJuegoOnline() {
         System.out.println(">>> INICIANDO EN MODO ONLINE (MULTIJUGADOR)");
-        // 1. Crear el cliente de red real.
-        // Nota: Le pasamos 'null' a PantallaDeJuego, así que la referencia interna no se usará.
+        // Crear el cliente de red real.
+        //Le pasamos 'null' a PantallaDeJuego, así que la referencia interna no se usará.
         GameClient client = new GameClient(null);
         client.connect("localhost"); // Conecta al servidor en la misma máquina. Cambia "localhost" por una IP si es necesario.
 
-        // 2. Crear la pantalla de juego, inyectando el cliente online y NINGÚN servidor local.
+        // Crear la pantalla de juego, inyectando el cliente online y NINGÚN servidor local.
         setPantallaActiva(new PantallaDeJuego(this, client, null));
     }
 
