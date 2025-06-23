@@ -55,7 +55,11 @@ public class PantallaMenu extends PantallaBase{
                     if (inputEvent.getType().equals(InputEvent.Type.touchDown)) {
                         System.out.println("Botón Jugar presionado");
                         // Aquí puedes cambiar a la pantalla del juego
-                        JSonicJuego.setPantallaActiva(new PantallaDeJuego(juegoApp));
+                        if (JSonicJuego.modoOnline) { // Necesitarás hacer MODO_ONLINE accesible (p.ej. 'public')
+                            juegoApp.iniciarJuegoOnline();
+                        } else {
+                            juegoApp.iniciarJuegoLocal();
+                        }
                         return true; // Indica que el evento fue manejado
                     }
                 }

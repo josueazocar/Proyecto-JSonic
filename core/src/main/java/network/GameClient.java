@@ -5,10 +5,14 @@ import com.JSonic.uneg.PantallaDeJuego;
 import com.esotericsoftware.kryonet.Client;
 import com.esotericsoftware.kryonet.Connection;
 import com.esotericsoftware.kryonet.Listener;
+import network.interfaces.IGameClient;
+
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.io.IOException;
+import java.util.Queue;
+import java.util.concurrent.ConcurrentLinkedQueue;
 
-public class GameClient {
+public class GameClient implements IGameClient {
 
     public Client cliente;
     private final PantallaDeJuego juego;
@@ -41,14 +45,45 @@ public class GameClient {
             }
         });
 
-        cliente.start(); // El cliente se inicia en un nuevo hilo
+       cliente.start(); // El cliente se inicia en un nuevo hilo
 
-        // Intentamos conectarnos al servidor
+//         Intentamos conectarnos al servidor
+//        try {
+//            // "127.0.0.1" es la dirección para conectarse a la misma máquina (localhost)
+//            cliente.connect(5000, "localhost", Network.PORT);
+//        } catch (IOException e) {
+//            e.printStackTrace();
+//        }
+    }
+
+    @Override
+    public void connect(String host) {
         try {
-            // "127.0.0.1" es la dirección para conectarse a la misma máquina (localhost)
-            cliente.connect(5000, "localhost", Network.PORT);
+            // Usamos el 'host' que nos pasan como parámetro.
+            // Para tu código original, el puerto es Network.PORT
+            cliente.connect(5000, host, Network.PORT);
         } catch (IOException e) {
+            // Aquí puedes manejar errores de conexión, como "servidor no encontrado".
             e.printStackTrace();
+        }
+    }
+
+    @Override
+    public void send(Object packet) {
+        if (cliente != null && cliente.isConnected()) {
+            cliente.sendTCP(packet);
+        }
+    }
+
+    @Override
+    public Queue<Object> getPaquetesRecibidos() {
+        return this.paquetesRecibidos;
+    }
+
+    @Override
+    public void dispose() {
+        if(cliente != null) {
+            cliente.close();
         }
     }
 

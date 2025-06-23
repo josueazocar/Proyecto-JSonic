@@ -3,7 +3,6 @@ package com.JSonic.uneg;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Input.Keys;
 import com.badlogic.gdx.graphics.g2d.Animation;
-import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.utils.Disposable;
 import com.badlogic.gdx.math.MathUtils; // Importar para MathUtils.clamp
 import com.badlogic.gdx.math.Rectangle;
@@ -44,7 +43,7 @@ public abstract class Player extends Entity implements Disposable {
             this.estado.x = 100;
             this.estado.y = 100;
         }
-        speed = 6; // Asegúrate de que 'speed' esté declarado en Entity o aquí
+        speed = 2.8F; // Asegúrate de que 'speed' esté declarado en Entity o aquí
         setEstadoActual(EstadoPlayer.IDLE_RIGHT);
     }
 //Para las colisiones

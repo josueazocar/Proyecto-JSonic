@@ -17,20 +17,25 @@ import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 import com.badlogic.gdx.maps.MapObject;
 import com.badlogic.gdx.maps.objects.RectangleMapObject;
 import com.badlogic.gdx.math.Rectangle;
+import network.interfaces.IGameClient;
+import network.interfaces.IGameServer;
+
 import java.util.ArrayList;
 import java.util.HashMap;
 
 public class PantallaDeJuego extends PantallaBase {
 
     // --- VARIABLES ORIGINALES ---
-    public static final float VIRTUAL_WIDTH = 1280;
-    public static final float VIRTUAL_HEIGHT = 720;
+    public static final float VIRTUAL_WIDTH = 900;
+    public static final float VIRTUAL_HEIGHT = 505;
     private OrthographicCamera camaraJuego;
     private Viewport viewport;
     private final JSonicJuego juegoPrincipal;
     private final SpriteBatch batch;
     private LevelManager manejadorNivel;
-    private GameClient gameClient;
+    //private GameClient gameClient;
+    private final IGameClient gameClient;
+    private final IGameServer localServer;
     private Sonic sonic;
     private PlayerState sonicEstado;
     private final HashMap<Integer, Player> otrosJugadores = new HashMap<>();
@@ -38,28 +43,36 @@ public class PantallaDeJuego extends PantallaBase {
     private static final String BACKGROUND_MUSIC_PATH2 = "SoundsBackground/Dating Fight.mp3";
     private AssetManager assetManager;
     private ShapeRenderer shapeRenderer;
-    private ArrayList<RobotVisual> enemigosEnPantalla;
-    private float tiempoGeneracionEnemigo = 0f;
-    private final float INTERVALO_GENERACION_ENEMIGO = 5.0f;
-    private int proximoIdEnemigo = 0;
+    private final HashMap<Integer, RobotVisual> enemigosEnPantalla = new HashMap<>();
+    private final HashMap<Integer, ItemVisual> itemsEnPantalla = new HashMap<>();
+ //  private ArrayList<RobotVisual> enemigosEnPantalla;
+//    private float tiempoGeneracionEnemigo = 0f;
+//    private final float INTERVALO_GENERACION_ENEMIGO = 5.0f;
+//    private int proximoIdEnemigo = 0;
 
     // --- VARIABLES PARA ÍTEMS (AHORA COMPLETAS) ---
-    private ArrayList<ItemVisual> itemsEnPantalla = new ArrayList<>();
-    private int proximoIdItem = 0;
-    private static final int MAX_ANILLOS = 50;
-    private static final int MAX_BASURA = 10;
-    private static final int MAX_PLASTICO = 10;
-    private static final float INTERVALO_SPAWN_ANILLO = 1.0f;
-    private static final float INTERVALO_SPAWN_BASURA = 5.0f;
-    private static final float INTERVALO_SPAWN_PLASTICO = 5.0f;
-    private float tiempoSpawnAnillo = 0f;
-    private float tiempoSpawnBasura = 0f;
-    private float tiempoSpawnPlastico = 0f;
+ // private ArrayList<ItemVisual> itemsEnPantalla = new ArrayList<>();
+//    private int proximoIdItem = 0;
+//    private static final int MAX_ANILLOS = 50;
+//    private static final int MAX_BASURA = 10;
+//    private static final int MAX_PLASTICO = 10;
+//    private static final float INTERVALO_SPAWN_ANILLO = 1.0f;
+//    private static final float INTERVALO_SPAWN_BASURA = 5.0f;
+//    private static final float INTERVALO_SPAWN_PLASTICO = 5.0f;
+//    private float tiempoSpawnAnillo = 0f;
+//    private float tiempoSpawnBasura = 0f;
+//    private float tiempoSpawnPlastico = 0f;
 
-    public PantallaDeJuego(JSonicJuego juego) {
+    public PantallaDeJuego(JSonicJuego juego, IGameClient client, IGameServer server) {
         super();
         this.juegoPrincipal = juego;
         this.batch = juego.batch;
+        this.gameClient = client; // Asignamos el cliente recibido
+        this.localServer = server;  // Asignamos el servidor recibido (puede ser null)
+    }
+
+    public PantallaDeJuego(JSonicJuego juego) {
+        this(juego, null, null); // Llamamos al constructor con nulls si no hay cliente/servidor
     }
 
     @Override
@@ -76,59 +89,71 @@ public class PantallaDeJuego extends PantallaBase {
         assetManager = new AssetManager();
         soundManager = new SoundManager(assetManager);
         manejadorNivel.setPlayer(sonic);
-        enemigosEnPantalla = new ArrayList<>();
-        crearNuevoEnemigo(200, 300);
+       // enemigosEnPantalla = new ArrayList<>();
+        //crearNuevoEnemigo(200, 300);
         soundManager.loadMusic(BACKGROUND_MUSIC_PATH2);
 
-       gameClient = new GameClient(this);
+      // gameClient = new GameClient(this);
 
         soundManager.playBackgroundMusic(BACKGROUND_MUSIC_PATH2, 0.5f, true);
         assetManager.finishLoading();
         shapeRenderer = new ShapeRenderer();
+
+//        if (localServer != null && localServer instanceof network.LocalServer) {
+//            // Hacemos un "cast" para poder usar el metodo que creamos
+//            ((network.LocalServer) localServer).setManejadorNivel(this.manejadorNivel);
+       // }
     }
 
-    private void spawnItem(ItemState.ItemType tipo) {
-        if (manejadorNivel == null || manejadorNivel.getAnchoMapaPixels() == 0) return;
-
-        int intentos = 0;
-        final int MAX_INTENTOS = 20;
-        boolean colocado = false;
-
-        while (!colocado && intentos < MAX_INTENTOS) {
-            float randomX = MathUtils.random(0, manejadorNivel.getAnchoMapaPixels());
-            float randomY = MathUtils.random(0, manejadorNivel.getAltoMapaPixels());
-            Rectangle nuevoBounds = new Rectangle(randomX, randomY, 32, 32); // Ajusta tamaño según el ítem
-
-            boolean superpuesto = false;
-            for (ItemVisual item : itemsEnPantalla) {
-                if (item.getBounds() != null && item.getBounds().overlaps(nuevoBounds)) {
-                    superpuesto = true;
-                    break;
-                }
-            }
-
-            if (!superpuesto && !manejadorNivel.colisionaConMapa(nuevoBounds)) {
-                ItemState nuevoEstado = new ItemState(proximoIdItem++, randomX, randomY, tipo);
-                ItemVisual nuevoItem = null;
-                switch (tipo) {
-                    case ANILLO: nuevoItem = new AnillosVisual(nuevoEstado); break;
-                    case BASURA: nuevoItem = new BasuraVisual(nuevoEstado); break;
-                    case PIEZA_PLASTICO: nuevoItem = new PiezaDePlasticoVisual(nuevoEstado); break;
-                }
-                if (nuevoItem != null) {
-                    itemsEnPantalla.add(nuevoItem);
-                    colocado = true;
-                }
-            }
-            intentos++;
-        }
-    }
+//    private void spawnItem(ItemState.ItemType tipo) {
+//        if (manejadorNivel == null || manejadorNivel.getAnchoMapaPixels() == 0) return;
+//
+//        int intentos = 0;
+//        final int MAX_INTENTOS = 20;
+//        boolean colocado = false;
+//
+//        while (!colocado && intentos < MAX_INTENTOS) {
+//            float randomX = MathUtils.random(0, manejadorNivel.getAnchoMapaPixels());
+//            float randomY = MathUtils.random(0, manejadorNivel.getAltoMapaPixels());
+//            Rectangle nuevoBounds = new Rectangle(randomX, randomY, 32, 32); // Ajusta tamaño según el ítem
+//
+//            boolean superpuesto = false;
+//            for (ItemVisual item : itemsEnPantalla.values()) {
+//                if (item.getBounds() != null && item.getBounds().overlaps(nuevoBounds)) {
+//                    superpuesto = true;
+//                    break;
+//                }
+//            }
+//
+//            if (!superpuesto && !manejadorNivel.colisionaConMapa(nuevoBounds)) {
+//                ItemState nuevoEstado = new ItemState(proximoIdItem++, randomX, randomY, tipo);
+//                ItemVisual nuevoItem = null;
+//                switch (tipo) {
+//                    case ANILLO: nuevoItem = new AnillosVisual(nuevoEstado); break;
+//                    case BASURA: nuevoItem = new BasuraVisual(nuevoEstado); break;
+//                    case PIEZA_PLASTICO: nuevoItem = new PiezaDePlasticoVisual(nuevoEstado); break;
+//                }
+//                if (nuevoItem != null) {
+//                    itemsEnPantalla.add(nuevoItem);
+//                    colocado = true;
+//                }
+//            }
+//            intentos++;
+//        }
+//    }
 
     @Override
     public void actualizar(float deltat) {
+        if (localServer != null) {
+            localServer.update(deltat, this.manejadorNivel);
+        }
+
         if (gameClient != null) {
-            while (!gameClient.paquetesRecibidos.isEmpty()) {
-                Object paquete = gameClient.paquetesRecibidos.poll();
+            while (!gameClient.getPaquetesRecibidos().isEmpty()) {
+                Object paquete = gameClient.getPaquetesRecibidos().poll();
+// === AÑADE ESTA LÍNEA DE DEPURACIÓN ===
+                System.out.println("[CLIENT_DEBUG] Procesando paquete de tipo: " + paquete.getClass().getSimpleName());
+                // =======================================
 
                 if (paquete instanceof Network.RespuestaAccesoPaquete p) {
                     if (p.tuEstado != null) inicializarJugadorLocal(p.tuEstado);
@@ -140,64 +165,110 @@ public class PantallaDeJuego extends PantallaBase {
                     if (sonicEstado != null && p.id != sonicEstado.id) {
                         actualizarPosicionOtroJugador(p.id, p.x, p.y, p.estadoAnimacion);
                     }
+                } else if (paquete instanceof Network.PaqueteEnemigoNuevo p) {
+                    // El servidor nos ordena crear un enemigo
+                    crearEnemigoVisual(p.estadoEnemigo);
+                } else if (paquete instanceof Network.PaqueteItemNuevo p) {
+                    // El servidor nos ordena crear un ítem
+                    crearItemVisual(p.estadoItem);
+                } else if (paquete instanceof Network.PaqueteItemEliminado p) {
+                    // El servidor nos ordena eliminar un ítem
+                    ItemVisual itemEliminado = itemsEnPantalla.remove(p.idItem);
+                    if (itemEliminado != null) {
+                        System.out.println("[CLIENT] Obedeciendo orden de eliminar ítem con ID: " + p.idItem);
+                        itemEliminado.dispose();
+                    }
+                }  else if (paquete instanceof Network.PaqueteActualizacionEnemigos p) {
+                // Recibimos la lista completa de estados de enemigos del servidor
+                for (EnemigoState estadoServidor : p.estadosEnemigos.values()) {
+                    RobotVisual enemigoVisual = enemigosEnPantalla.get(estadoServidor.id);
+                    if (enemigoVisual != null) {
+                        // Actualizamos la posición y el estado del enemigo visual
+                        // para que coincida con lo que dice el servidor.
+                        enemigoVisual.estado.x = estadoServidor.x;
+                        enemigoVisual.estado.y = estadoServidor.y;
+                        enemigoVisual.setEstadoActual(estadoServidor.estadoAnimacion); // Asumiendo que RobotVisual tiene este método
+                    }
                 }
             }
-        }
-        // --- LÓGICA DE SPAWNING (AHORA COMPLETA) ---
-        int anillos = 0, basura = 0, plastico = 0;
-        for(ItemVisual item : itemsEnPantalla) {
-            if(item.estado.tipo == ItemState.ItemType.ANILLO) anillos++;
-            if(item.estado.tipo == ItemState.ItemType.BASURA) basura++;
-            if(item.estado.tipo == ItemState.ItemType.PIEZA_PLASTICO) plastico++;
-        }
 
-        tiempoSpawnAnillo += deltat;
-        if (tiempoSpawnAnillo >= INTERVALO_SPAWN_ANILLO && anillos < MAX_ANILLOS) {
-            spawnItem(ItemState.ItemType.ANILLO);
-            tiempoSpawnAnillo = 0f;
-        }
-
-        tiempoSpawnBasura += deltat;
-        if (tiempoSpawnBasura >= INTERVALO_SPAWN_BASURA && basura < MAX_BASURA) {
-            spawnItem(ItemState.ItemType.BASURA);
-            tiempoSpawnBasura = 0f;
-        }
-
-        tiempoSpawnPlastico += deltat;
-        if (tiempoSpawnPlastico >= INTERVALO_SPAWN_PLASTICO && plastico < MAX_PLASTICO) {
-            spawnItem(ItemState.ItemType.PIEZA_PLASTICO);
-            tiempoSpawnPlastico = 0f;
-        }
-
-        // Actualizar ítems y comprobar colisiones con jugador
-        Iterator<ItemVisual> iter = itemsEnPantalla.iterator();
-        while (iter.hasNext()) {
-            ItemVisual item = iter.next();
-            item.update(deltat);
-            if (sonic.getBounds() != null && item.getBounds() != null && Intersector.overlaps(sonic.getBounds(), item.getBounds())) {
-                iter.remove();
-                item.dispose();
             }
         }
 
-        // --- LÓGICA DE JUGADOR Y ENEMIGOS ---
-        sonic.KeyHandler(); // Esto ahora maneja el movimiento Y la colisión con el mapa
-        sonic.update(deltat);
-        
-        for (Player otro : otrosJugadores.values()) {
-            otro.update(deltat);
+//        if (localServer != null) {
+//            // --- LÓGICA DE SPAWNING (AHORA COMPLETA) ---
+//            int anillos = 0, basura = 0, plastico = 0;
+//            for (ItemVisual item : itemsEnPantalla) {
+//                if (item.estado.tipo == ItemState.ItemType.ANILLO) anillos++;
+//                if (item.estado.tipo == ItemState.ItemType.BASURA) basura++;
+//                if (item.estado.tipo == ItemState.ItemType.PIEZA_PLASTICO) plastico++;
+//            }
+//
+//            tiempoSpawnAnillo += deltat;
+//            if (tiempoSpawnAnillo >= INTERVALO_SPAWN_ANILLO && anillos < MAX_ANILLOS) {
+//                spawnItem(ItemState.ItemType.ANILLO);
+//                tiempoSpawnAnillo = 0f;
+//            }
+//
+//            tiempoSpawnBasura += deltat;
+//            if (tiempoSpawnBasura >= INTERVALO_SPAWN_BASURA && basura < MAX_BASURA) {
+//                spawnItem(ItemState.ItemType.BASURA);
+//                tiempoSpawnBasura = 0f;
+//            }
+//
+//            tiempoSpawnPlastico += deltat;
+//            if (tiempoSpawnPlastico >= INTERVALO_SPAWN_PLASTICO && plastico < MAX_PLASTICO) {
+//                spawnItem(ItemState.ItemType.PIEZA_PLASTICO);
+//                tiempoSpawnPlastico = 0f;
+//            }
+//
+//            //genera enemigos periodicamente
+//            tiempoGeneracionEnemigo += deltat;
+//            if (tiempoGeneracionEnemigo >= INTERVALO_GENERACION_ENEMIGO) {
+//                crearNuevoEnemigo(MathUtils.random(0, manejadorNivel.getAnchoMapaPixels()),
+//                    MathUtils.random(0, manejadorNivel.getAltoMapaPixels()));
+//                tiempoGeneracionEnemigo = 0f;
+//            }
+//        }
+            // Actualizar ítems y comprobar colisiones con jugador
+//            Iterator<ItemVisual> iter = itemsEnPantalla.values().iterator();
+//            while (iter.hasNext()) {
+//                ItemVisual item = iter.next();
+//                item.update(deltat);
+//                if (sonic.getBounds() != null && item.getBounds() != null && Intersector.overlaps(sonic.getBounds(), item.getBounds())) {
+//                    iter.remove();
+//                    item.dispose();
+//                }
+//            }
+// Primero, actualizamos todos los ítems
+        for (ItemVisual item : itemsEnPantalla.values()) {
+            item.update(deltat);
         }
 
-        for (RobotVisual enemigo : enemigosEnPantalla) {
-            enemigo.update(deltat);
+// Luego, en un bucle separado, comprobamos colisiones
+        for (ItemVisual item : itemsEnPantalla.values()) {
+            if (sonic.getBounds() != null && item.getBounds() != null && Intersector.overlaps(sonic.getBounds(), item.getBounds())) {
+                // ¡No lo eliminamos! Enviamos una solicitud al servidor.
+                Network.PaqueteSolicitudRecogerItem paquete = new Network.PaqueteSolicitudRecogerItem();
+                paquete.idItem = item.estado.id;
+                gameClient.send(paquete);
+
+                // Rompemos el bucle para enviar solo una solicitud por fotograma y evitar spam
+                break;
+            }
         }
-        //genera enemigos periodicamente
-        tiempoGeneracionEnemigo += deltat;
-        if(tiempoGeneracionEnemigo >= INTERVALO_GENERACION_ENEMIGO){
-            crearNuevoEnemigo(MathUtils.random(0, manejadorNivel.getAnchoMapaPixels()),
-                MathUtils.random(0, manejadorNivel.getAltoMapaPixels()));
-            tiempoGeneracionEnemigo = 0f;
-        }
+            // --- LÓGICA DE JUGADOR Y ENEMIGOS ---
+            sonic.KeyHandler(); // Esto ahora maneja el movimiento Y la colisión con el mapa
+            sonic.update(deltat);
+
+            for (Player otro : otrosJugadores.values()) {
+                otro.update(deltat);
+            }
+
+//            for (RobotVisual enemigo : enemigosEnPantalla) {
+//                enemigo.update(deltat);
+//            }
+        for (RobotVisual enemigo : enemigosEnPantalla.values()) enemigo.update(deltat);;
 
         // Actualizar cámara
         camaraJuego.position.x = sonic.estado.x;
@@ -219,12 +290,10 @@ public class PantallaDeJuego extends PantallaBase {
         batch.begin();
         sonic.draw(batch);
         for (Player otro : otrosJugadores.values()) otro.draw(batch);
-        for (RobotVisual enemigo : enemigosEnPantalla) enemigo.draw(batch);
+        for (RobotVisual enemigo : enemigosEnPantalla.values()) enemigo.draw(batch);
 
         // --- INICIO: DIBUJAR ÍTEMS ---
-        for (ItemVisual item : itemsEnPantalla) {
-            item.draw(batch);
-        }
+        for (ItemVisual item : itemsEnPantalla.values()) item.draw(batch);
         // --- FIN: DIBUJAR ÍTEMS ---
         batch.end();
 
@@ -234,9 +303,7 @@ public class PantallaDeJuego extends PantallaBase {
             paquete.x = sonic.estado.x;
             paquete.y = sonic.estado.y;
             paquete.estadoAnimacion = sonic.getEstadoActual();
-            if (gameClient.cliente != null && gameClient.cliente.isConnected()) {
-                gameClient.cliente.sendTCP(paquete);
-            }
+            gameClient.send(paquete); // Usa el método de la interfaz
         }
     }
 
@@ -266,19 +333,50 @@ public class PantallaDeJuego extends PantallaBase {
         }
     }
 
-    private void crearNuevoEnemigo(float x, float y) {
-        Rectangle bounds = new Rectangle(x, y, 48, 48); // Ajusta el tamaño según el sprite del robot
-        if (!manejadorNivel.colisionaConMapa(bounds)) {
-            EnemigoState nuevoEstadoEnemigo = new EnemigoState(proximoIdEnemigo++, x, y, 100, EnemigoState.EnemigoType.ROBOT);
-            RobotVisual nuevoRobot = new RobotVisual(nuevoEstadoEnemigo, manejadorNivel);
-            enemigosEnPantalla.add(nuevoRobot);
-        }
-    }
+//    private void crearNuevoEnemigo(float x, float y) {
+//        Rectangle bounds = new Rectangle(x, y, 48, 48); // Ajusta el tamaño según el sprite del robot
+//        if (!manejadorNivel.colisionaConMapa(bounds)) {
+//            EnemigoState nuevoEstadoEnemigo = new EnemigoState(proximoIdEnemigo++, x, y, 100, EnemigoState.EnemigoType.ROBOT);
+//            RobotVisual nuevoRobot = new RobotVisual(nuevoEstadoEnemigo, manejadorNivel);
+//            enemigosEnPantalla.add(nuevoRobot);
+//        }
+//    }
     public void inicializarJugadorLocal(PlayerState estadoRecibido) {
         this.sonic.estado = estadoRecibido;
         System.out.println("[CLIENT] ID asignado por el servidor: " + this.sonic.estado.id);
     }
+    private void crearEnemigoVisual(EnemigoState estadoEnemigo) {
+        // Nos aseguramos de no crear un enemigo que ya exista
+        if (!enemigosEnPantalla.containsKey(estadoEnemigo.id)) {
+            System.out.println("[CLIENT] Recibida orden de crear enemigo con ID: " + estadoEnemigo.id);
+            // Creamos el objeto visual usando el estado que nos dio el servidor
+            RobotVisual nuevoRobot = new RobotVisual(estadoEnemigo, manejadorNivel, this.gameClient);
+            enemigosEnPantalla.put(estadoEnemigo.id, nuevoRobot);
+        }
+    }
 
+    private void crearItemVisual(ItemState estadoItem) {
+        if (!itemsEnPantalla.containsKey(estadoItem.id)) {
+            System.out.println("[CLIENT] Recibida orden de crear ítem tipo " + estadoItem.tipo + " con ID: " + estadoItem.id);
+            ItemVisual nuevoItem = null;
+            // Creamos el tipo de ítem visual correcto según la información del servidor
+            switch (estadoItem.tipo) {
+                case ANILLO:
+                    nuevoItem = new AnillosVisual(estadoItem);
+                    break;
+                case BASURA:
+                    nuevoItem = new BasuraVisual(estadoItem);
+                    break;
+                case PIEZA_PLASTICO:
+                    nuevoItem = new PiezaDePlasticoVisual(estadoItem);
+                    break;
+            }
+
+            if (nuevoItem != null) {
+                itemsEnPantalla.put(estadoItem.id, nuevoItem);
+            }
+        }
+    }
     public void agregarOActualizarOtroJugador(PlayerState estadoRecibido) {
         Player jugadorVisual = otrosJugadores.get(estadoRecibido.id);
         if (jugadorVisual == null) {
@@ -310,10 +408,10 @@ public class PantallaDeJuego extends PantallaBase {
         if (assetManager != null) assetManager.dispose();
         if (soundManager != null) soundManager.dispose();
         if (shapeRenderer != null) shapeRenderer.dispose();
-        for (RobotVisual enemigo : enemigosEnPantalla) enemigo.dispose();
+        for (RobotVisual enemigo : enemigosEnPantalla.values()) enemigo.dispose();
 
-        // --- INICIO: LIMPIAR ÍTEMS ---
-        for (ItemVisual item : itemsEnPantalla) {
+        // --- INICIO: LIMPIAR ÍTEMS ---ss
+        for (ItemVisual item : itemsEnPantalla.values()) {
             item.dispose();
         }
         // --- FIN: LIMPIAR ÍTEMS ---

@@ -8,6 +8,8 @@ public class EnemigoState {
     public EnemigoType tipo;
     public boolean mirandoDerecha; // Para la dirección del sprite y el movimiento
     public EstadoEnemigo estadoAnimacion; // Nuevo: Para controlar la animación del enemigo
+    public float tiempoEnEstado = 0f;
+    public float tiempoDeEnfriamientoAtaque = 0f;
 
     public enum EnemigoType {
         ROBOT,
@@ -21,7 +23,11 @@ public class EnemigoState {
         RUN_LEFT,
         HIT_RIGHT,
         HIT_LEFT,
+        POST_ATAQUE, // Estado después de un ataque
         // Puedes añadir más estados específicos para enemigos si los necesitas
+    }
+
+    public EnemigoState() {
     }
 
     // Constructor para facilitar la inicialización
@@ -33,5 +39,7 @@ public class EnemigoState {
         this.tipo = tipo;
         this.mirandoDerecha = true; // Por defecto mirará a la derecha
         this.estadoAnimacion = EstadoEnemigo.IDLE_RIGHT; // Estado inicial por defecto
+        this.tiempoEnEstado = 0f;
+        this.tiempoDeEnfriamientoAtaque = 0f;
     }
 }
