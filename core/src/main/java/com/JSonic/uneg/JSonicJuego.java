@@ -13,7 +13,7 @@ public class JSonicJuego extends JuegoBase {
 
     // true  -> Inicia en modo multijugador online.
     // false -> Inicia en modo de un jugador offline.
-    public static boolean modoOnline = false;
+    public static boolean modoOnline = true;
 
     public JSonicJuego() {
         super();
@@ -57,7 +57,7 @@ public class JSonicJuego extends JuegoBase {
         // Crear el cliente de red real.
         //Le pasamos 'null' a PantallaDeJuego, así que la referencia interna no se usará.
         GameClient client = new GameClient(null);
-        client.connect("localhost"); // Conecta al servidor en la misma máquina. Cambia "localhost" por una IP si es necesario.
+        client.connect("20.112.50.29"); // Conecta al servidor en la misma máquina. Cambia "localhost" por una IP si es necesario.
 
         // Crear la pantalla de juego, inyectando el cliente online y NINGÚN servidor local.
         setPantallaActiva(new PantallaDeJuego(this, client, null));
