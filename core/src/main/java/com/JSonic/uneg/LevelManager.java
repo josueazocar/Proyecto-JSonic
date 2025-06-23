@@ -152,14 +152,28 @@ public class LevelManager {
         return tileHeight;
     }
 
-    public MapObjects getCollisionObjects() {
-        if (mapaActual == null) {
-            return null;
-        }
-        // Asumiendo que tu capa de colisiones se llama "Colisiones"
-        return mapaActual.getLayers().get("Colisiones").getObjects();
+//    public MapObjects getCollisionObjects() {
+//        if (mapaActual == null) {
+//            return null;
+//        }
+//        // Asumiendo que tu capa de colisiones se llama "Colisiones"
+//        return mapaActual.getLayers().get("Colisiones").getObjects();
+//    }
+
+public MapObjects getCollisionObjects() {
+    if (mapaActual == null) {
+        return null;
+    }
+    // Asumiendo que tu capa de colisiones se llama "Colisiones"
+    com.badlogic.gdx.maps.MapLayer collisionLayer = mapaActual.getLayers().get("Colisiones");
+
+    // Si la capa no existe, devolvemos null y lo manejamos en PantallaDeJuego
+    if (collisionLayer == null) {
+        return null;
     }
 
+    return collisionLayer.getObjects();
+}
     public boolean colisionaConMapa(Rectangle bounds) {
         MapObjects objetosColision = getCollisionObjects();
         if (objetosColision == null) return false;

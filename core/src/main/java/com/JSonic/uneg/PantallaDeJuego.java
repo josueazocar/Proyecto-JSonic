@@ -2,6 +2,7 @@
 package com.JSonic.uneg;
 
 // Imports...
+import com.badlogic.gdx.maps.MapObjects;
 import com.badlogic.gdx.math.Intersector;
 import com.badlogic.gdx.math.MathUtils;
 import java.util.Iterator;
@@ -99,6 +100,7 @@ public class PantallaDeJuego extends PantallaBase {
         assetManager.finishLoading();
         shapeRenderer = new ShapeRenderer();
 
+
 //        if (localServer != null && localServer instanceof network.LocalServer) {
 //            // Hacemos un "cast" para poder usar el metodo que creamos
 //            ((network.LocalServer) localServer).setManejadorNivel(this.manejadorNivel);
@@ -155,9 +157,34 @@ public class PantallaDeJuego extends PantallaBase {
                 System.out.println("[CLIENT_DEBUG] Procesando paquete de tipo: " + paquete.getClass().getSimpleName());
                 // =======================================
 
+//                if (paquete instanceof Network.RespuestaAccesoPaquete p) {
+//                    if (p.tuEstado != null) inicializarJugadorLocal(p.tuEstado); }
                 if (paquete instanceof Network.RespuestaAccesoPaquete p) {
-                    if (p.tuEstado != null) inicializarJugadorLocal(p.tuEstado);
-                } else if (paquete instanceof Network.PaqueteJugadorConectado p) {
+                    if (p.tuEstado != null) {
+                        inicializarJugadorLocal(p.tuEstado);
+
+                        // Ahora que sabemos que el servidor nos ha aceptado,
+                        // es el momento perfecto para enviarle el plano del mapa.
+                        System.out.println("[CLIENT] Conexión aceptada. Extrayendo y enviando plano del mapa...");
+
+                        java.util.ArrayList<Rectangle> paredes = new java.util.ArrayList<>();
+                        MapObjects objetosColision = manejadorNivel.getCollisionObjects();
+
+                        if (objetosColision != null) {
+                            for (com.badlogic.gdx.maps.MapObject obj : objetosColision) {
+                                if (obj instanceof com.badlogic.gdx.maps.objects.RectangleMapObject) {
+                                    paredes.add(((com.badlogic.gdx.maps.objects.RectangleMapObject) obj).getRectangle());
+                                }
+                            }
+                        }
+
+                        Network.PaqueteInformacionMapa paqueteMapa = new Network.PaqueteInformacionMapa();
+                        paqueteMapa.paredes = paredes;
+                        gameClient.send(paqueteMapa);
+                        System.out.println("[CLIENT] Plano del mapa con " + paredes.size() + " paredes enviado.");
+                    }
+                }
+                else if (paquete instanceof Network.PaqueteJugadorConectado p) {
                     if (sonicEstado != null && p.nuevoJugador.id != sonicEstado.id) {
                         agregarOActualizarOtroJugador(p.nuevoJugador);
                     }

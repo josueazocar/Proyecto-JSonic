@@ -38,6 +38,10 @@ public class Network {
         kryo.register(PaqueteSolicitudRecogerItem.class);
         kryo.register(PaqueteItemEliminado.class);
         kryo.register(PaqueteAnimacionEnemigoTerminada.class);
+
+        kryo.register(PaqueteInformacionMapa.class);
+        kryo.register(java.util.ArrayList.class);
+        kryo.register(com.badlogic.gdx.math.Rectangle.class);
     }
 
     // --- Definición de los Paquetes ---
@@ -89,6 +93,9 @@ public class Network {
     // Paquete enviado por el cliente al servidor cuando un enemigo termina una animación clave.
     public static class PaqueteAnimacionEnemigoTerminada {
         public int idEnemigo;
+    }
+    public static class PaqueteInformacionMapa {
+        public java.util.ArrayList<com.badlogic.gdx.math.Rectangle> paredes;
     }
 }
 

@@ -8,15 +8,16 @@ import network.interfaces.IGameServer;
 
 import java.io.IOException;
 import java.util.HashMap;
+import java.util.ArrayList;
 
 public class GameServer implements IGameServer {
 
     private final Server servidor;
-    private LevelManager manejadorNivel;
     // --- ALMACENES DE ESTADO ---
     private final HashMap<Integer, PlayerState> jugadores = new HashMap<>();
     private final HashMap<Integer, EnemigoState> enemigosActivos = new HashMap<>();
     private final HashMap<Integer, ItemState> itemsActivos = new HashMap<>();
+    private volatile ArrayList<com.badlogic.gdx.math.Rectangle> paredesDelMapa = null;
 
     // --- VARIABLES DE CONTROL DE SPAWNING ---
     private int proximoIdEnemigo = 0;
@@ -127,6 +128,14 @@ public class GameServer implements IGameServer {
                         enemigo.tiempoEnEstado = 0;
                     }
                 }
+                if (objeto instanceof Network.PaqueteInformacionMapa paquete) {
+                    // El primer cliente que se conecta nos envía el plano del mapa.
+                    // Solo lo guardamos si aún no lo tenemos.
+                    if (paredesDelMapa == null) {
+                        paredesDelMapa = paquete.paredes;
+                        System.out.println("[SERVER] Plano del mapa recibido con " + paredesDelMapa.size() + " paredes. ¡Ahora puedo ver las paredes!");
+                    }
+                }
             }
 
             public void disconnected(Connection conexion) {
@@ -144,6 +153,23 @@ public class GameServer implements IGameServer {
         servidor.start();
 
         new Thread(() -> {
+            System.out.println("[SERVER] Hilo de juego iniciado. Esperando el plano del mapa del primer cliente...");
+
+            // Este bucle se ejecutará hasta que la variable 'paredesDelMapa' sea llenada
+            // por el paquete que envía el primer cliente.
+            while (paredesDelMapa == null) {
+                try {
+                    // Esperamos un corto tiempo para no consumir 100% de la CPU mientras esperamos.
+                    Thread.sleep(100);
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                    Thread.currentThread().interrupt();
+                    return; // Salimos del hilo si es interrumpido.
+                }
+            }
+
+            System.out.println("[SERVER] ¡Plano del mapa detectado! Iniciando bucle de juego principal.");
+
             final float FIXED_DELTA_TIME = 1 / 60f;
             while (true) {
                 try {
@@ -283,29 +309,108 @@ public class GameServer implements IGameServer {
         }
     }
 
+//    private void spawnNuevoEnemigo() {
+//        System.out.println("[SERVER_DEBUG] Dentro de spawnNuevoEnemigo(). Creando paquete...");
+//
+//        float x = (float) (Math.random() * 1920);
+//        float y = (float) (Math.random() * 1280);
+//        EnemigoState nuevoEstado = new EnemigoState(proximoIdEnemigo++, x, y, 100, EnemigoState.EnemigoType.ROBOT);
+//        enemigosActivos.put(nuevoEstado.id, nuevoEstado);
+//
+//        System.out.println("[SERVER] Generando nuevo enemigo con ID: " + nuevoEstado.id); // Log de depuración
+//
+//        Network.PaqueteEnemigoNuevo paquete = new Network.PaqueteEnemigoNuevo();
+//        paquete.estadoEnemigo = nuevoEstado;
+//        servidor.sendToAllTCP(paquete); // Esta es la línea clave que asegura la notificación
+//    }
+
     private void spawnNuevoEnemigo() {
-        System.out.println("[SERVER_DEBUG] Dentro de spawnNuevoEnemigo(). Creando paquete...");
+        // Si todavía no hemos recibido el plano del mapa, no generamos nada.
+        if (paredesDelMapa == null) {
+            System.out.println("[SERVER] Aún no tengo el plano del mapa, no puedo generar enemigos.");
+            return;
+        }
 
-        float x = (float) (Math.random() * 1920);
-        float y = (float) (Math.random() * 1280);
-        EnemigoState nuevoEstado = new EnemigoState(proximoIdEnemigo++, x, y, 100, EnemigoState.EnemigoType.ROBOT);
-        enemigosActivos.put(nuevoEstado.id, nuevoEstado);
+        int intentos = 0;
+        boolean colocado = false;
+        while (!colocado && intentos < 20) { // Hacemos hasta 20 intentos para encontrar un lugar libre
+            float x = (float) (Math.random() * 1920);
+            float y = (float) (Math.random() * 1280);
+            com.badlogic.gdx.math.Rectangle bounds = new com.badlogic.gdx.math.Rectangle(x, y, 48, 48);
 
-        System.out.println("[SERVER] Generando nuevo enemigo con ID: " + nuevoEstado.id); // Log de depuración
+            // Comprobamos si la nueva posición choca con alguna pared
+            boolean hayColision = false;
+            for (com.badlogic.gdx.math.Rectangle pared : paredesDelMapa) {
+                if (pared.overlaps(bounds)) {
+                    hayColision = true;
+                    break;
+                }
+            }
 
-        Network.PaqueteEnemigoNuevo paquete = new Network.PaqueteEnemigoNuevo();
-        paquete.estadoEnemigo = nuevoEstado;
-        servidor.sendToAllTCP(paquete); // Esta es la línea clave que asegura la notificación
+            if (!hayColision) {
+                EnemigoState nuevoEstado = new EnemigoState(proximoIdEnemigo++, bounds.x, bounds.y, 100, EnemigoState.EnemigoType.ROBOT);
+                enemigosActivos.put(nuevoEstado.id, nuevoEstado);
+                Network.PaqueteEnemigoNuevo paquete = new Network.PaqueteEnemigoNuevo();
+                paquete.estadoEnemigo = nuevoEstado;
+                servidor.sendToAllTCP(paquete);
+                colocado = true;
+            }
+            intentos++;
+        }
     }
 
+//    private void spawnNuevoItem(ItemState.ItemType tipo) {
+//        float x = (float) (Math.random() * 1920);
+//        float y = (float) (Math.random() * 1280);
+//        ItemState nuevoEstado = new ItemState(proximoIdItem++, x, y, tipo);
+//        itemsActivos.put(nuevoEstado.id, nuevoEstado);
+//        Network.PaqueteItemNuevo paquete = new Network.PaqueteItemNuevo();
+//        paquete.estadoItem = nuevoEstado;
+//        servidor.sendToAllTCP(paquete);
+//    }
+
     private void spawnNuevoItem(ItemState.ItemType tipo) {
-        float x = (float) (Math.random() * 1920);
-        float y = (float) (Math.random() * 1280);
-        ItemState nuevoEstado = new ItemState(proximoIdItem++, x, y, tipo);
-        itemsActivos.put(nuevoEstado.id, nuevoEstado);
-        Network.PaqueteItemNuevo paquete = new Network.PaqueteItemNuevo();
-        paquete.estadoItem = nuevoEstado;
-        servidor.sendToAllTCP(paquete);
+        // Si todavía no hemos recibido el plano del mapa, no generamos nada.
+        if (paredesDelMapa == null) {
+            System.out.println("[SERVER] Aún no tengo el plano del mapa, no puedo generar ítems.");
+            return;
+        }
+
+        int intentos = 0;
+        boolean colocado = false;
+        while (!colocado && intentos < 20) {
+            float x = (float) (Math.random() * 1920);
+            float y = (float) (Math.random() * 1280);
+            com.badlogic.gdx.math.Rectangle nuevoBounds = new com.badlogic.gdx.math.Rectangle(x, y, 32, 32);
+
+            // Comprobamos si la nueva posición choca con alguna pared O con otro ítem
+            boolean hayColision = false;
+            for (com.badlogic.gdx.math.Rectangle pared : paredesDelMapa) {
+                if (pared.overlaps(nuevoBounds)) {
+                    hayColision = true;
+                    break;
+                }
+            }
+            // Añadimos la comprobación de superposición con otros ítems
+            if (!hayColision) {
+                for (ItemState itemExistente : itemsActivos.values()) {
+                    if (new com.badlogic.gdx.math.Rectangle(itemExistente.x, itemExistente.y, 32, 32).overlaps(nuevoBounds)) {
+                        hayColision = true;
+                        break;
+                    }
+                }
+            }
+
+            if (!hayColision) {
+                ItemState nuevoEstado = new ItemState(proximoIdItem++, nuevoBounds.x, nuevoBounds.y, tipo);
+                itemsActivos.put(nuevoEstado.id, nuevoEstado);
+                Network.PaqueteItemNuevo paquete = new Network.PaqueteItemNuevo();
+                paquete.estadoItem = nuevoEstado;
+                servidor.sendToAllTCP(paquete);
+                colocado = true;
+            }
+            intentos++;
+        }
     }
 
     @Override
@@ -319,15 +424,5 @@ public class GameServer implements IGameServer {
             servidor.close();
             System.out.println("[SERVER] Servidor detenido.");
         }
-    }
-
-    /**
-     * Permite que el contexto que crea el servidor (como la PantallaDeJuego)
-     * le entregue el mapa para que pueda realizar comprobaciones de colisión.
-     * @param manejador El LevelManager ya inicializado del juego.
-     */
-    public void setManejadorNivel(LevelManager manejador) {
-        this.manejadorNivel = manejador;
-        System.out.println("[SERVER] Mapa recibido. Ahora puedo ver las colisiones.");
     }
 }
