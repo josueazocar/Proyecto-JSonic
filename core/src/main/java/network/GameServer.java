@@ -1,109 +1,390 @@
 package network;
 
-import com.JSonic.uneg.Entity;
-import com.JSonic.uneg.Player;
-import com.JSonic.uneg.PlayerState;
-import com.JSonic.uneg.Sonic;
+import com.JSonic.uneg.*;
 import com.esotericsoftware.kryonet.Connection;
 import com.esotericsoftware.kryonet.Listener;
 import com.esotericsoftware.kryonet.Server;
+import network.interfaces.IGameServer;
 
 import java.io.IOException;
 import java.util.HashMap;
+import java.util.ArrayList;
 
-public class GameServer {
+public class GameServer implements IGameServer {
 
     private final Server servidor;
-    // Este mapa guardará a cada jugador, usando el ID de su conexión como clave.
+    // --- ALMACENES DE ESTADO ---
     private final HashMap<Integer, PlayerState> jugadores = new HashMap<>();
+    private final HashMap<Integer, EnemigoState> enemigosActivos = new HashMap<>();
+    private final HashMap<Integer, ItemState> itemsActivos = new HashMap<>();
+    private volatile ArrayList<com.badlogic.gdx.math.Rectangle> paredesDelMapa = null;
 
-    public GameServer() throws IOException {
+    // --- VARIABLES DE CONTROL DE SPAWNING ---
+    private int proximoIdEnemigo = 0;
+    private int proximoIdItem = 0;
+    private float tiempoGeneracionEnemigo = 0f;
+    private final float INTERVALO_GENERACION_ENEMIGO = 5.0f;
+    private static final int MAX_ANILLOS = 50;
+    private static final int MAX_BASURA = 10;
+    private static final int MAX_PLASTICO = 10;
+    private static final float INTERVALO_SPAWN_ANILLO = 1.0f;
+    private static final float INTERVALO_SPAWN_BASURA = 5.0f;
+    private static final float INTERVALO_SPAWN_PLASTICO = 5.0f;
+    private float tiempoSpawnAnillo = 0f;
+    private float tiempoSpawnBasura = 0f;
+    private float tiempoSpawnPlastico = 0f;
+    private static final float ROBOT_SPEED = 1.0f;
+    private static final float ROBOT_DETECTION_RANGE = 300f;
+    private static final float ROBOT_ATTACK_RANGE = 10f;
+
+
+
+    public GameServer() {
         servidor = new Server();
+    }
 
-        // Registramos las clases que vamos a usar en la red
+    @Override
+    public void start() {
         Network.registrar(servidor);
-
-        // Añadimos un "Listener" para reaccionar a eventos de red
         servidor.addListener(new Listener() {
-            // Este metodo se ejecuta cuando un nuevo cliente se conecta
             public void connected(Connection conexion) {
                 System.out.println("[SERVER] Un cliente se ha conectado: ID " + conexion.getID());
-
-                // Crear el ESTADO para el nuevo jugador.
                 PlayerState nuevoEstado = new PlayerState();
                 nuevoEstado.id = conexion.getID();
-                nuevoEstado.x = 100; // Posición inicial X
-                nuevoEstado.y = 100; // Posición inicial Y
+                nuevoEstado.x = 100;
+                nuevoEstado.y = 100;
                 nuevoEstado.estadoAnimacion = Player.EstadoPlayer.IDLE_RIGHT;
-
-                // Ahora, en cuanto se conecte, su ficha ya está en el archivador.
                 jugadores.put(conexion.getID(), nuevoEstado);
 
                 Network.PaqueteJugadorConectado packetNuevoJugador = new Network.PaqueteJugadorConectado();
                 packetNuevoJugador.nuevoJugador = nuevoEstado;
                 servidor.sendToAllExceptTCP(conexion.getID(), packetNuevoJugador);
 
-                // Enviar al NUEVO jugador la lista de los que YA estaban conectados.
                 for (PlayerState jugadorExistente : jugadores.values()) {
-                    // Nos aseguramos de no enviarle al nuevo jugador su propio estado en esta lista.
                     if (jugadorExistente.id != conexion.getID()) {
                         Network.PaqueteJugadorConectado packetJugadorExistente = new Network.PaqueteJugadorConectado();
                         packetJugadorExistente.nuevoJugador = jugadorExistente;
                         conexion.sendTCP(packetJugadorExistente);
                     }
                 }
+
+                // Sincronizar ítems y enemigos existentes al nuevo cliente
+                for (ItemState itemExistente : itemsActivos.values()) {
+                    Network.PaqueteItemNuevo paqueteItem = new Network.PaqueteItemNuevo();
+                    paqueteItem.estadoItem = itemExistente;
+                    conexion.sendTCP(paqueteItem);
+                }
+                for (EnemigoState enemigoExistente : enemigosActivos.values()) {
+                    Network.PaqueteEnemigoNuevo paqueteEnemigo = new Network.PaqueteEnemigoNuevo();
+                    paqueteEnemigo.estadoEnemigo = enemigoExistente;
+                    conexion.sendTCP(paqueteEnemigo);
+                }
             }
 
-            // Este metodo se ejecuta cuando recibimos un paquete de un cliente
             public void received(Connection conexion, Object objeto) {
-
                 if (objeto instanceof Network.PaquetePosicionJugador paquete) {
-
-                    // Actualizamos el estado del jugador en el mapa del servidor
                     PlayerState estadoJugador = jugadores.get(paquete.id);
                     if (estadoJugador != null) {
                         estadoJugador.x = paquete.x;
                         estadoJugador.y = paquete.y;
-
-                        // Actualizamos también el estado de la animación en el servidor
                         estadoJugador.estadoAnimacion = paquete.estadoAnimacion;
-
-                        // Retransmitimos la posición a todos los demás
                         servidor.sendToAllExceptTCP(conexion.getID(), paquete);
                     }
                 }
-                // Comprobamos si el paquete recibido es una petición de login
                 if (objeto instanceof Network.SolicitudAccesoPaquete solicitud) {
                     System.out.println("[SERVER] Peticion de login recibida de: " + solicitud.nombreJugador);
-
-                    // Preparamos una respuesta para el cliente
                     Network.RespuestaAccesoPaquete respuesta = new Network.RespuestaAccesoPaquete();
                     respuesta.mensajeRespuesta = "Bienvenido al servidor, " + solicitud.nombreJugador + "!";
                     PlayerState estadoAsignado = jugadores.get(conexion.getID());
                     respuesta.tuEstado = estadoAsignado;
-                    // Enviamos la respuesta solo a ese cliente
                     conexion.sendTCP(respuesta);
                 }
+                if (objeto instanceof Network.PaqueteSolicitudRecogerItem paquete) {
+                    // Un cliente solicita recoger un ítem. Verificamos si todavía existe.
+                    // Usamos 'synchronized' para evitar que dos jugadores recojan el mismo ítem a la vez.
+                    synchronized (itemsActivos) {
+                        ItemState itemRecogido = itemsActivos.remove(paquete.idItem);
 
+                        if (itemRecogido != null) {
+                            // El ítem existía. Lo hemos eliminado de nuestra lista maestra.
+                            System.out.println("[SERVER] Ítem con ID" +
+                                " " + paquete.idItem + " recogido por jugador " + conexion.getID() + ". Notificando a todos.");
+
+                            // Creamos el paquete de confirmación.
+                            Network.PaqueteItemEliminado paqueteEliminado = new Network.PaqueteItemEliminado();
+                            paqueteEliminado.idItem = paquete.idItem;
+
+                            // ¡Enviamos la orden de eliminación a TODOS los clientes!
+                            servidor.sendToAllTCP(paqueteEliminado);
+                        }
+                    }
+                }
+                if (objeto instanceof Network.PaqueteAnimacionEnemigoTerminada paquete) {
+                    // Un cliente nos informa que la animación de un enemigo terminó.
+                    EnemigoState enemigo = enemigosActivos.get(paquete.idEnemigo);
+                    if (enemigo != null) {
+                        // Ponemos al enemigo en el estado especial para que la IA lo reevalúe.
+                        enemigo.estadoAnimacion = EnemigoState.EstadoEnemigo.POST_ATAQUE;
+                        enemigo.tiempoEnEstado = 0;
+                    }
+                }
+                if (objeto instanceof Network.PaqueteInformacionMapa paquete) {
+                    // El primer cliente que se conecta nos envía el plano del mapa.
+                    // Solo lo guardamos si aún no lo tenemos.
+                    if (paredesDelMapa == null) {
+                        paredesDelMapa = paquete.paredes;
+                        System.out.println("[SERVER] Plano del mapa recibido con " + paredesDelMapa.size() + " paredes. ¡Ahora puedo ver las paredes!");
+                    }
+                }
             }
 
-            // Este metodo se ejecuta cuando un cliente se desconecta
             public void disconnected(Connection conexion) {
                 System.out.println("[SERVER] Un cliente se ha desconectado.");
-                // Eliminamos al jugador del mapa cuando se desconecta
                 jugadores.remove(conexion.getID());
             }
         });
 
-        // Vinculamos el servidor al puerto y lo iniciamos
-        servidor.bind(Network.PORT);
-        servidor.start(); // El servidor se inicia en un nuevo hilo automáticamente
+        try {
+            servidor.bind(Network.PORT);
+        } catch (IOException e) {
+            e.printStackTrace();
+            return;
+        }
+        servidor.start();
 
-        System.out.println("[SERVER] Servidor iniciado y escuchando en el puerto " + Network.PORT);
+        new Thread(() -> {
+            System.out.println("[SERVER] Hilo de juego iniciado. Esperando el plano del mapa del primer cliente...");
+
+            // Este bucle se ejecutará hasta que la variable 'paredesDelMapa' sea llenada
+            // por el paquete que envía el primer cliente.
+            while (paredesDelMapa == null) {
+                try {
+                    // Esperamos un corto tiempo para no consumir 100% de la CPU mientras esperamos.
+                    Thread.sleep(100);
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                    Thread.currentThread().interrupt();
+                    return; // Salimos del hilo si es interrumpido.
+                }
+            }
+
+            System.out.println("[SERVER] ¡Plano del mapa detectado! Iniciando bucle de juego principal.");
+
+            final float FIXED_DELTA_TIME = 1 / 60f;
+            while (true) {
+                try {
+                    updateServerLogic(FIXED_DELTA_TIME);
+                    Thread.sleep((long) (FIXED_DELTA_TIME * 1000));
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                    Thread.currentThread().interrupt();
+                }
+            }
+        }).start();
+
+        System.out.println("[SERVER] Servidor online iniciado y escuchando en el puerto " + Network.PORT);
+    }
+    private void actualizarEnemigosAI(float deltaTime) {
+        // Si no hay jugadores conectados, no hay nada que hacer.
+        if (jugadores.isEmpty()) {
+            return;
+        }
+
+        for (EnemigoState enemigo : enemigosActivos.values()) {
+
+            // --- Lógica para encontrar al jugador más cercano ---
+            PlayerState jugadorMasCercano = null;
+            float distanciaMinima = Float.MAX_VALUE;
+
+            for (PlayerState jugador : jugadores.values()) {
+                float d = (float) Math.sqrt(Math.pow(jugador.x - enemigo.x, 2) + Math.pow(jugador.y - enemigo.y, 2));
+                if (d < distanciaMinima) {
+                    distanciaMinima = d;
+                    jugadorMasCercano = jugador;
+                }
+            }
+
+            // Si por alguna razón no encontramos a nadie, saltamos a la siguiente iteración.
+            if (jugadorMasCercano == null) {
+                continue;
+            }
+
+
+            float dx = jugadorMasCercano.x - enemigo.x;
+            float dy = jugadorMasCercano.y - enemigo.y;
+            float distance = distanciaMinima; // Ya la calculamos
+
+            if (enemigo.estadoAnimacion == EnemigoState.EstadoEnemigo.HIT_RIGHT || enemigo.estadoAnimacion == EnemigoState.EstadoEnemigo.HIT_LEFT) {
+                continue;
+            }
+
+            EnemigoState.EstadoEnemigo estadoAnterior = enemigo.estadoAnimacion;
+
+            if (distance <= ROBOT_ATTACK_RANGE) {
+                enemigo.estadoAnimacion = dx > 0 ? EnemigoState.EstadoEnemigo.HIT_RIGHT : EnemigoState.EstadoEnemigo.HIT_LEFT;
+            } else if (distance <= ROBOT_DETECTION_RANGE) {
+                enemigo.mirandoDerecha = dx > 0;
+                enemigo.estadoAnimacion = enemigo.mirandoDerecha ? EnemigoState.EstadoEnemigo.RUN_RIGHT : EnemigoState.EstadoEnemigo.RUN_LEFT;
+            } else {
+                enemigo.mirandoDerecha = dx > 0;
+                enemigo.estadoAnimacion = enemigo.mirandoDerecha ? EnemigoState.EstadoEnemigo.IDLE_RIGHT : EnemigoState.EstadoEnemigo.IDLE_LEFT;
+            }
+
+            if (estadoAnterior != enemigo.estadoAnimacion) {
+                enemigo.tiempoEnEstado = 0;
+            }
+
+            if (enemigo.estadoAnimacion == EnemigoState.EstadoEnemigo.RUN_RIGHT || enemigo.estadoAnimacion == EnemigoState.EstadoEnemigo.RUN_LEFT) {
+                float nextX = enemigo.x;
+                float nextY = enemigo.y;
+                if (dx > 0) nextX += ROBOT_SPEED; else if (dx < 0) nextX -= ROBOT_SPEED;
+                if (dy > 0) nextY += ROBOT_SPEED; else if (dy < 0) nextY -= ROBOT_SPEED;
+
+                enemigo.x = nextX;
+                enemigo.y = nextY;
+            }
+        }
+    }
+    private void updateServerLogic(float deltaTime) {
+        actualizarEnemigosAI(deltaTime);
+
+        generarNuevosItems(deltaTime);
+        generarNuevosEnemigos(deltaTime);
+
+        // Creamos un nuevo paquete y le metemos la lista completa de enemigos.
+        Network.PaqueteActualizacionEnemigos paqueteUpdate = new Network.PaqueteActualizacionEnemigos();
+        paqueteUpdate.estadosEnemigos = this.enemigosActivos;
+        servidor.sendToAllTCP(paqueteUpdate);
+    }
+
+    private void generarNuevosItems(float deltaTime) {
+        int anillos = 0, basura = 0, plastico = 0;
+        for (ItemState item : itemsActivos.values()) {
+            if (item.tipo == ItemState.ItemType.ANILLO) anillos++;
+            if (item.tipo == ItemState.ItemType.BASURA) basura++;
+            if (item.tipo == ItemState.ItemType.PIEZA_PLASTICO) plastico++;
+        }
+        tiempoSpawnAnillo += deltaTime;
+        if (tiempoSpawnAnillo >= INTERVALO_SPAWN_ANILLO && anillos < MAX_ANILLOS) {
+            spawnNuevoItem(ItemState.ItemType.ANILLO);
+            tiempoSpawnAnillo = 0f;
+        }
+        tiempoSpawnBasura += deltaTime;
+        if (tiempoSpawnBasura >= INTERVALO_SPAWN_BASURA && basura < MAX_BASURA) {
+            spawnNuevoItem(ItemState.ItemType.BASURA);
+            tiempoSpawnBasura = 0f;
+        }
+        tiempoSpawnPlastico += deltaTime;
+        if (tiempoSpawnPlastico >= INTERVALO_SPAWN_PLASTICO && plastico < MAX_PLASTICO) {
+            spawnNuevoItem(ItemState.ItemType.PIEZA_PLASTICO);
+            tiempoSpawnPlastico = 0f;
+        }
+    }
+
+    private void generarNuevosEnemigos(float deltaTime) {
+        tiempoGeneracionEnemigo += deltaTime;
+        if (tiempoGeneracionEnemigo >= INTERVALO_GENERACION_ENEMIGO) {
+            spawnNuevoEnemigo();
+            tiempoGeneracionEnemigo = 0f;
+        }
+
+        if (tiempoGeneracionEnemigo >= INTERVALO_GENERACION_ENEMIGO) {
+            spawnNuevoEnemigo();
+            tiempoGeneracionEnemigo = 0f;
+        }
     }
 
 
-    public static void main(String[] args) throws IOException {
-        new GameServer();
+    private void spawnNuevoEnemigo() {
+        // Si todavía no hemos recibido el plano del mapa, no generamos nada.
+        if (paredesDelMapa == null) {
+            System.out.println("[SERVER] Aún no tengo el plano del mapa, no puedo generar enemigos.");
+            return;
+        }
+
+        int intentos = 0;
+        boolean colocado = false;
+        while (!colocado && intentos < 20) { // Hacemos hasta 20 intentos para encontrar un lugar libre
+            float x = (float) (Math.random() * 1920);
+            float y = (float) (Math.random() * 1280);
+            com.badlogic.gdx.math.Rectangle bounds = new com.badlogic.gdx.math.Rectangle(x, y, 48, 48);
+
+            // Comprobamos si la nueva posición choca con alguna pared
+            boolean hayColision = false;
+            for (com.badlogic.gdx.math.Rectangle pared : paredesDelMapa) {
+                if (pared.overlaps(bounds)) {
+                    hayColision = true;
+                    break;
+                }
+            }
+
+            if (!hayColision) {
+                EnemigoState nuevoEstado = new EnemigoState(proximoIdEnemigo++, bounds.x, bounds.y, 100, EnemigoState.EnemigoType.ROBOT);
+                enemigosActivos.put(nuevoEstado.id, nuevoEstado);
+                Network.PaqueteEnemigoNuevo paquete = new Network.PaqueteEnemigoNuevo();
+                paquete.estadoEnemigo = nuevoEstado;
+                servidor.sendToAllTCP(paquete);
+                colocado = true;
+            }
+            intentos++;
+        }
+    }
+
+
+    private void spawnNuevoItem(ItemState.ItemType tipo) {
+        // Si todavía no hemos recibido el plano del mapa, no generamos nada.
+        if (paredesDelMapa == null) {
+            System.out.println("[SERVER] Aún no tengo el plano del mapa, no puedo generar ítems.");
+            return;
+        }
+
+        int intentos = 0;
+        boolean colocado = false;
+        while (!colocado && intentos < 20) {
+            float x = (float) (Math.random() * 1920);
+            float y = (float) (Math.random() * 1280);
+            com.badlogic.gdx.math.Rectangle nuevoBounds = new com.badlogic.gdx.math.Rectangle(x, y, 32, 32);
+
+            // Comprobamos si la nueva posición choca con alguna pared O con otro ítem
+            boolean hayColision = false;
+            for (com.badlogic.gdx.math.Rectangle pared : paredesDelMapa) {
+                if (pared.overlaps(nuevoBounds)) {
+                    hayColision = true;
+                    break;
+                }
+            }
+            // Añadimos la comprobación de superposición con otros ítems
+            if (!hayColision) {
+                for (ItemState itemExistente : itemsActivos.values()) {
+                    if (new com.badlogic.gdx.math.Rectangle(itemExistente.x, itemExistente.y, 32, 32).overlaps(nuevoBounds)) {
+                        hayColision = true;
+                        break;
+                    }
+                }
+            }
+
+            if (!hayColision) {
+                ItemState nuevoEstado = new ItemState(proximoIdItem++, nuevoBounds.x, nuevoBounds.y, tipo);
+                itemsActivos.put(nuevoEstado.id, nuevoEstado);
+                Network.PaqueteItemNuevo paquete = new Network.PaqueteItemNuevo();
+                paquete.estadoItem = nuevoEstado;
+                servidor.sendToAllTCP(paquete);
+                colocado = true;
+            }
+            intentos++;
+        }
+    }
+
+    @Override
+    public void update(float deltaTime, com.JSonic.uneg.LevelManager manejadorNivel) {
+
+    }
+
+    @Override
+    public void dispose() {
+        if (servidor != null) {
+            servidor.close();
+            System.out.println("[SERVER] Servidor detenido.");
+        }
     }
 }

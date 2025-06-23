@@ -4,6 +4,7 @@ eclipse.project.name = appName + '-core'
 dependencies {
   api "com.badlogicgames.gdx:gdx:$gdxVersion"
   api "com.github.crykn:kryonet:$kryoNetVersion"
+  api "com.badlogicgames.gdx:gdx-backend-headless:$gdxVersion"
 
   if(enableGraalNative == 'true') {
     implementation "io.github.berstanio:gdx-svmhelper-annotations:$graalHelperVersion"

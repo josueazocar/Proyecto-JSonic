@@ -1,6 +1,5 @@
 package com.JSonic.uneg;
 
-import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.Animation;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
@@ -12,7 +11,7 @@ public abstract class Entity {
     //Atributos
     private int tileSize;
     public PlayerState estado;
-    protected int speed;
+    protected float speed;
 
     //Atributos para dibujar las animaciones de entidades
     protected Animation<TextureRegion> animacion; // ¡Importante! Aseguramos que 'animacion' siempre use el tipo genérico <TextureRegion>
@@ -77,7 +76,7 @@ public abstract class Entity {
         this.tileSize = tileSize;
     }
 
-    public void setSpeed(int speed) {
+    public void setSpeed(float speed) {
         this.speed = speed;
     }
 
@@ -157,7 +156,7 @@ public abstract class Entity {
         return tileSize;
     }
 
-    public int getSpeed() {
+    public float getSpeed() {
         return speed;
     }
 
