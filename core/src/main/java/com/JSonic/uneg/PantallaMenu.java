@@ -19,12 +19,12 @@ public class PantallaMenu extends PantallaBase {
                   texturaBotonAcercaDe, texturaBotonAcercaDeHover, texturaBotonAcercaDeDown,
                   texturaBotonUnJugador, texturaBotonUnJugadorHover, texturaBotonUnJugadorDown,
                   texturaBotonMultijugador, texturaBotonMultijugadorHover, texturaBotonMultijugadorDown,
-                  texturaBotonAtras,
+                  texturaBotonOnline, texturaBotonOnlineHover, texturaBotonOnlineDown,texturaBotonAtras,
                   texturaBotonSalir, texturaBotonSalirHover, texturaBotonSalirDown,
                   texturaBotonOpciones, texturaBotonOpcionesHover, texturaBotonOpcionesDown,
                   texturaBotonAyuda, texturaBotonAyudaHover, texturaBotonAyudaDown;
     private Image imagenFondo, imagenTextoInicio;
-    private Button botonJugar, botonAcercaDe, botonUnJugador, botonMultijugador, botonAtras, botonSalir, botonOpciones, botonAyuda;
+    private Button botonJugar, botonAcercaDe, botonUnJugador, botonOnline ,botonMultijugador, botonAtras, botonSalir, botonOpciones, botonAyuda;
     private final boolean mostrarMenuDirecto;
     private boolean logicaInicializada = false; // Bandera para controlar la inicialización
 
@@ -60,6 +60,10 @@ public class PantallaMenu extends PantallaBase {
         texturaBotonMultijugadorHover = new Texture(Gdx.files.internal("assets/Botones/boton_multijugador_hover.png"));
         texturaBotonMultijugadorDown = new Texture(Gdx.files.internal("assets/Botones/boton_multijugador_down.png"));
 
+        texturaBotonOnline = new Texture(Gdx.files.internal("assets/Botones/boton_online.png"));
+        texturaBotonOnlineHover = new Texture(Gdx.files.internal("assets/Botones/boton_online_hover.png"));
+        texturaBotonOnlineDown = new Texture(Gdx.files.internal("assets/Botones/boton_online_down.png"));
+
         texturaBotonAtras = new Texture(Gdx.files.internal("assets/Botones/boton_atras.png"));
 
         texturaBotonSalir = new Texture(Gdx.files.internal("assets/Botones/boton_salir.png"));
@@ -81,6 +85,7 @@ public class PantallaMenu extends PantallaBase {
         botonAcercaDe = crearBotonConEstados(texturaBotonAcercaDe, texturaBotonAcercaDeDown, texturaBotonAcercaDeHover);
         botonUnJugador = crearBotonConEstados(texturaBotonUnJugador, texturaBotonUnJugadorDown, texturaBotonUnJugadorHover);
         botonMultijugador = crearBotonConEstados(texturaBotonMultijugador, texturaBotonMultijugadorDown, texturaBotonMultijugadorHover);
+        botonOnline = crearBotonConEstados(texturaBotonOnline, texturaBotonOnlineDown, texturaBotonOnlineHover);
         botonAtras = crearBoton(texturaBotonAtras);
         botonOpciones = crearBotonConEstados(texturaBotonOpciones, texturaBotonOpcionesDown, texturaBotonOpcionesHover);
         botonSalir = crearBotonConEstados(texturaBotonSalir, texturaBotonSalirDown, texturaBotonSalirHover);
@@ -125,6 +130,7 @@ public class PantallaMenu extends PantallaBase {
             botonAcercaDe.setVisible(false);
             botonUnJugador.setVisible(false);
             botonMultijugador.setVisible(false);
+            botonOnline.setVisible(false);
             botonAtras.setVisible(false);
             botonAyuda.setVisible(false);
         }
@@ -189,6 +195,14 @@ public class PantallaMenu extends PantallaBase {
         botonMultijugador.addListener(new ClickListener() {
             @Override
             public void clicked(InputEvent event, float x, float y) {
+                juegoApp.direccionIp = "localhost";
+                juegoApp.iniciarJuegoOnline();
+            }
+        });
+        botonOnline.addListener(new ClickListener() {
+            @Override
+            public void clicked(InputEvent event, float x, float y) {
+                juegoApp.direccionIp = "20.112.50.29";
                 juegoApp.iniciarJuegoOnline();
             }
         });
@@ -197,7 +211,7 @@ public class PantallaMenu extends PantallaBase {
     private void mostrarMenuPrincipal() {
         uiTable.clear();
         uiTable.bottom().padBottom(40);
-        uiTable.add(botonJugar).size(250, 125).padBottom(10);
+        uiTable.add(botonJugar).size(250, 125);
         uiTable.row();
         uiTable.add(botonOpciones).size(250, 125);
         uiTable.row();
@@ -209,6 +223,7 @@ public class PantallaMenu extends PantallaBase {
         botonAcercaDe.setVisible(false);
         botonUnJugador.setVisible(false);
         botonMultijugador.setVisible(false);
+        botonOnline.setVisible(false);
         botonAtras.setVisible(false);
         botonAyuda.setVisible(false);
     }
@@ -216,9 +231,11 @@ public class PantallaMenu extends PantallaBase {
     private void mostrarMenuJugar() {
         uiTable.clear();
         uiTable.bottom().padBottom(40);
-        uiTable.add(botonUnJugador).size(250, 125).padBottom(10);
+        uiTable.add(botonUnJugador).size(250, 125);
         uiTable.row();
         uiTable.add(botonMultijugador).size(250, 125);
+        uiTable.row();
+        uiTable.add(botonOnline).size(250, 125);
 
         botonJugar.setVisible(false);
         botonOpciones.setVisible(false);
@@ -226,6 +243,7 @@ public class PantallaMenu extends PantallaBase {
         botonAcercaDe.setVisible(false);
         botonUnJugador.setVisible(true);
         botonMultijugador.setVisible(true);
+        botonOnline.setVisible(true);
         botonAtras.setVisible(true);
         botonAyuda.setVisible(false);
     }
@@ -243,6 +261,7 @@ public class PantallaMenu extends PantallaBase {
         botonAcercaDe.setVisible(true);
         botonUnJugador.setVisible(false);
         botonMultijugador.setVisible(false);
+        botonOnline.setVisible(false);
         botonAtras.setVisible(true);
         botonAyuda.setVisible(true);
     }
@@ -282,6 +301,10 @@ public class PantallaMenu extends PantallaBase {
         if (texturaBotonMultijugador != null) texturaBotonMultijugador.dispose();
         if (texturaBotonMultijugadorHover != null) texturaBotonMultijugadorHover.dispose();
         if (texturaBotonMultijugadorDown != null) texturaBotonMultijugadorDown.dispose();
+
+        if (texturaBotonOnline != null) texturaBotonOnline.dispose();
+        if (texturaBotonOnlineHover != null) texturaBotonOnlineHover.dispose();
+        if (texturaBotonOnlineDown != null) texturaBotonOnlineDown.dispose();
 
         if (texturaBotonAtras != null) texturaBotonAtras.dispose();
 
