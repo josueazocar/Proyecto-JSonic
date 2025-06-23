@@ -149,27 +149,9 @@ public class PantallaMenu extends PantallaBase {
             @Override
             public void clicked(InputEvent event, float x, float y) {
                 mostrarMenuPrincipal();
-
-     /*   //Funcionalidad al Boton
-        botonJugar.addListener(new EventListener() {
-            public boolean handle(Event event) {
-                if (event instanceof InputEvent) {
-                    InputEvent inputEvent = (InputEvent) event;
-                    if (inputEvent.getType().equals(InputEvent.Type.touchDown)) {
-                        System.out.println("Botón Jugar presionado");
-                        // Aquí puedes cambiar a la pantalla del juego
-                        if (JSonicJuego.modoOnline) { // Necesitarás hacer MODO_ONLINE accesible (p.ej. 'public')
-                            juegoApp.iniciarJuegoOnline();
-                        } else {
-                            juegoApp.iniciarJuegoLocal();
-                        }
-                        return true; // Indica que el evento fue manejado
-                    }
-                }
-                return false; // Indica que el evento no fue manejado
             }
         });
-*/
+
         botonOpciones.addListener(new ClickListener() {
             @Override
             public void clicked(InputEvent event, float x, float y) {
@@ -201,13 +183,13 @@ public class PantallaMenu extends PantallaBase {
         botonUnJugador.addListener(new ClickListener() {
             @Override
             public void clicked(InputEvent event, float x, float y) {
-                juegoApp.setPantallaActiva(new PantallaDeJuego(juegoApp));
+                juegoApp.iniciarJuegoLocal();
             }
         });
         botonMultijugador.addListener(new ClickListener() {
             @Override
             public void clicked(InputEvent event, float x, float y) {
-                juegoApp.setPantallaActiva(new PantallaDeJuego(juegoApp));
+                juegoApp.iniciarJuegoOnline();
             }
         });
     }
