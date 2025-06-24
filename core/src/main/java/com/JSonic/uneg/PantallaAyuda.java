@@ -29,7 +29,7 @@ public class PantallaAyuda extends PantallaBase{
         mainStage.addActor(fondo);
 
         // --- Botón de Volver ---
-        texturaBotonVolver = new Texture(Gdx.files.internal("assets/Botones/boton_atras.png"));
+        texturaBotonVolver = new Texture(Gdx.files.internal("Botones/boton_atras.png"));
         Button.ButtonStyle estiloBotonVolver = new Button.ButtonStyle();
         estiloBotonVolver.up = new TextureRegionDrawable(new TextureRegion(texturaBotonVolver));
         Button botonVolver = new Button(estiloBotonVolver);

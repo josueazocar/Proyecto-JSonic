@@ -41,42 +41,42 @@ public class PantallaMenu extends PantallaBase {
     @Override
     public void inicializar() {
         // 1. Cargar todos los assets y crear los actores.
-        texturaFondo = new Texture(Gdx.files.internal("assets/Fondos/Sonic-Tails-Knuckles.png"));
-        textureTextoInicio = new Texture(Gdx.files.internal("assets/Fondos/Texto_inicial.png"));
+        texturaFondo = new Texture(Gdx.files.internal("Fondos/Sonic-Tails-Knuckles.png"));
+        textureTextoInicio = new Texture(Gdx.files.internal("Fondos/Texto_inicial.png"));
 
-        texturaBotonJugar = new Texture(Gdx.files.internal("assets/Botones/boton_Jugar.png"));
-        texturaBotonJugarHover = new Texture(Gdx.files.internal("assets/Botones/boton_jugar_hover.png"));
-        texturaBotonJugarDown = new Texture(Gdx.files.internal("assets/Botones/boton_jugar_down.png"));
+        texturaBotonJugar = new Texture(Gdx.files.internal("Botones/boton_Jugar.png"));
+        texturaBotonJugarHover = new Texture(Gdx.files.internal("Botones/boton_jugar_hover.png"));
+        texturaBotonJugarDown = new Texture(Gdx.files.internal("Botones/boton_jugar_down.png"));
 
-        texturaBotonAcercaDe = new Texture(Gdx.files.internal("assets/Botones/boton_AcercaDe.png"));
-        texturaBotonAcercaDeHover = new Texture(Gdx.files.internal("assets/Botones/boton_acercade_hover.png"));
-        texturaBotonAcercaDeDown = new Texture(Gdx.files.internal("assets/Botones/boton_acercade_down.png"));
+        texturaBotonAcercaDe = new Texture(Gdx.files.internal("Botones/boton_AcercaDe.png"));
+        texturaBotonAcercaDeHover = new Texture(Gdx.files.internal("Botones/boton_acercade_hover.png"));
+        texturaBotonAcercaDeDown = new Texture(Gdx.files.internal("Botones/boton_acercade_down.png"));
 
-        texturaBotonUnJugador = new Texture(Gdx.files.internal("assets/Botones/boton_1jugador.png"));
-        texturaBotonUnJugadorHover = new Texture(Gdx.files.internal("assets/Botones/boton_unjugador_hover.png"));
-        texturaBotonUnJugadorDown = new Texture(Gdx.files.internal("assets/Botones/boton_unjugador_down.png"));
+        texturaBotonUnJugador = new Texture(Gdx.files.internal("Botones/boton_1jugador.png"));
+        texturaBotonUnJugadorHover = new Texture(Gdx.files.internal("Botones/boton_unjugador_hover.png"));
+        texturaBotonUnJugadorDown = new Texture(Gdx.files.internal("Botones/boton_unjugador_down.png"));
 
-        texturaBotonMultijugador = new Texture(Gdx.files.internal("assets/Botones/boton_multijugador.png"));
-        texturaBotonMultijugadorHover = new Texture(Gdx.files.internal("assets/Botones/boton_multijugador_hover.png"));
-        texturaBotonMultijugadorDown = new Texture(Gdx.files.internal("assets/Botones/boton_multijugador_down.png"));
+        texturaBotonMultijugador = new Texture(Gdx.files.internal("Botones/boton_multijugador.png"));
+        texturaBotonMultijugadorHover = new Texture(Gdx.files.internal("Botones/boton_multijugador_hover.png"));
+        texturaBotonMultijugadorDown = new Texture(Gdx.files.internal("Botones/boton_multijugador_down.png"));
 
-        texturaBotonOnline = new Texture(Gdx.files.internal("assets/Botones/boton_online.png"));
-        texturaBotonOnlineHover = new Texture(Gdx.files.internal("assets/Botones/boton_online_hover.png"));
-        texturaBotonOnlineDown = new Texture(Gdx.files.internal("assets/Botones/boton_online_down.png"));
+        texturaBotonOnline = new Texture(Gdx.files.internal("Botones/boton_online.png"));
+        texturaBotonOnlineHover = new Texture(Gdx.files.internal("Botones/boton_online_hover.png"));
+        texturaBotonOnlineDown = new Texture(Gdx.files.internal("Botones/boton_online_down.png"));
 
-        texturaBotonAtras = new Texture(Gdx.files.internal("assets/Botones/boton_atras.png"));
+        texturaBotonAtras = new Texture(Gdx.files.internal("Botones/boton_atras.png"));
 
-        texturaBotonSalir = new Texture(Gdx.files.internal("assets/Botones/boton_salir.png"));
-        texturaBotonSalirHover = new Texture(Gdx.files.internal("assets/Botones/boton_salir_hover.png"));
-        texturaBotonSalirDown = new Texture(Gdx.files.internal("assets/Botones/boton_salir_down.png"));
+        texturaBotonSalir = new Texture(Gdx.files.internal("Botones/boton_salir.png"));
+        texturaBotonSalirHover = new Texture(Gdx.files.internal("Botones/boton_salir_hover.png"));
+        texturaBotonSalirDown = new Texture(Gdx.files.internal("Botones/boton_salir_down.png"));
 
-        texturaBotonOpciones = new Texture(Gdx.files.internal("assets/Botones/boton_opciones.png"));
-        texturaBotonOpcionesHover = new Texture(Gdx.files.internal("assets/Botones/boton_opciones_hover.png"));
-        texturaBotonOpcionesDown = new Texture(Gdx.files.internal("assets/Botones/boton_opciones_down.png"));
+        texturaBotonOpciones = new Texture(Gdx.files.internal("Botones/boton_opciones.png"));
+        texturaBotonOpcionesHover = new Texture(Gdx.files.internal("Botones/boton_opciones_hover.png"));
+        texturaBotonOpcionesDown = new Texture(Gdx.files.internal("Botones/boton_opciones_down.png"));
 
-        texturaBotonAyuda = new Texture(Gdx.files.internal("assets/Botones/boton_ayuda.png"));
-        texturaBotonAyudaHover = new Texture(Gdx.files.internal("assets/Botones/boton_ayuda_hover.png"));
-        texturaBotonAyudaDown = new Texture(Gdx.files.internal("assets/Botones/boton_ayuda_down.png"));
+        texturaBotonAyuda = new Texture(Gdx.files.internal("Botones/boton_ayuda.png"));
+        texturaBotonAyudaHover = new Texture(Gdx.files.internal("Botones/boton_ayuda_hover.png"));
+        texturaBotonAyudaDown = new Texture(Gdx.files.internal("Botones/boton_ayuda_down.png"));
 
 
         imagenFondo = new Image(texturaFondo);

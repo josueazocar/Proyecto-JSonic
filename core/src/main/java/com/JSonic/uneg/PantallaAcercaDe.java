@@ -32,7 +32,7 @@ public class PantallaAcercaDe extends PantallaBase {
     @Override
     public void inicializar() {
         // --- Fondo ---
-        texturaFondo = new Texture(Gdx.files.internal("assets/Fondos/Sonic-Tails-Knuckles.png"));
+        texturaFondo = new Texture(Gdx.files.internal("Fondos/Sonic-Tails-Knuckles.png"));
         Image imagenFondo = new Image(texturaFondo);
         imagenFondo.setSize(mainStage.getWidth(), mainStage.getHeight());
         mainStage.addActor(imagenFondo);
@@ -51,7 +51,7 @@ public class PantallaAcercaDe extends PantallaBase {
         infoLabel.setAlignment(Align.center);
 
         // --- Botón de Volver ---
-        texturaBotonVolver = new Texture(Gdx.files.internal("assets/Botones/boton_atras.png"));
+        texturaBotonVolver = new Texture(Gdx.files.internal("Botones/boton_atras.png"));
         Button.ButtonStyle estiloBotonVolver = new Button.ButtonStyle();
         estiloBotonVolver.up = new TextureRegionDrawable(new TextureRegion(texturaBotonVolver));
         Button botonVolver = new Button(estiloBotonVolver);
