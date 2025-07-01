@@ -11,7 +11,8 @@ public class ItemState {
     public enum ItemType {
         ANILLO,
         BASURA,
-        PIEZA_PLASTICO
+        PIEZA_PLASTICO,
+        TELETRANSPORTE
     }
 
     public int id;

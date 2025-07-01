@@ -50,6 +50,10 @@ public class PantallaDeJuego extends PantallaBase {
     private int anillosTotal = 0;
     private int basuraTotal = 0;
 
+    //para el teletransporte
+    // Al inicio de la clase
+    private float tiempoTranscurrido = 0f;
+    private boolean teletransporteCreado = false;
 
     public PantallaDeJuego(JSonicJuego juego, IGameClient client, IGameServer server) {
         super();
@@ -107,6 +111,22 @@ public class PantallaDeJuego extends PantallaBase {
 
     @Override
     public void actualizar(float deltat) {
+        // Al inicio del método actualizar
+        tiempoTranscurrido += deltat;
+        if (!teletransporteCreado && tiempoTranscurrido >= 20f) {
+            // Coordenadas esquina superior derecha (ajusta según tu mapa)
+            float destinoX = VIRTUAL_WIDTH - 50;
+            float destinoY = VIRTUAL_HEIGHT - 50;
+            ItemState estadoTele = new ItemState(
+                999, // ID único
+                destinoX,
+                destinoY,
+                ItemState.ItemType.TELETRANSPORTE
+            );
+            // Puedes agregar destinoX y destinoY de destino en el estado si lo necesitas
+            crearItemVisual(estadoTele);
+            teletransporteCreado = true;
+        }
         if (localServer != null) {
             localServer.update(deltat, this.manejadorNivel);
         }
@@ -206,6 +226,16 @@ public class PantallaDeJuego extends PantallaBase {
                     basuraTotal++;
                     contadorBasura.setValor(basuraTotal);
                     itemRecogido = true;
+                }
+                //para el Teletransporte
+                else if (item.estado.tipo == ItemState.ItemType.TELETRANSPORTE) {
+                    manejadorNivel.cargarNivel("maps/ZonaJefeN1.tmx");
+                    sonic.estado.x = 100;
+                    sonic.estado.y = 100;
+                    iter.remove();
+                    item.dispose();
+                    System.out.println("[CLIENT_DEBUG] Teletransporte activado, cambiando de mapa.");
+                    break;
                 }
 
                 // 3. Lógica de prueba: Eliminar el ítem visualmente.
@@ -323,6 +353,9 @@ public class PantallaDeJuego extends PantallaBase {
                     break;
                 case PIEZA_PLASTICO:
                     nuevoItem = new PiezaDePlasticoVisual(estadoItem);
+                    break;
+                case TELETRANSPORTE:
+                    nuevoItem = new TeletransporteVisual(estadoItem);
                     break;
             }
 

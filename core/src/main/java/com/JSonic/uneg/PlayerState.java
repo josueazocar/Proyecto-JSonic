@@ -8,6 +8,11 @@ public class PlayerState {
 
         public Player.EstadoPlayer estadoAnimacion;
 
+     public void setPosition(float x, float y) {
+        this.x = x;
+        this.y = y;
+    }
+
         public PlayerState() {
             this.id = -1; // Valor por defecto para indicar que no está inicializado
             this.x = 0f;
