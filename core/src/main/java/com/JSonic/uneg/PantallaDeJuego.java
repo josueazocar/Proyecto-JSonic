@@ -86,7 +86,6 @@ public class PantallaDeJuego extends PantallaBase {
         }
 
         sonic = new Sonic(sonicEstado, manejadorNivel);
-        sonic = new Sonic(sonicEstado, manejadorNivel);
         assetManager = new AssetManager();
         soundManager = new SoundManager(assetManager);
         manejadorNivel.setPlayer(sonic);
@@ -252,12 +251,41 @@ public class PantallaDeJuego extends PantallaBase {
 
                     // Asigna las coordenadas iniciales según el mapa cargado
                     if (manejadorNivel.getMapaActual().equals("maps/ZonaJefeN1.tmx")) {
-                        sonic.estado.x = 12.01f;
-                        sonic.estado.y = 156.08f;
-                    } else if (manejadorNivel.getMapaActual().equals("maps/Zona1N1.tmx")) {
-                        sonic.estado.x = 100;
-                        sonic.estado.y = 100;
-                    }
+                        // Buscar el objeto "Llegada" en la capa de objetos del mapa
+                        com.badlogic.gdx.maps.tiled.TiledMap map = manejadorNivel.getTiledMap();
+                        boolean llegadaEncontrada = false;
+                        if (map != null) {
+                            com.badlogic.gdx.maps.MapLayer destinoxLayer = map.getLayers().get("destinox");
+                            if (destinoxLayer != null) {
+                                for (com.badlogic.gdx.maps.MapObject obj : destinoxLayer.getObjects()) {
+                                    String nombre = obj.getName() != null ? obj.getName() : "";
+                                    String clase = obj.getProperties().containsKey("class") ? obj.getProperties().get("class", String.class) : "";
+                                    if ((nombre.toLowerCase().contains("llegada") || clase.toLowerCase().contains("llegada"))
+                                        && obj instanceof com.badlogic.gdx.maps.objects.RectangleMapObject) {
+                                        com.badlogic.gdx.maps.objects.RectangleMapObject rectObj = (com.badlogic.gdx.maps.objects.RectangleMapObject) obj;
+                                        com.badlogic.gdx.math.Rectangle rect = rectObj.getRectangle();
+// Conversión de coordenadas Tiled (origen arriba-izquierda) a LibGDX (origen abajo-izquierda)
+                                        float alturaMapa = map.getProperties().get("height", Integer.class) * map.getProperties().get("tileheight", Integer.class);
+                                        float xFinal = rect.x;
+                                        float yFinal = alturaMapa - rect.y - rect.height;
+                                        sonic.estado.x = xFinal;
+                                        sonic.estado.y = yFinal;
+                                        System.out.println("[DEBUG] Llegada encontrada en destinox: rect.x=" + rect.x + ", rect.y=" + rect.y + ", width=" + rect.width + ", height=" + rect.height + ". Sonic en x=" + sonic.estado.x + ", y=" + sonic.estado.y);
+                                       // System.out.println("[DEBUG] Llegada encontrada en destinox: rect.x=" + rect.x + ", rect.y=" + rect.y + ", width=" + rect.width + ", height=" + rect.height + ". Sonic en x=" + sonic.estado.x + ", y=" + sonic.estado.y);
+                                        llegadaEncontrada = true;
+                                        break;
+                                    }
+
+                                 }
+                            }
+                        }
+                        // Si no se encontró el objeto Llegada, usar valores por defecto
+                        if (!llegadaEncontrada) {
+                            sonic.estado.x = 12.01f;
+                            sonic.estado.y = 156.08f;
+                        }
+                             }
+
                     idTeletransporteAEliminar = item.estado.id;
                     System.out.println("[CLIENT_DEBUG] Teletransporte activado, cambiando de mapa.");
                     break;

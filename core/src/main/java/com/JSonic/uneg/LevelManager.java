@@ -42,6 +42,10 @@ public class LevelManager {
     }
 
 
+    public com.badlogic.gdx.maps.tiled.TiledMap getTiledMap() {
+        return mapaActual;
+    }
+
     // Método para cargar un nivel (mapa Tiled)
     public void cargarNivel(String rutaMapa) {
         // Si ya hay un mapa cargado, liberamos sus recursos antes de cargar uno nuevo

@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<map version="1.10" tiledversion="1.11.2" orientation="orthogonal" renderorder="right-down" width="40" height="30" tilewidth="32" tileheight="32" infinite="0" nextlayerid="13" nextobjectid="61">
+<map version="1.10" tiledversion="1.11.2" orientation="orthogonal" renderorder="right-down" width="40" height="30" tilewidth="32" tileheight="32" infinite="0" nextlayerid="13" nextobjectid="63">
  <tileset firstgid="1" source="Escenario.tsx"/>
  <tileset firstgid="1289" source="EjemploZonaJefe.tsx"/>
  <tileset firstgid="2313" source="Camino.tsx"/>
@@ -261,23 +261,17 @@
   <object id="50" x="1064" y="136" width="18.6667" height="24"/>
   <object id="51" x="404" y="492" width="28" height="74.6667"/>
  </objectgroup>
- <objectgroup id="9" name="destinox">
-  <properties>
-   <property name="destinoX" type="float" value="12"/>
-   <property name="destinoY" type="float" value="268"/>
-  </properties>
-  <object id="59" x="12.0063" y="156.081" width="62.6993" height="57.3632">
-   <properties>
-    <property name="destinoX" type="float" value="0"/>
-    <property name="destinoY" type="float" value="0"/>
-   </properties>
-  </object>
- </objectgroup>
- <objectgroup id="12" name="destinoy">
-  <object id="60" x="1132.59" y="32.0167" width="65.3674" height="68.0354">
+ <objectgroup id="12" name="destinox">
+  <object id="60" name="Portal" type="Portal" x="1132.59" y="32.0167" width="65.3674" height="68.0354">
    <properties>
     <property name="destinoX" type="float" value="22"/>
     <property name="destinoY" type="float" value="296"/>
+   </properties>
+  </object>
+  <object id="61" name="Llegada" type="Llegada" x="12.0063" y="156.081" width="70.7035" height="60.0313">
+   <properties>
+    <property name="destinoX" type="float" value="0"/>
+    <property name="destinoY" type="float" value="0"/>
    </properties>
   </object>
  </objectgroup>
