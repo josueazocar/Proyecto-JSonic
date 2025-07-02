@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<map version="1.10" tiledversion="1.11.2" orientation="orthogonal" renderorder="right-down" width="40" height="30" tilewidth="32" tileheight="32" infinite="0" nextlayerid="10" nextobjectid="54">
+<map version="1.10" tiledversion="1.11.2" orientation="orthogonal" renderorder="right-down" width="40" height="30" tilewidth="32" tileheight="32" infinite="0" nextlayerid="13" nextobjectid="61">
  <tileset firstgid="1" source="Escenario.tsx"/>
  <tileset firstgid="1289" source="EjemploZonaJefe.tsx"/>
  <tileset firstgid="2313" source="Camino.tsx"/>
@@ -195,7 +195,7 @@
 0,0,0,0,0,0,0,1131,1132,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
 0,0,0,0,0,0,0,1187,1188,0,0,0,1075,1076,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1075,1076,0,0,0,0,0,0,0,0,
 0,0,0,0,0,0,0,0,0,0,0,0,1131,1132,0,0,0,3723,3724,0,0,0,0,0,0,0,0,0,0,0,1131,1132,0,0,0,0,0,0,0,0,
-0,0,0,0,0,0,0,0,0,0,0,0,1187,1188,0,0,0,3727,3728,0,0,0,0,0,0,0,0,0,0,0,1187,1188,0,0,0,0,0,0,0,0,
+0,0,0,0,0,0,0,3666,0,0,0,0,1187,1188,0,0,0,3727,3728,0,0,0,0,0,0,0,0,0,0,0,1187,1188,0,0,0,0,0,0,0,0,
 0,0,0,1135,1136,0,0,0,0,0,0,0,0,0,0,0,0,3731,3732,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
 0,0,0,1191,1192,0,0,0,0,0,0,0,0,0,0,0,0,3735,3736,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1135,1136,0,0,0,0,
@@ -261,11 +261,23 @@
   <object id="50" x="1064" y="136" width="18.6667" height="24"/>
   <object id="51" x="404" y="492" width="28" height="74.6667"/>
  </objectgroup>
- <objectgroup id="9" name="destinoy">
-  <object id="52" x="12.0063" y="137.405" width="50.6931" height="78.7077">
+ <objectgroup id="9" name="destinox">
+  <properties>
+   <property name="destinoX" type="float" value="12"/>
+   <property name="destinoY" type="float" value="268"/>
+  </properties>
+  <object id="59" x="12.0063" y="156.081" width="62.6993" height="57.3632">
    <properties>
     <property name="destinoX" type="float" value="0"/>
     <property name="destinoY" type="float" value="0"/>
+   </properties>
+  </object>
+ </objectgroup>
+ <objectgroup id="12" name="destinoy">
+  <object id="60" x="1132.59" y="32.0167" width="65.3674" height="68.0354">
+   <properties>
+    <property name="destinoX" type="float" value="22"/>
+    <property name="destinoY" type="float" value="296"/>
    </properties>
   </object>
  </objectgroup>

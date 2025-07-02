@@ -14,19 +14,19 @@ public class TeletransporteVisual extends ItemVisual {
 
     @Override
     public void cargarAnimacion() {
-        spriteSheet = new Texture("Items/Telestransporte.png");
-        int FRAME_COLS = 4; // Cambia este valor según la cantidad de columnas (frames) en la primera fila
-        int FRAME_ROWS = 1; // Solo la primera fila
+        spriteSheet = new Texture("Items/Teletransporte.png");
+        int FRAME_COLS = 8; // Cambia este valor según la cantidad de columnas (frames) en la primera fila
+
 
         TextureRegion[][] tmp = TextureRegion.split(
             spriteSheet,
             spriteSheet.getWidth() / FRAME_COLS,
-            spriteSheet.getHeight() / FRAME_ROWS
+            spriteSheet.getHeight()
         );
 
         TextureRegion[] frames = new TextureRegion[FRAME_COLS];
         for (int i = 0; i < FRAME_COLS; i++) {
-            frames[i] = tmp[0][i]; // Solo la primera fila
+            frames[i] = tmp[0][i];
         }
         animacion = new Animation<>(0.1f, frames);
     }

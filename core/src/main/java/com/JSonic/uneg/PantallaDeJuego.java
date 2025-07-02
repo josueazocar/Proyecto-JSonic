@@ -73,10 +73,19 @@ public class PantallaDeJuego extends PantallaBase {
         camaraJuego = new OrthographicCamera();
         viewport = new FitViewport(VIRTUAL_WIDTH, VIRTUAL_HEIGHT, camaraJuego);
         manejadorNivel = new LevelManager(camaraJuego, batch);
+        // Java
         manejadorNivel.cargarNivel("maps/Zona1N1.tmx");
         sonicEstado = new PlayerState();
-        sonicEstado.x = 100;
-        sonicEstado.y = 100;
+
+        if (manejadorNivel.getMapaActual().equals("maps/Zona1N1.tmx")) {
+            sonicEstado.x = 100;
+            sonicEstado.y = 100;
+        } else if (manejadorNivel.getMapaActual().equals("maps/ZonaJefeN1.tmx")) {
+            sonicEstado.x = 12.01f;
+            sonicEstado.y = 156.08f;
+        }
+
+        sonic = new Sonic(sonicEstado, manejadorNivel);
         sonic = new Sonic(sonicEstado, manejadorNivel);
         assetManager = new AssetManager();
         soundManager = new SoundManager(assetManager);
@@ -109,22 +118,37 @@ public class PantallaDeJuego extends PantallaBase {
         mainStage.addActor(tablaUI);
     }
 
+    //para poder crear varios portales se necesita reiniciar el teletransporte
+    // Dentro de PantallaDeJuego
+    private void reiniciarTeletransporte() {
+        teletransporteCreado = false;
+        tiempoTranscurrido = 0f;
+    }
+
+
     @Override
     public void actualizar(float deltat) {
-        // Al inicio del método actualizar
         tiempoTranscurrido += deltat;
         if (!teletransporteCreado && tiempoTranscurrido >= 20f) {
-            // Coordenadas esquina superior derecha (ajusta según tu mapa)
-            float destinoX = VIRTUAL_WIDTH - 50;
-            float destinoY = VIRTUAL_HEIGHT - 50;
-            ItemState estadoTele = new ItemState(
-                999, // ID único
-                destinoX,
-                destinoY,
-                ItemState.ItemType.TELETRANSPORTE
-            );
-            // Puedes agregar destinoX y destinoY de destino en el estado si lo necesitas
-            crearItemVisual(estadoTele);
+            var layer = manejadorNivel.getMapaActual().getLayers().get("destinox");
+            if (layer != null) {
+                MapObjects objetos = layer.getObjects();
+                int idBase = 999;
+                for (com.badlogic.gdx.maps.MapObject obj : objetos) {
+                    if (obj instanceof com.badlogic.gdx.maps.objects.RectangleMapObject rectObj) {
+                        Rectangle rect = rectObj.getRectangle();
+                        ItemState estadoTele = new ItemState(
+                            idBase++,
+                            rect.x,
+                            rect.y,
+                            ItemState.ItemType.TELETRANSPORTE
+                        );
+                        crearItemVisual(estadoTele);
+                    }
+                }
+            } else {
+                System.out.println("[CLIENT_DEBUG] Capa 'destinox' no encontrada en el mapa actual.");
+            }
             teletransporteCreado = true;
         }
         if (localServer != null) {
@@ -134,7 +158,6 @@ public class PantallaDeJuego extends PantallaBase {
         if (gameClient != null) {
             while (!gameClient.getPaquetesRecibidos().isEmpty()) {
                 Object paquete = gameClient.getPaquetesRecibidos().poll();
-                // LÍNEA DE DEPURACIÓN ===
                 System.out.println("[CLIENT_DEBUG] Procesando paquete de tipo: " + paquete.getClass().getSimpleName());
 
                 if (paquete instanceof Network.RespuestaAccesoPaquete p) {
@@ -169,41 +192,34 @@ public class PantallaDeJuego extends PantallaBase {
                         actualizarPosicionOtroJugador(p.id, p.x, p.y, p.estadoAnimacion);
                     }
                 } else if (paquete instanceof Network.PaqueteEnemigoNuevo p) {
-                    // El servidor nos ordena crear un enemigo
                     crearEnemigoVisual(p.estadoEnemigo);
                 } else if (paquete instanceof Network.PaqueteItemNuevo p) {
-                    // El servidor nos ordena crear un ítem
                     crearItemVisual(p.estadoItem);
                 } else if (paquete instanceof Network.PaqueteItemEliminado p) {
-                    // El servidor nos ordena eliminar un ítem
                     ItemVisual itemEliminado = itemsEnPantalla.remove(p.idItem);
                     if (itemEliminado != null) {
                         System.out.println("[CLIENT] Obedeciendo orden de eliminar ítem con ID: " + p.idItem);
                         itemEliminado.dispose();
                     }
                 } else if (paquete instanceof Network.PaqueteActualizacionEnemigos p) {
-                    // Recibimos la lista completa de estados de enemigos del servidor
                     for (EnemigoState estadoServidor : p.estadosEnemigos.values()) {
                         RobotVisual enemigoVisual = enemigosEnPantalla.get(estadoServidor.id);
                         if (enemigoVisual != null) {
-                            // Actualizamos la posición y el estado del enemigo visual
-                            // para que coincida con lo que dice el servidor.
                             enemigoVisual.estado.x = estadoServidor.x;
                             enemigoVisual.estado.y = estadoServidor.y;
-                            enemigoVisual.setEstadoActual(estadoServidor.estadoAnimacion); // Asumiendo que RobotVisual tiene este método
+                            enemigoVisual.setEstadoActual(estadoServidor.estadoAnimacion);
                         }
                     }
                 }
             }
         }
 
-        // Primero, actualizamos todos los ítems
         for (ItemVisual item : itemsEnPantalla.values()) {
             item.update(deltat);
         }
 
-
-        // Usamos un iterador para poder eliminar elementos de forma segura mientras recorremos la colección.
+        // --- CORRECCIÓN: Manejo seguro del teletransporte ---
+        Integer idTeletransporteAEliminar = null;
         Iterator<Map.Entry<Integer, ItemVisual>> iter = itemsEnPantalla.entrySet().iterator();
         while (iter.hasNext()) {
             Map.Entry<Integer, ItemVisual> entry = iter.next();
@@ -227,30 +243,43 @@ public class PantallaDeJuego extends PantallaBase {
                     contadorBasura.setValor(basuraTotal);
                     itemRecogido = true;
                 }
-                //para el Teletransporte
+                // Teletransporte: solo guardamos el ID y salimos del ciclo
+                // Java
                 else if (item.estado.tipo == ItemState.ItemType.TELETRANSPORTE) {
                     manejadorNivel.cargarNivel("maps/ZonaJefeN1.tmx");
-                    sonic.estado.x = 100;
-                    sonic.estado.y = 100;
-                    iter.remove();
-                    item.dispose();
+                    crearRobotsPorNivel("maps/ZonaJefeN1.tmx");
+                    reiniciarTeletransporte();
+
+                    // Asigna las coordenadas iniciales según el mapa cargado
+                    if (manejadorNivel.getMapaActual().equals("maps/ZonaJefeN1.tmx")) {
+                        sonic.estado.x = 12.01f;
+                        sonic.estado.y = 156.08f;
+                    } else if (manejadorNivel.getMapaActual().equals("maps/Zona1N1.tmx")) {
+                        sonic.estado.x = 100;
+                        sonic.estado.y = 100;
+                    }
+                    idTeletransporteAEliminar = item.estado.id;
                     System.out.println("[CLIENT_DEBUG] Teletransporte activado, cambiando de mapa.");
                     break;
                 }
 
-                // 3. Lógica de prueba: Eliminar el ítem visualmente.
-                // En la versión final, esto solo debe ocurrir cuando el servidor lo ordene.
                 if (itemRecogido) {
-                    iter.remove(); // Elimina el ítem del HashMap de forma segura.
-                    item.dispose(); // Libera los recursos del ítem.
+                    iter.remove();
+                    item.dispose();
                     System.out.println("[CLIENT_DEBUG] Ítem " + item.estado.id + " eliminado visualmente para la prueba.");
-                    break; // Rompemos el bucle para procesar solo una recogida por fotograma.
+                    break;
                 }
             }
         }
 
-        // --- LÓGICA DE JUGADOR Y ENEMIGOS ---
-        sonic.KeyHandler(); // Esto ahora maneja el movimiento Y la colisión con el mapa
+        // Fuera del ciclo: limpiar enemigos/ítems y eliminar el teletransporte
+        if (idTeletransporteAEliminar != null) {
+            limpiarEnemigosEItems();
+            ItemVisual item = itemsEnPantalla.remove(idTeletransporteAEliminar);
+            if (item != null) item.dispose();
+        }
+
+        sonic.KeyHandler();
         sonic.update(deltat);
 
         for (Player otro : otrosJugadores.values()) {
@@ -259,7 +288,6 @@ public class PantallaDeJuego extends PantallaBase {
 
         for (RobotVisual enemigo : enemigosEnPantalla.values()) enemigo.update(deltat);
 
-        // Actualizar cámara
         camaraJuego.position.x = sonic.estado.x;
         camaraJuego.position.y = sonic.estado.y;
         manejadorNivel.limitarCamaraAMapa(camaraJuego);
@@ -336,6 +364,47 @@ public class PantallaDeJuego extends PantallaBase {
             // Creamos el objeto visual usando el estado que nos dio el servidor
             RobotVisual nuevoRobot = new RobotVisual(estadoEnemigo, manejadorNivel, this.gameClient);
             enemigosEnPantalla.put(estadoEnemigo.id, nuevoRobot);
+        }
+    }
+
+    //para limpriar los enemigos en los otros mapas
+    private void limpiarEnemigosEItems() {
+        for (RobotVisual enemigo : enemigosEnPantalla.values()) {
+            enemigo.dispose();
+        }
+        enemigosEnPantalla.clear();
+
+        for (ItemVisual item : itemsEnPantalla.values()) {
+            item.dispose();
+        }
+        itemsEnPantalla.clear();
+    }
+//para delimitar los robots y crearlos por mapa
+    private void crearRobotsPorNivel(String nombreNivel) {
+        limpiarEnemigosEItems();
+
+        if (nombreNivel.equals("maps/Zona1N1.tmx")) {
+            for (int i = 0; i < 5; i++) {
+                EnemigoState estado = new EnemigoState(
+                    i,
+                    100 + i * 50,
+                    200,
+                    100, // vida
+                    EnemigoState.EnemigoType.ROBOT
+                );
+                crearEnemigoVisual(estado);
+            }
+        } else if (nombreNivel.equals("maps/ZonaJefeN1.tmx")) {
+            for (int i = 10; i < 15; i++) {
+                EnemigoState estado = new EnemigoState(
+                    i,
+                    300 + (i - 10) * 60,
+                    250,
+                    200, // vida
+                    EnemigoState.EnemigoType.ROBOT
+                );
+                crearEnemigoVisual(estado);
+            }
         }
     }
 
