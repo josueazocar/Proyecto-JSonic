@@ -9,13 +9,13 @@ import com.badlogic.gdx.graphics.g2d.TextureRegion;
 import com.badlogic.gdx.math.Rectangle;
 
 
-public class Sonic extends Player {
+public class Knuckles extends Player {
 
     protected TextureRegion[] frameSpinRight;
     protected TextureRegion[] frameSpinLeft;
 
 
-    public Sonic(PlayerState estadoInicial) {
+    public Knuckles(PlayerState estadoInicial) {
         super(estadoInicial);
         CargarSprites();
         inicializarHitbox();
@@ -28,7 +28,7 @@ public class Sonic extends Player {
         }
     }
 
-    public Sonic(PlayerState estadoInicial, LevelManager levelManager) {
+    public Knuckles(PlayerState estadoInicial, LevelManager levelManager) {
         super(estadoInicial, levelManager);
         CargarSprites();
         inicializarHitbox();
@@ -81,30 +81,21 @@ public class Sonic extends Player {
             // Al activarse HIT, anula cualquier movimiento que el super.KeyHandler() haya intentado aplicar.
             estado.x = currentX;
             estado.y = currentY;
-        } else if (Gdx.input.isKeyJustPressed(Input.Keys.K)) {
-            if (lastDirection == EstadoPlayer.LEFT || lastDirection == EstadoPlayer.IDLE_LEFT) {
-                setEstadoActual(EstadoPlayer.KICK_LEFT);
-            } else {
-                setEstadoActual(EstadoPlayer.KICK_RIGHT);
-            }
-            tiempoXFrame = 0; // Reinicia el tiempo para la animación de patada
-            actionStateSet = true;
-            // Al activarse KICK, anula cualquier movimiento que el super.KeyHandler() haya intentado aplicar.
-            estado.x = currentX;
-            estado.y = currentY;
         }
-        // 3. Maneja el SPIN (L) - Esta es una acción continua que SÍ permite movimiento en el eje X.
+
+
+        // 3. Maneja el ROMPE BLOQUES - Esta es una acción continua que SÍ permite movimiento en el eje X.
         // Se usa 'else if' para que SPIN solo se active si J o K no fueron presionadas.
         else if (Gdx.input.isKeyPressed(Input.Keys.L)) {
-            // Determina la dirección del SPIN basándose en WASD si se presiona.
+            // Determina la dirección del ROMPE BLOQUES basándose en WASD si se presiona.
             if (Gdx.input.isKeyPressed(Input.Keys.A)) {
                 setEstadoActual(EstadoPlayer.SPECIAL_LEFT);
                 lastDirection = EstadoPlayer.LEFT; // Actualiza lastDirection para consistencia
-                estado.x -= speed;
+                estado.x = currentX;
             } else if (Gdx.input.isKeyPressed(Input.Keys.D)) {
                 setEstadoActual(EstadoPlayer.SPECIAL_RIGHT);
                 lastDirection = EstadoPlayer.RIGHT; // Actualiza lastDirection para consistencia
-                estado.x += speed;
+                estado.x = currentX;
             } else {
                 // Si L se presiona sin A o D, mantiene el giro en la última dirección horizontal conocida.
                 // Aquí también se permite el movimiento si WASD fue presionado, el super.KeyHandler() ya lo aplicó.
@@ -137,7 +128,7 @@ public class Sonic extends Player {
 
 
     protected String getSpriteSheetPath() {
-        return "Entidades/Player/Sonic/sonic.png";
+        return "Entidades/Player/Knuckles/knuckles.png";
     }
 
     @Override
@@ -145,7 +136,7 @@ public class Sonic extends Player {
         Texture coleccionDeSprites = new Texture(Gdx.files.internal(getSpriteSheetPath()));
         setSpriteSheet(coleccionDeSprites);
 
-        TextureRegion[][] matrizDeSprites = TextureRegion.split(getSpriteSheet(), getSpriteSheet().getWidth() / 8, getSpriteSheet().getHeight() / 30);
+        TextureRegion[][] matrizDeSprites = TextureRegion.split(getSpriteSheet(), getSpriteSheet().getWidth() / 8, getSpriteSheet().getHeight() / 34);
 
         frameIdleRight = new TextureRegion[8];
         frameIdleLeft = new TextureRegion[8];
@@ -155,12 +146,12 @@ public class Sonic extends Player {
         frameDownLeft = new TextureRegion[8];
         frameLeft = new TextureRegion[8];
         frameRight = new TextureRegion[8];
-        frameHitRight = new TextureRegion[8];
-        frameHitLeft = new TextureRegion[8];
+        frameHitRight = new TextureRegion[12];
+        frameHitLeft = new TextureRegion[12];
         frameKickRight = new TextureRegion[8];
         frameKickLeft = new TextureRegion[8];
-        frameSpinRight = new TextureRegion[24];
-        frameSpinLeft = new TextureRegion[24];
+        frameSpinRight = new TextureRegion[12];
+        frameSpinLeft = new TextureRegion[12];
 
         for (int i = 0; i < 4; i++) {
             frameIdleLeft[i] = matrizDeSprites[0][i];
@@ -196,28 +187,32 @@ public class Sonic extends Player {
             frameRight[i] = new TextureRegion(frameLeft[i]);
             frameRight[i].flip(true, false);
         }
-        for (int i = 0; i < 8; i++) {
-            frameHitLeft[i] = matrizDeSprites[7][i];
+
+        for (int i = 0; i < 6; i++) {
+            frameHitLeft[i] = matrizDeSprites[8][i];
+        }for (int i = 0; i < 6; i++) {
+            frameHitLeft[i + 6] = matrizDeSprites[8][5 - i];
         }
-        for (int i = 0; i < 8; i++) {
+
+        for (int i = 0; i < 12; i++) {
             frameHitRight[i] = new TextureRegion(frameHitLeft[i]);
             frameHitRight[i].flip(true, false);
         }
-        for (int i = 0; i < 8; i++) {
-            frameKickLeft[i] = matrizDeSprites[8][i];
+
+
+        for (int i = 0; i < 6; i++) {
+            frameSpinLeft[i] = matrizDeSprites[10][i]; // Primeros 4 directos
         }
-        for (int i = 0; i < 8; i++) {
-            frameKickRight[i] = new TextureRegion(frameKickLeft[i]);
-            frameKickRight[i].flip(true, false);
-        }
-        for (int i = 0; i < 24; i++) {
-            frameSpinLeft[i] = matrizDeSprites[18][i % 8];
-        }
-        for (int i = 0; i < 24; i++) {
-            frameSpinRight[i] = new TextureRegion(frameSpinLeft[i]);
-            frameSpinRight[i].flip(true, false);
+        for (int i = 0; i < 6; i++) {
+            frameSpinLeft[i + 6] = matrizDeSprites[10][5 - i]; // Siguientes 4 inversos de los primeros 4
+            // Esto asume que tienes suficientes sprites en matrizDeSprites[11] (al menos hasta el índice 3)
         }
 
+        // Tercer bucle: Crear frameSpinRight invirtiendo los frames de frameSpinLeft
+        for (int i = 0; i < 12; i++) { // Cambiado de 24 a 8
+            frameSpinRight[i] = new TextureRegion(frameSpinLeft[i]);
+            frameSpinRight[i].flip(true, false); // Voltear horizontalmente
+        }
         animations.put(EstadoPlayer.IDLE_RIGHT, new Animation<TextureRegion>(0.12f, frameIdleRight));
         animations.put(EstadoPlayer.IDLE_LEFT, new Animation<TextureRegion>(0.12f, frameIdleLeft));
         animations.put(EstadoPlayer.UP_LEFT, new Animation<TextureRegion>(0.1f, frameUpLeft));
@@ -228,8 +223,6 @@ public class Sonic extends Player {
         animations.put(EstadoPlayer.RIGHT, new Animation<TextureRegion>(0.2f, frameRight));
         animations.put(EstadoPlayer.HIT_RIGHT, new Animation<TextureRegion>(0.08f, frameHitRight));
         animations.put(EstadoPlayer.HIT_LEFT, new Animation<TextureRegion>(0.08f, frameHitLeft));
-        animations.put(EstadoPlayer.KICK_RIGHT, new Animation<TextureRegion>(0.1f, frameKickRight));
-        animations.put(EstadoPlayer.KICK_LEFT, new Animation<TextureRegion>(0.1f, frameKickLeft));
         animations.put(EstadoPlayer.SPECIAL_RIGHT, new Animation<TextureRegion>(0.07f, frameSpinRight));
         animations.put(EstadoPlayer.SPECIAL_LEFT, new Animation<TextureRegion>(0.07f, frameSpinLeft));
 
@@ -243,8 +236,6 @@ public class Sonic extends Player {
         animations.get(EstadoPlayer.RIGHT).setPlayMode(Animation.PlayMode.LOOP);
         animations.get(EstadoPlayer.HIT_RIGHT).setPlayMode(Animation.PlayMode.NORMAL);
         animations.get(EstadoPlayer.HIT_LEFT).setPlayMode(Animation.PlayMode.NORMAL);
-        animations.get(EstadoPlayer.KICK_RIGHT).setPlayMode(Animation.PlayMode.NORMAL);
-        animations.get(EstadoPlayer.KICK_LEFT).setPlayMode(Animation.PlayMode.NORMAL);
         animations.get(EstadoPlayer.SPECIAL_RIGHT).setPlayMode(Animation.PlayMode.LOOP);
         animations.get(EstadoPlayer.SPECIAL_LEFT).setPlayMode(Animation.PlayMode.LOOP);
 

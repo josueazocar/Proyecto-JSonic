@@ -20,7 +20,16 @@ public abstract class Player extends Entity implements Disposable {
     protected float collisionHeight;
     protected float collisionOffsetX;
     protected float collisionOffsetY;
+    // Flag to track if any WASD movement was detected.
+    protected boolean isMoving = false;
+    // Stores the proposed movement state (UP, DOWN, LEFT, RIGHT) before applying actions.
+    protected EstadoPlayer proposedMovementState = null;
+    protected boolean actionStateSet = false; // Flag to know if an action state has been set.
 //hasta aqui
+
+    public Player(){
+        super();
+    }
 
     public Player(PlayerState estadoInicial) {
         super(estadoInicial);
@@ -46,20 +55,20 @@ public abstract class Player extends Entity implements Disposable {
         speed = 2.8F; // Asegúrate de que 'speed' esté declarado en Entity o aquí
         setEstadoActual(EstadoPlayer.IDLE_RIGHT);
     }
-//Para las colisiones
-public Rectangle getBounds() {
-    if (bounds == null) {
-        Gdx.app.log("Player", "ERROR CRÍTICO: bounds es nulo. ¡La inicialización del hitbox debe ocurrir en la subclase Sonic!");
-        // Fallback: Usar el tileSize de la entidad (48) para el hitbox si no se inicializó.
-        this.collisionWidth = getTileSize(); // Se mantiene usando getTileSize() (48)
-        this.collisionHeight = getTileSize(); // Se mantiene usando getTileSize() (48)
-        this.collisionOffsetX = 0;
-        this.collisionOffsetY = 0;
-        this.bounds = new Rectangle(estado.x, estado.y, collisionWidth, collisionHeight);
+    //Para las colisiones
+    public Rectangle getBounds() {
+        if (bounds == null) {
+            Gdx.app.log("Player", "ERROR CRÍTICO: bounds es nulo. ¡La inicialización del hitbox debe ocurrir en la subclase Sonic!");
+            // Fallback: Usar el tileSize de la entidad (48) para el hitbox si no se inicializó.
+            this.collisionWidth = getTileSize(); // Se mantiene usando getTileSize() (48)
+            this.collisionHeight = getTileSize(); // Se mantiene usando getTileSize() (48)
+            this.collisionOffsetX = 0;
+            this.collisionOffsetY = 0;
+            this.bounds = new Rectangle(estado.x, estado.y, collisionWidth, collisionHeight);
+        }
+        bounds.set(estado.x + collisionOffsetX, estado.y + collisionOffsetY, collisionWidth, collisionHeight);
+        return bounds;
     }
-    bounds.set(estado.x + collisionOffsetX, estado.y + collisionOffsetY, collisionWidth, collisionHeight);
-    return bounds;
-}
 //colisiones
 
     /**
@@ -110,7 +119,7 @@ public Rectangle getBounds() {
         // SPIN, si es LOOP, no entra aquí. Si SPIN fuera NORMAL y quieres que bloquee,
         // no necesitarías una condición especial para ello aquí.
         boolean isNormalAction = animacion.getPlayMode() == Animation.PlayMode.NORMAL;
-        boolean isSpinning = getEstadoActual() == EstadoPlayer.SPIN_LEFT || getEstadoActual() == EstadoPlayer.SPIN_RIGHT;
+        boolean isSpinning = getEstadoActual() == EstadoPlayer.SPECIAL_LEFT || getEstadoActual() == EstadoPlayer.SPECIAL_RIGHT;
 
         if (isSpinning && animacion.getPlayMode() == Animation.PlayMode.LOOP) {
             return false; // El Spin en modo LOOP no bloquea el *procesamiento* de teclas de movimiento,
@@ -124,17 +133,6 @@ public Rectangle getBounds() {
 
     @Override
     public void KeyHandler() {
-        // 1. Handle non-interruptible actions (hit and kick).
-        // If the player is in a hit or kick animation, no other input is processed.
-        if (estado.estadoAnimacion == EstadoPlayer.HIT_RIGHT || estado.estadoAnimacion == EstadoPlayer.HIT_LEFT ||
-            estado.estadoAnimacion == EstadoPlayer.KICK_RIGHT || estado.estadoAnimacion == EstadoPlayer.KICK_LEFT) {
-            return; // Do not process further input while these actions play
-        }
-
-        // Flag to track if any WASD movement was detected.
-        boolean isMoving = false;
-        // Stores the proposed movement state (UP, DOWN, LEFT, RIGHT) before applying actions.
-        EstadoPlayer proposedMovementState = null;
 
         //Para las colisiones
         // CAMBIO: Declarar e inicializar oldX, oldY, targetX, targetY al inicio
@@ -143,31 +141,52 @@ public Rectangle getBounds() {
         float targetX = estado.x;
         float targetY = estado.y;
 
-        // 2. Process movement input (WASD). This updates the player's position.
-        // Position updates occur independently of the current animation,
-        // allowing movement while spinning.
+        isMoving = false;
+        proposedMovementState = null; // Reinicia el estado de movimiento propuesto
+
         // Calcula los valores tentativos sin modificar la posición real
         if (Gdx.input.isKeyPressed(Keys.W)) {
             targetY += speed;
-            proposedMovementState = EstadoPlayer.UP;
             isMoving = true;
+            // El estado de movimiento propuesto para el movimiento vertical depende de la última dirección horizontal
+            if(lastDirection == EstadoPlayer.RIGHT || lastDirection == EstadoPlayer.IDLE_RIGHT) {
+                proposedMovementState = EstadoPlayer.UP_RIGHT;
+            } else {
+                proposedMovementState = EstadoPlayer.UP_LEFT;
+            }
         }
+
         if (Gdx.input.isKeyPressed(Keys.S)) {
             targetY -= speed;
-            proposedMovementState = EstadoPlayer.DOWN;
             isMoving = true;
+            if(lastDirection == EstadoPlayer.RIGHT || lastDirection == EstadoPlayer.IDLE_RIGHT) {
+                proposedMovementState = EstadoPlayer.DOWN_RIGHT;
+            } else {
+                proposedMovementState = EstadoPlayer.DOWN_LEFT;
+            }
         }
         if (Gdx.input.isKeyPressed(Keys.A)) {
             targetX -= speed;
-            lastDirection = EstadoPlayer.LEFT;
-            proposedMovementState = EstadoPlayer.LEFT;
+            lastDirection = EstadoPlayer.LEFT; // Actualiza la última dirección horizontal
             isMoving = true;
+            proposedMovementState = EstadoPlayer.LEFT;
         }
+
         if (Gdx.input.isKeyPressed(Keys.D)) {
             targetX += speed;
-            lastDirection = EstadoPlayer.RIGHT;
-            proposedMovementState = EstadoPlayer.RIGHT;
+            lastDirection = EstadoPlayer.RIGHT; // Actualiza la última dirección horizontal
             isMoving = true;
+            proposedMovementState = EstadoPlayer.RIGHT;
+        }
+
+        if(!isMoving) {
+            //En caso de que no se este presionando ninguna tecla
+            // Solo establece IDLE si no se están presionando teclas de movimiento
+            if (lastDirection == EstadoPlayer.LEFT) {
+                proposedMovementState = EstadoPlayer.IDLE_LEFT;
+            } else {
+                proposedMovementState = EstadoPlayer.IDLE_RIGHT;
+            }
         }
 
 // Aplica el movimiento solo si no hay colisión
@@ -176,13 +195,6 @@ public Rectangle getBounds() {
         }
         if (!checkCollision(estado.x, targetY)) {
             estado.y = targetY;
-        }
-        // 3. Aplicar el movimiento en el eje Y si no hay colisión
-        if (targetY != oldY) { // Solo si hubo intento de movimiento en Y
-            // CAMBIO: Chequear colisión en Y usando la nueva X (potencialmente actualizada)
-            if (!checkCollision(estado.x, targetY)) {
-                estado.y = targetY;
-            }
         }
 
         // CAMBIO: Limitar al personaje a los bordes del mapa usando getTileSize() (que es 48).
@@ -194,63 +206,6 @@ public Rectangle getBounds() {
             estado.y = MathUtils.clamp(estado.y, 0, mapHeight - getTileSize());
         }
 
-        // 3. Process action inputs (J, K, L). These determine the animation state.
-        // Actions take precedence over simple movement animations (walk/run).
-        boolean actionStateSet = false; // Flag to know if an action state has been set.
-
-        // Handle hit (punch - J)
-        // Hit has priority if just pressed.
-        if (Gdx.input.isKeyJustPressed(Keys.J)) {
-            // The direction of the hit is based on the last horizontal direction.
-            if (lastDirection == EstadoPlayer.LEFT) {
-                setEstadoActual(EstadoPlayer.HIT_LEFT);
-            } else {
-                setEstadoActual(EstadoPlayer.HIT_RIGHT);
-            }
-            tiempoXFrame = 0; // Reset time so the hit animation starts from the beginning
-            actionStateSet = true;
-        }
-        // Handle kick (K)
-        // Kick has priority if just pressed.
-        else if (Gdx.input.isKeyJustPressed(Keys.K)) {
-            // The direction of the kick is based on the last horizontal direction.
-            if (lastDirection == EstadoPlayer.LEFT) {
-                setEstadoActual(EstadoPlayer.KICK_LEFT);
-            } else {
-                setEstadoActual(EstadoPlayer.KICK_RIGHT);
-            }
-            tiempoXFrame = 0; // Reset time for kick animation
-            actionStateSet = true;
-        }
-        // Handle SPIN (L)
-        // Spin can be held down and combines with WASD movement.
-        else if (Gdx.input.isKeyPressed(Keys.L) && Gdx.input.isKeyPressed(Keys.D) ) {
-            estado.x += speed;
-            setEstadoActual(EstadoPlayer.SPIN_LEFT);
-            actionStateSet = true;
-        }
-        else if (Gdx.input.isKeyPressed(Keys.L) && Gdx.input.isKeyPressed(Keys.A) ) {
-            estado.x -= speed;
-            setEstadoActual(EstadoPlayer.SPIN_RIGHT);
-            actionStateSet = true;
-        }
-
-
-        // 4. If no action state was set (J, K, L), determine the state based on movement or IDLE.
-        if (!actionStateSet) {
-            if (isMoving) {
-                // If there's movement (WASD), set the current state to the detected movement state.
-                setEstadoActual(proposedMovementState);
-            } else {
-                // If there's no movement and no action key was pressed, return to the IDLE state.
-                // The IDLE direction is based on the last saved HORIZONTAL direction.
-                if (lastDirection == EstadoPlayer.LEFT) {
-                    setEstadoActual(EstadoPlayer.IDLE_LEFT);
-                } else {
-                    setEstadoActual(EstadoPlayer.IDLE_RIGHT);
-                }
-            }
-        }
     }
 
     //Para que todos los personajes puedan recolectar anillos, basura..

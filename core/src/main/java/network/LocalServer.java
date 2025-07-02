@@ -41,7 +41,7 @@ public class LocalServer implements IGameServer {
     // Referencia directa al único cliente que existirá en este modo
     private LocalClient clienteLocal;
     private int proximoIdJugador = 1; // En modo local, siempre empezamos en 1
-    private static final float ROBOT_SPEED = 1.0f;
+    private static final int ROBOT_SPEED = 1;
     private static final float ROBOT_DETECTION_RANGE = 300f;
     private static final float ROBOT_ATTACK_RANGE = 10f; // Usando el valor del código original
 
@@ -131,9 +131,9 @@ public class LocalServer implements IGameServer {
         if (jugador == null) return;
 
         for (EnemigoState enemigo : enemigosActivos.values()) {
-            float dx = jugador.x - enemigo.x;
-            float dy = jugador.y - enemigo.y;
-            float distance = (float) Math.sqrt(dx * dx + dy * dy);
+            int dx = (int) (jugador.x - enemigo.x);
+            int dy = (int) (jugador.y - enemigo.y);
+            int distance = (int) Math.sqrt(dx * dx + dy * dy);
 
             // Si el robot está en medio de la animación de GOLPE, el servidor no hace NADA.
             // Simplemente espera a que el cliente le notifique que la animación ha terminado.

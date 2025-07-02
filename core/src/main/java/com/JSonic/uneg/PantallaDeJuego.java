@@ -1,7 +1,7 @@
-// Archivo: src/com/JSonic/uneg/PantallaDeJuego.java (COMPLETO Y CORREGIDO)
+// Archivo: src/com/JSonic/uneg/PantallaDeJuego.java
 package com.JSonic.uneg;
 
-// Imports...
+// Imports... (mantener los mismos imports que ya tenías)
 import com.badlogic.gdx.maps.MapObjects;
 import com.badlogic.gdx.math.Intersector;
 import com.badlogic.gdx.assets.AssetManager;
@@ -11,6 +11,7 @@ import com.badlogic.gdx.utils.viewport.FitViewport;
 import com.badlogic.gdx.utils.viewport.Viewport;
 import network.Network;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
+import com.badlogic.gdx.maps.objects.RectangleMapObject;
 import com.badlogic.gdx.math.Rectangle;
 import network.interfaces.IGameClient;
 import network.interfaces.IGameServer;
@@ -21,6 +22,10 @@ import java.util.HashMap;
 import com.badlogic.gdx.scenes.scene2d.ui.Table;
 import com.badlogic.gdx.scenes.scene2d.ui.Image;
 import com.badlogic.gdx.graphics.Texture;
+import com.badlogic.gdx.math.Vector2;
+
+// Importar la clase RobotnikVisual
+import com.JSonic.uneg.RobotnikVisual;
 
 public class PantallaDeJuego extends PantallaBase {
 
@@ -50,21 +55,40 @@ public class PantallaDeJuego extends PantallaBase {
     private int anillosTotal = 0;
     private int basuraTotal = 0;
 
+    // --- AGREGAR AQUÍ LA INSTANCIA DE ROBOTVISUAL ---
+    private RobotnikVisual eggman;
+
+    // --- NUEVAS VARIABLES PARA LA LÓGICA DE MOVIMIENTO DE ROBOTVISUAL (mantener las relevantes) ---
+    private static final float VELOCIDAD_ROBOTNIK = 60f; // Velocidad de movimiento de RobotVisual (pixeles/segundo)
+    private static final float RANGO_DETENERSE_ROBOTNIK = 30f; // Distancia a la que RobotVisual se detiene de Sonic
+
+    // NOTA: Las variables de "desatasco" (stuckTimerX, forceMoveY, UNSTICK_DURATION, etc.)
+    // YA NO SON NECESARIAS si Robotnik no colisiona, pero las dejamos declaradas
+    // por si en el futuro decides volver a activar las colisiones.
+    // Solo se eliminará la lógica que las usa.
+    private float stuckTimerX;
+    private float stuckTimerY;
+    private boolean forceMoveY;
+    private boolean forceMoveX;
+    private float forceMoveTimer;
+    private static final float STUCK_TIMEOUT = 0.5f;
+    private static final float UNSTICK_DURATION = 8.0f;
+    private static final float UNSTICK_SPEED_MULTIPLIER = 3.5f;
+
 
     public PantallaDeJuego(JSonicJuego juego, IGameClient client, IGameServer server) {
         super();
         this.juegoPrincipal = juego;
         this.batch = juego.batch;
-        this.gameClient = client; // Asignamos el cliente recibido
-        this.localServer = server;  // Asignamos el servidor recibido (puede ser null)
+        this.gameClient = client;
+        this.localServer = server;
     }
 
     public PantallaDeJuego(JSonicJuego juego) {
-        this(juego, null, null); // Llamamos al constructor con nulls si no hay cliente/servidor
+        this(juego, null, null);
     }
 
     @Override
-    /* Tu método inicializar original (SIN CAMBIOS... por ahora)*/
     public void inicializar() {
         camaraJuego = new OrthographicCamera();
         viewport = new FitViewport(VIRTUAL_WIDTH, VIRTUAL_HEIGHT, camaraJuego);
@@ -103,6 +127,17 @@ public class PantallaDeJuego extends PantallaBase {
         tablaUI.add(contadorBasura.getTabla()).padLeft(5);
 
         mainStage.addActor(tablaUI);
+
+        // --- AGREGAR AQUÍ LA INSTANCIACIÓN DE EGGMAN (RobotnikVisual) ---
+        EnemigoState eggmanState = new EnemigoState(999, 300, 100, 100, EnemigoState.EnemigoType.ROBOT);
+        eggman = new RobotnikVisual(eggmanState, manejadorNivel);
+
+        // Ya no es necesario inicializar variables de desatasco si no hay colisiones.
+        // stuckTimerX = 0;
+        // stuckTimerY = 0;
+        // forceMoveX = false;
+        // forceMoveY = false;
+        // forceMoveTimer = 0;
     }
 
     @Override
@@ -165,12 +200,13 @@ public class PantallaDeJuego extends PantallaBase {
                     // Recibimos la lista completa de estados de enemigos del servidor
                     for (EnemigoState estadoServidor : p.estadosEnemigos.values()) {
                         RobotVisual enemigoVisual = enemigosEnPantalla.get(estadoServidor.id);
+
                         if (enemigoVisual != null) {
                             // Actualizamos la posición y el estado del enemigo visual
                             // para que coincida con lo que dice el servidor.
                             enemigoVisual.estado.x = estadoServidor.x;
                             enemigoVisual.estado.y = estadoServidor.y;
-                            enemigoVisual.setEstadoActual(estadoServidor.estadoAnimacion); // Asumiendo que RobotVisual tiene este método
+                            enemigoVisual.setEstadoActual(estadoServidor.estadoAnimacion);
                         }
                     }
                 }
@@ -181,7 +217,6 @@ public class PantallaDeJuego extends PantallaBase {
         for (ItemVisual item : itemsEnPantalla.values()) {
             item.update(deltat);
         }
-
 
         // Usamos un iterador para poder eliminar elementos de forma segura mientras recorremos la colección.
         Iterator<Map.Entry<Integer, ItemVisual>> iter = itemsEnPantalla.entrySet().iterator();
@@ -211,23 +246,85 @@ public class PantallaDeJuego extends PantallaBase {
                 // 3. Lógica de prueba: Eliminar el ítem visualmente.
                 // En la versión final, esto solo debe ocurrir cuando el servidor lo ordene.
                 if (itemRecogido) {
-                    iter.remove(); // Elimina el ítem del HashMap de forma segura.
-                    item.dispose(); // Libera los recursos del ítem.
+                    iter.remove();
+                    item.dispose();
                     System.out.println("[CLIENT_DEBUG] Ítem " + item.estado.id + " eliminado visualmente para la prueba.");
-                    break; // Rompemos el bucle para procesar solo una recogida por fotograma.
+                    break;
                 }
             }
         }
 
         // --- LÓGICA DE JUGADOR Y ENEMIGOS ---
-        sonic.KeyHandler(); // Esto ahora maneja el movimiento Y la colisión con el mapa
+        sonic.KeyHandler();
         sonic.update(deltat);
 
-        for (Player otro : otrosJugadores.values()) {
-            otro.update(deltat);
-        }
+        for (Player otro : otrosJugadores.values()) otro.update(deltat);
 
+        // Actualizar otros enemigos (si los hubiera)
         for (RobotVisual enemigo : enemigosEnPantalla.values()) enemigo.update(deltat);
+
+        // --- INICIO: LÓGICA Y ACTUALIZACIÓN DE ROBOTVISUAL (EGGMAN) ---
+        if (eggman != null) {
+            eggman.update(deltat); // Primero actualizamos su animación
+
+            // Solo si Sonic existe y no es nulo, el RobotVisual persigue
+            if (sonic != null && sonic.estado != null) {
+                // Posición de RobotVisual (centro para cálculo de distancia)
+                float robotnikCenterX = eggman.estado.x + eggman.getBounds().width / 2;
+                float robotnikCenterY = eggman.estado.y + eggman.getBounds().height / 2;
+
+                // Posición de Sonic (centro para cálculo de distancia)
+                float sonicCenterX = sonic.estado.x + sonic.getBounds().width / 2;
+                float sonicCenterY = sonic.estado.y + sonic.getBounds().height / 2;
+
+                // Calcular la distancia entre RobotVisual y Sonic
+                float distanciaX = sonicCenterX - robotnikCenterX;
+                float distanciaY = sonicCenterY - robotnikCenterY;
+                float distancia = (float) Math.sqrt(distanciaX * distanciaX + distanciaY * distanciaY);
+
+                // Comprobar si RobotVisual está fuera del rango de detención
+                if (distancia > RANGO_DETENERSE_ROBOTNIK) {
+                    float velocidadMovimiento = VELOCIDAD_ROBOTNIK * deltat;
+
+                    // Calcular la dirección normalizada deseada hacia Sonic
+                    Vector2 direccionDeseada = new Vector2(distanciaX, distanciaY).nor();
+
+                    // --- MOVIMIENTO DE EGGMAN SIN COLISIONES ---
+                    // Actualiza directamente la posición de Eggman sin verificar colisiones.
+                    eggman.estado.x += direccionDeseada.x * velocidadMovimiento;
+                    eggman.estado.y += direccionDeseada.y * velocidadMovimiento;
+
+                    // IMPORTANTE: Aunque Eggman no colisione, es buena práctica actualizar
+                    // los bounds por si en algún momento los usas para otra lógica (ej. colisión con Sonic).
+                    eggman.getBounds().x = eggman.estado.x;
+                    eggman.getBounds().y = eggman.estado.y;
+
+                    // Lógica de animación
+                    if (Math.abs(direccionDeseada.x) > 0.001f) { // Si hay movimiento horizontal significativo
+                        eggman.estado.mirandoDerecha = (direccionDeseada.x > 0);
+                        eggman.setEstadoActual(eggman.estado.mirandoDerecha ? EnemigoState.EstadoEnemigo.RUN_RIGHT : EnemigoState.EstadoEnemigo.RUN_LEFT);
+                    } else if (Math.abs(direccionDeseada.y) > 0.001f) {
+                        // Si solo se mueve verticalmente, mantiene la última dirección horizontal
+                        eggman.setEstadoActual(eggman.estado.mirandoDerecha ? EnemigoState.EstadoEnemigo.RUN_RIGHT : EnemigoState.EstadoEnemigo.RUN_LEFT);
+                    } else {
+                        eggman.setEstadoActual(eggman.estado.mirandoDerecha ? EnemigoState.EstadoEnemigo.IDLE_RIGHT : EnemigoState.EstadoEnemigo.IDLE_LEFT);
+                    }
+
+                } else {
+                    // Si está dentro del rango de detención, se queda quieto
+                    eggman.setEstadoActual(eggman.estado.mirandoDerecha ? EnemigoState.EstadoEnemigo.IDLE_RIGHT : EnemigoState.EstadoEnemigo.IDLE_LEFT);
+                }
+            } else {
+                // Si Sonic es nulo o su estado es nulo, RobotVisual se queda quieto
+                eggman.setEstadoActual(eggman.estado.mirandoDerecha ? EnemigoState.EstadoEnemigo.IDLE_RIGHT : EnemigoState.EstadoEnemigo.IDLE_LEFT);
+            }
+
+            // NOTA: Toda la lógica de "stuckTimerX", "stuckTimerY", "forceMoveX", "forceMoveY",
+            // y "forceMoveTimer" se ha ELIMINADO de aquí porque ya no es necesaria
+            // al no haber colisiones con el mapa para Eggman.
+        }
+        // --- FIN: LÓGICA Y ACTUALIZACIÓN DE ROBOTVISUAL (EGGMAN) ---
+
 
         // Actualizar cámara
         camaraJuego.position.x = sonic.estado.x;
@@ -251,6 +348,11 @@ public class PantallaDeJuego extends PantallaBase {
         for (Player otro : otrosJugadores.values()) otro.draw(batch);
         for (RobotVisual enemigo : enemigosEnPantalla.values()) enemigo.draw(batch);
 
+        // --- AGREGAR AQUÍ EL DIBUJADO DE EGGMAN (RobotVisual) ---
+        if (eggman != null) {
+            eggman.draw(batch);
+        }
+
         for (ItemVisual item : itemsEnPantalla.values()) item.draw(batch);
 
         batch.end();
@@ -264,11 +366,9 @@ public class PantallaDeJuego extends PantallaBase {
             paquete.x = sonic.estado.x;
             paquete.y = sonic.estado.y;
             paquete.estadoAnimacion = sonic.getEstadoActual();
-            gameClient.send(paquete); // Usa el método de la interfaz
+            gameClient.send(paquete);
         }
     }
-
-
 
     @Override
     public void resize(int width, int height) {
@@ -285,8 +385,6 @@ public class PantallaDeJuego extends PantallaBase {
         }
     }
 
-
-
     @Override
     public void resume() {
         if (soundManager != null) {
@@ -300,12 +398,12 @@ public class PantallaDeJuego extends PantallaBase {
     }
 
     private void crearEnemigoVisual(EnemigoState estadoEnemigo) {
-        // Nos aseguramos de no crear un enemigo que ya exista
         if (!enemigosEnPantalla.containsKey(estadoEnemigo.id)) {
             System.out.println("[CLIENT] Recibida orden de crear enemigo con ID: " + estadoEnemigo.id);
-            // Creamos el objeto visual usando el estado que nos dio el servidor
+            // Asegurarse de que el constructor de RobotVisual sea compatible
             RobotVisual nuevoRobot = new RobotVisual(estadoEnemigo, manejadorNivel, this.gameClient);
             enemigosEnPantalla.put(estadoEnemigo.id, nuevoRobot);
+
         }
     }
 
@@ -313,7 +411,6 @@ public class PantallaDeJuego extends PantallaBase {
         if (!itemsEnPantalla.containsKey(estadoItem.id)) {
             System.out.println("[CLIENT] Recibida orden de crear ítem tipo " + estadoItem.tipo + " con ID: " + estadoItem.id);
             ItemVisual nuevoItem = null;
-            // Creamos el tipo de ítem visual correcto según la información del servidor
             switch (estadoItem.tipo) {
                 case ANILLO:
                     nuevoItem = new AnillosVisual(estadoItem);
@@ -353,7 +450,6 @@ public class PantallaDeJuego extends PantallaBase {
         }
     }
 
-    // Tu método dispose original (CON MODIFICACIONES)
     @Override
     public void dispose() {
         super.dispose();
@@ -363,6 +459,10 @@ public class PantallaDeJuego extends PantallaBase {
         if (soundManager != null) soundManager.dispose();
         if (shapeRenderer != null) shapeRenderer.dispose();
         for (RobotVisual enemigo : enemigosEnPantalla.values()) enemigo.dispose();
+        // --- AGREGAR AQUÍ EL DISPOSE DE EGGMAN (RobotVisual) ---
+        if (eggman != null) {
+            eggman.dispose();
+        }
 
         for (ItemVisual item : itemsEnPantalla.values()) {
             item.dispose();
@@ -370,5 +470,4 @@ public class PantallaDeJuego extends PantallaBase {
         if (contadorAnillos != null) contadorAnillos.dispose();
         if (contadorBasura != null) contadorBasura.dispose();
     }
-
 }

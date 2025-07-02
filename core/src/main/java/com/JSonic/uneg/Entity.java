@@ -18,8 +18,10 @@ public abstract class Entity {
     protected Texture spriteSheet; //Imagen donde se encuentra todos los sprites en columnas y filas
     protected TextureRegion[] frameIdleRight; //Arreglo para almacenar los sprites cuando el personaje no se mueve
     protected TextureRegion[] frameIdleLeft; //Arreglo para almacenar los sprites cuando el personaje no se mueve
-    protected TextureRegion[] frameUp; //Arreglo para almacenar los sprites de ir hacia arriba
-    protected TextureRegion[] frameDown; //Arreglo para almacenar los sprites de ir hacia abajo
+    protected TextureRegion[] frameUpRight; //Arreglo para almacenar los sprites de ir hacia arriba
+    protected TextureRegion[] frameUpLeft; //Arreglo para almacenar los sprites de ir hacia arriba
+    protected TextureRegion[] frameDownRight; //Arreglo para almacenar los sprites de ir hacia abajo
+    protected TextureRegion[] frameDownLeft; //Arreglo para almacenar los sprites de ir hacia abajo
     protected TextureRegion[] frameLeft; //Arreglo para almacenar los sprites de ir hacia izquierda
     protected TextureRegion[] frameRight; //Arreglo para almacenar los sprites de ir hacia derecha
     protected TextureRegion[] frameHitRight; //Arreglo para almacenar los sprites de golpear a la derecha
@@ -32,16 +34,18 @@ public abstract class Entity {
     public enum EstadoPlayer {
         IDLE_RIGHT,
         IDLE_LEFT,
-        UP,
-        DOWN,
+        UP_RIGHT,
+        UP_LEFT,
+        DOWN_RIGHT,
+        DOWN_LEFT,
         LEFT,
         RIGHT,
         HIT_RIGHT,
         HIT_LEFT,
         KICK_RIGHT,
         KICK_LEFT,
-        SPIN_RIGHT,
-        SPIN_LEFT
+        SPECIAL_RIGHT,
+        SPECIAL_LEFT
     }
 
     // Mapa para almacenar diferentes animaciones por estado
@@ -56,8 +60,10 @@ public abstract class Entity {
         spriteSheet = null;
         frameIdleRight = null;
         frameIdleLeft = null;
-        frameUp = null;
-        frameDown = null;
+        frameUpRight = null;
+        frameUpLeft = null;
+        frameDownRight = null;
+        frameDownLeft = null;
         frameLeft = null;
         frameRight = null;
         frameHitRight = null;
@@ -68,6 +74,9 @@ public abstract class Entity {
         this.estado.estadoAnimacion = EstadoPlayer.IDLE_RIGHT; // Establecer un estado por defecto es útil
         // Inicializar el mapa de animaciones
         animations = new EnumMap<>(EstadoPlayer.class);
+    }
+
+    public Entity(){
     }
 
     //Setters
@@ -109,13 +118,6 @@ public abstract class Entity {
         this.frameIdleLeft = frameIdleLeft;
     }
 
-    public void setFrameUp(TextureRegion[] frameUp) {
-        this.frameUp = frameUp;
-    }
-
-    public void setFrameDown(TextureRegion[] frameDown) {
-        this.frameDown = frameDown;
-    }
 
     public void setFrameLeft(TextureRegion[] frameLeft) {
         this.frameLeft = frameLeft;
@@ -178,12 +180,21 @@ public abstract class Entity {
         return frameIdleLeft;
     }
 
-    public TextureRegion[] getFrameUp() {
-        return frameUp;
+    public TextureRegion[] getFrameUpRight() {
+        return frameUpRight;
     }
 
-    public TextureRegion[] getFrameDown() {
-        return frameDown;
+    public TextureRegion[] getFrameUpLeft() {
+        return frameUpLeft;
+    }
+
+
+    public TextureRegion[] getFrameDownRight() {
+        return frameDownRight;
+    }
+
+    public TextureRegion[] getFrameDownLeft() {
+        return frameDownLeft;
     }
 
     public TextureRegion[] getFrameLeft() {
