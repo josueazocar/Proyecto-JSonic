@@ -3,7 +3,7 @@ package com.JSonic.uneg;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Input;
 import com.badlogic.gdx.graphics.Texture;
-import com.badlogic.gdx.graphics.g2d.TextureRegion;
+import com.badlogic.gdx.graphics.g2d.TextureAtlas;
 import com.badlogic.gdx.scenes.scene2d.InputEvent;
 import com.badlogic.gdx.scenes.scene2d.ui.Button;
 import com.badlogic.gdx.scenes.scene2d.ui.Image;
@@ -15,23 +15,27 @@ public class PantallaMenu extends PantallaBase {
 
     private final JSonicJuego juegoApp;
     private Texture texturaFondo, textureTextoInicio;
-    private Texture texturaBotonJugar, texturaBotonJugarHover, texturaBotonJugarDown,
-                  texturaBotonAcercaDe, texturaBotonAcercaDeHover, texturaBotonAcercaDeDown,
-                  texturaBotonUnJugador, texturaBotonUnJugadorHover, texturaBotonUnJugadorDown,
-                  texturaBotonMultijugador, texturaBotonMultijugadorHover, texturaBotonMultijugadorDown,
-                  texturaBotonOnline, texturaBotonOnlineHover, texturaBotonOnlineDown,texturaBotonAtras,
-                  texturaBotonSalir, texturaBotonSalirHover, texturaBotonSalirDown,
-                  texturaBotonOpciones, texturaBotonOpcionesHover, texturaBotonOpcionesDown,
-                  texturaBotonAyuda, texturaBotonAyudaHover, texturaBotonAyudaDown;
+    private TextureAtlas atlasBotones;
     private Image imagenFondo, imagenTextoInicio;
-    private Button botonJugar, botonAcercaDe, botonUnJugador, botonOnline ,botonMultijugador, botonAtras, botonSalir, botonOpciones, botonAyuda;
+    private Button botonJugar, botonAcercaDe, botonUnJugador, botonOnline , botonLocal,botonMultijugador, botonAtras, botonSalir, botonOpciones, botonAyuda, botonCrear, botonUnirse;
     private final boolean mostrarMenuDirecto;
     private boolean logicaInicializada = false; // Bandera para controlar la inicialización
+    private EstadoMenu estadoInicial = EstadoMenu.PRINCIPAL;
+    private EstadoMenu estadoActual;
+
+    public enum EstadoMenu {
+        PRINCIPAL, JUGAR, OPCIONES, MULTIJUGADOR, CREAR_UNIRSE
+    }
 
     public PantallaMenu(JSonicJuego juegoApp, boolean mostrarMenuDirecto) {
         super(); // Llama a inicializar() internamente
         this.juegoApp = juegoApp;
         this.mostrarMenuDirecto = mostrarMenuDirecto;
+        this.estadoActual = EstadoMenu.PRINCIPAL;
+    }
+
+    public void setEstadoMenu(EstadoMenu estado) {
+        this.estadoInicial = estado;
     }
 
     public PantallaMenu(JSonicJuego juegoApp) {
@@ -41,55 +45,25 @@ public class PantallaMenu extends PantallaBase {
     @Override
     public void inicializar() {
         // 1. Cargar todos los assets y crear los actores.
-        texturaFondo = new Texture(Gdx.files.internal("Fondos/Sonic-Tails-Knuckles.png"));
+        texturaFondo = new Texture(Gdx.files.internal("Fondos/Portada.png"));
         textureTextoInicio = new Texture(Gdx.files.internal("Fondos/Texto_inicial.png"));
-
-        texturaBotonJugar = new Texture(Gdx.files.internal("Botones/boton_Jugar.png"));
-        texturaBotonJugarHover = new Texture(Gdx.files.internal("Botones/boton_jugar_hover.png"));
-        texturaBotonJugarDown = new Texture(Gdx.files.internal("Botones/boton_jugar_down.png"));
-
-        texturaBotonAcercaDe = new Texture(Gdx.files.internal("Botones/boton_AcercaDe.png"));
-        texturaBotonAcercaDeHover = new Texture(Gdx.files.internal("Botones/boton_acercade_hover.png"));
-        texturaBotonAcercaDeDown = new Texture(Gdx.files.internal("Botones/boton_acercade_down.png"));
-
-        texturaBotonUnJugador = new Texture(Gdx.files.internal("Botones/boton_1jugador.png"));
-        texturaBotonUnJugadorHover = new Texture(Gdx.files.internal("Botones/boton_unjugador_hover.png"));
-        texturaBotonUnJugadorDown = new Texture(Gdx.files.internal("Botones/boton_unjugador_down.png"));
-
-        texturaBotonMultijugador = new Texture(Gdx.files.internal("Botones/boton_multijugador.png"));
-        texturaBotonMultijugadorHover = new Texture(Gdx.files.internal("Botones/boton_multijugador_hover.png"));
-        texturaBotonMultijugadorDown = new Texture(Gdx.files.internal("Botones/boton_multijugador_down.png"));
-
-        texturaBotonOnline = new Texture(Gdx.files.internal("Botones/boton_online.png"));
-        texturaBotonOnlineHover = new Texture(Gdx.files.internal("Botones/boton_online_hover.png"));
-        texturaBotonOnlineDown = new Texture(Gdx.files.internal("Botones/boton_online_down.png"));
-
-        texturaBotonAtras = new Texture(Gdx.files.internal("Botones/boton_atras.png"));
-
-        texturaBotonSalir = new Texture(Gdx.files.internal("Botones/boton_salir.png"));
-        texturaBotonSalirHover = new Texture(Gdx.files.internal("Botones/boton_salir_hover.png"));
-        texturaBotonSalirDown = new Texture(Gdx.files.internal("Botones/boton_salir_down.png"));
-
-        texturaBotonOpciones = new Texture(Gdx.files.internal("Botones/boton_opciones.png"));
-        texturaBotonOpcionesHover = new Texture(Gdx.files.internal("Botones/boton_opciones_hover.png"));
-        texturaBotonOpcionesDown = new Texture(Gdx.files.internal("Botones/boton_opciones_down.png"));
-
-        texturaBotonAyuda = new Texture(Gdx.files.internal("Botones/boton_ayuda.png"));
-        texturaBotonAyudaHover = new Texture(Gdx.files.internal("Botones/boton_ayuda_hover.png"));
-        texturaBotonAyudaDown = new Texture(Gdx.files.internal("Botones/boton_ayuda_down.png"));
+        atlasBotones = new TextureAtlas(Gdx.files.internal("Atlas/BotonesMenu.atlas"));
 
 
         imagenFondo = new Image(texturaFondo);
         imagenTextoInicio = new Image(textureTextoInicio);
-        botonJugar = crearBotonConEstados(texturaBotonJugar, texturaBotonJugarDown, texturaBotonJugarHover);
-        botonAcercaDe = crearBotonConEstados(texturaBotonAcercaDe, texturaBotonAcercaDeDown, texturaBotonAcercaDeHover);
-        botonUnJugador = crearBotonConEstados(texturaBotonUnJugador, texturaBotonUnJugadorDown, texturaBotonUnJugadorHover);
-        botonMultijugador = crearBotonConEstados(texturaBotonMultijugador, texturaBotonMultijugadorDown, texturaBotonMultijugadorHover);
-        botonOnline = crearBotonConEstados(texturaBotonOnline, texturaBotonOnlineDown, texturaBotonOnlineHover);
-        botonAtras = crearBoton(texturaBotonAtras);
-        botonOpciones = crearBotonConEstados(texturaBotonOpciones, texturaBotonOpcionesDown, texturaBotonOpcionesHover);
-        botonSalir = crearBotonConEstados(texturaBotonSalir, texturaBotonSalirDown, texturaBotonSalirHover);
-        botonAyuda = crearBotonConEstados(texturaBotonAyuda, texturaBotonAyudaDown, texturaBotonAyudaHover);
+        botonJugar = crearBotonConEstados("boton_jugar", "boton_jugar_down", "boton_jugar_hover");
+        botonAcercaDe = crearBotonConEstados("boton_AcercaDe", "boton_acercade_down", "boton_acercade_hover");
+        botonUnJugador = crearBotonConEstados("boton_1jugador", "boton_unjugador_down", "boton_unjugador_hover");
+        botonMultijugador = crearBotonConEstados("boton_multijugador", "boton_multijugador_down", "boton_multijugador_hover");
+        botonLocal = crearBotonConEstados("boton_local", "boton_local_down", "boton_local_hover");
+        botonOnline = crearBotonConEstados("boton_online", "boton_online_down", "boton_online_hover");
+        botonCrear = crearBotonConEstados("boton_crear", "boton_crear_down", "boton_crear_hover");
+        botonUnirse = crearBotonConEstados("boton_unirse", "boton_unirse_down", "boton_unirse_hover");
+        botonAtras = crearBoton("boton_atras");
+        botonOpciones = crearBotonConEstados("boton_opciones", "boton_opciones_down", "boton_opciones_hover");
+        botonSalir = crearBotonConEstados("boton_salir", "boton_salir_down", "boton_salir_hover");
+        botonAyuda = crearBotonConEstados("boton_ayuda", "boton_ayuda_down", "boton_ayuda_hover");
     }
 
     @Override
@@ -121,7 +95,18 @@ public class PantallaMenu extends PantallaBase {
         // Configurar visibilidad inicial
         if (mostrarMenuDirecto) {
             imagenTextoInicio.setVisible(false);
-            mostrarMenuPrincipal();
+            if (estadoInicial == EstadoMenu.OPCIONES) {
+                mostrarMenuOpciones();
+            } else if (estadoInicial == EstadoMenu.JUGAR) {
+                mostrarMenuJugar();
+            } else if (estadoInicial == EstadoMenu.MULTIJUGADOR) {
+                mostrarMenuMultijugador();
+            } else if (estadoInicial == EstadoMenu.CREAR_UNIRSE) {
+                mostrarMenuCrearUnirse();
+            }
+            else {
+                mostrarMenuPrincipal();
+            }
         } else {
             imagenTextoInicio.setVisible(true);
             botonJugar.setVisible(false);
@@ -130,7 +115,10 @@ public class PantallaMenu extends PantallaBase {
             botonAcercaDe.setVisible(false);
             botonUnJugador.setVisible(false);
             botonMultijugador.setVisible(false);
+            botonLocal.setVisible(false);
             botonOnline.setVisible(false);
+            botonCrear.setVisible(false);
+            botonUnirse.setVisible(false);
             botonAtras.setVisible(false);
             botonAyuda.setVisible(false);
         }
@@ -154,7 +142,13 @@ public class PantallaMenu extends PantallaBase {
         botonAtras.addListener(new ClickListener() {
             @Override
             public void clicked(InputEvent event, float x, float y) {
-                mostrarMenuPrincipal();
+                if (estadoActual == EstadoMenu.CREAR_UNIRSE) {
+                    mostrarMenuMultijugador();
+                } else if (estadoActual == EstadoMenu.MULTIJUGADOR) {
+                    mostrarMenuJugar();
+                } else {
+                    mostrarMenuPrincipal();
+                }
             }
         });
 
@@ -195,20 +189,42 @@ public class PantallaMenu extends PantallaBase {
         botonMultijugador.addListener(new ClickListener() {
             @Override
             public void clicked(InputEvent event, float x, float y) {
-                juegoApp.direccionIp = "localhost";
-                juegoApp.iniciarJuegoOnline();
+                mostrarMenuMultijugador();
             }
         });
         botonOnline.addListener(new ClickListener() {
             @Override
             public void clicked(InputEvent event, float x, float y) {
                 juegoApp.direccionIp = "20.112.50.29";
-                juegoApp.iniciarJuegoOnline();
+                mostrarMenuCrearUnirse();
+            }
+        });
+
+        botonLocal.addListener(new ClickListener() {
+            @Override
+            public void clicked(InputEvent event, float x, float y) {
+                juegoApp.direccionIp = "localhost";
+                mostrarMenuCrearUnirse();
+            }
+        });
+
+        botonCrear.addListener(new ClickListener() {
+            @Override
+            public void clicked(InputEvent event, float x, float y) {
+                juegoApp.setPantallaActiva(new PantallaCrearPartida(juegoApp));
+            }
+        });
+
+        botonUnirse.addListener(new ClickListener() {
+            @Override
+            public void clicked(InputEvent event, float x, float y) {
+                juegoApp.setPantallaActiva(new PantallaUnirsePartida(juegoApp));
             }
         });
     }
 
     private void mostrarMenuPrincipal() {
+        estadoActual = EstadoMenu.PRINCIPAL;
         uiTable.clear();
         uiTable.bottom().padBottom(40);
         uiTable.add(botonJugar).size(250, 125);
@@ -222,20 +238,22 @@ public class PantallaMenu extends PantallaBase {
         botonSalir.setVisible(true);
         botonAcercaDe.setVisible(false);
         botonUnJugador.setVisible(false);
+        botonLocal.setVisible(false);
         botonMultijugador.setVisible(false);
         botonOnline.setVisible(false);
+        botonCrear.setVisible(false);
+        botonUnirse.setVisible(false);
         botonAtras.setVisible(false);
         botonAyuda.setVisible(false);
     }
 
     private void mostrarMenuJugar() {
+        estadoActual = EstadoMenu.JUGAR;
         uiTable.clear();
         uiTable.bottom().padBottom(40);
         uiTable.add(botonUnJugador).size(250, 125);
         uiTable.row();
         uiTable.add(botonMultijugador).size(250, 125);
-        uiTable.row();
-        uiTable.add(botonOnline).size(250, 125);
 
         botonJugar.setVisible(false);
         botonOpciones.setVisible(false);
@@ -243,10 +261,58 @@ public class PantallaMenu extends PantallaBase {
         botonAcercaDe.setVisible(false);
         botonUnJugador.setVisible(true);
         botonMultijugador.setVisible(true);
-        botonOnline.setVisible(true);
+        botonLocal.setVisible(false);
+        botonOnline.setVisible(false);
+        botonCrear.setVisible(false);
+        botonUnirse.setVisible(false);
         botonAtras.setVisible(true);
         botonAyuda.setVisible(false);
     }
+
+    private void mostrarMenuMultijugador() {
+        estadoActual = EstadoMenu.MULTIJUGADOR;
+        uiTable.clear();
+        uiTable.bottom().padBottom(40);
+        uiTable.add(botonLocal).size(250, 125);
+        uiTable.row();
+        uiTable.add(botonOnline).size(250, 125);
+
+        botonJugar.setVisible(false);
+        botonOpciones.setVisible(false);
+        botonSalir.setVisible(false);
+        botonAcercaDe.setVisible(false);
+        botonUnJugador.setVisible(false);
+        botonMultijugador.setVisible(false);
+        botonLocal.setVisible(true);
+        botonOnline.setVisible(true);
+        botonCrear.setVisible(false);
+        botonUnirse.setVisible(false);
+        botonAtras.setVisible(true);
+        botonAyuda.setVisible(false);
+    }
+
+    private void mostrarMenuCrearUnirse() {
+        estadoActual = EstadoMenu.CREAR_UNIRSE;
+        uiTable.clear();
+        uiTable.bottom().padBottom(40);
+        uiTable.add(botonCrear).size(250, 125);
+        uiTable.row();
+        uiTable.add(botonUnirse).size(250, 125);
+
+        botonJugar.setVisible(false);
+        botonOpciones.setVisible(false);
+        botonSalir.setVisible(false);
+        botonAcercaDe.setVisible(false);
+        botonUnJugador.setVisible(false);
+        botonMultijugador.setVisible(false);
+        botonLocal.setVisible(false);
+        botonOnline.setVisible(false);
+        botonCrear.setVisible(true);
+        botonUnirse.setVisible(true);
+        botonAtras.setVisible(true);
+        botonAyuda.setVisible(false);
+    }
+
 
     private void mostrarMenuOpciones() {
         uiTable.clear();
@@ -261,22 +327,23 @@ public class PantallaMenu extends PantallaBase {
         botonAcercaDe.setVisible(true);
         botonUnJugador.setVisible(false);
         botonMultijugador.setVisible(false);
+        botonLocal.setVisible(false);
         botonOnline.setVisible(false);
         botonAtras.setVisible(true);
         botonAyuda.setVisible(true);
     }
 
-    private Button crearBoton(Texture textura) {
+    private Button crearBoton(String nombreRegion) {
         Button.ButtonStyle estilo = new Button.ButtonStyle();
-        estilo.up = new TextureRegionDrawable(new TextureRegion(textura));
+        estilo.up = new TextureRegionDrawable(atlasBotones.findRegion(nombreRegion));
         return new Button(estilo);
     }
 
-    private Button crearBotonConEstados(Texture up, Texture down, Texture over) {
+    private Button crearBotonConEstados(String up, String down, String over) {
         Button.ButtonStyle estilo = new Button.ButtonStyle();
-        estilo.up = new TextureRegionDrawable(new TextureRegion(up));
-        estilo.down = new TextureRegionDrawable(new TextureRegion(down));
-        estilo.over = new TextureRegionDrawable(new TextureRegion(over));
+        estilo.up = new TextureRegionDrawable(atlasBotones.findRegion(up));
+        estilo.down = new TextureRegionDrawable(atlasBotones.findRegion(down));
+        estilo.over = new TextureRegionDrawable(atlasBotones.findRegion(over));
         return new Button(estilo);
     }
 
@@ -285,40 +352,6 @@ public class PantallaMenu extends PantallaBase {
         super.dispose();
         if (texturaFondo != null) texturaFondo.dispose();
         if (textureTextoInicio != null) textureTextoInicio.dispose();
-
-        if (texturaBotonJugar != null) texturaBotonJugar.dispose();
-        if (texturaBotonJugarHover != null) texturaBotonJugarHover.dispose();
-        if (texturaBotonJugarDown != null) texturaBotonJugarDown.dispose();
-
-        if (texturaBotonAcercaDe != null) texturaBotonAcercaDe.dispose();
-        if (texturaBotonAcercaDeHover != null) texturaBotonAcercaDeHover.dispose();
-        if (texturaBotonAcercaDeDown != null) texturaBotonAcercaDeDown.dispose();
-
-        if (texturaBotonUnJugador != null) texturaBotonUnJugador.dispose();
-        if (texturaBotonUnJugadorHover != null) texturaBotonUnJugadorHover.dispose();
-        if (texturaBotonUnJugadorDown != null) texturaBotonUnJugadorDown.dispose();
-
-        if (texturaBotonMultijugador != null) texturaBotonMultijugador.dispose();
-        if (texturaBotonMultijugadorHover != null) texturaBotonMultijugadorHover.dispose();
-        if (texturaBotonMultijugadorDown != null) texturaBotonMultijugadorDown.dispose();
-
-        if (texturaBotonOnline != null) texturaBotonOnline.dispose();
-        if (texturaBotonOnlineHover != null) texturaBotonOnlineHover.dispose();
-        if (texturaBotonOnlineDown != null) texturaBotonOnlineDown.dispose();
-
-        if (texturaBotonAtras != null) texturaBotonAtras.dispose();
-
-        if (texturaBotonSalir != null) texturaBotonSalir.dispose();
-        if (texturaBotonSalirHover != null) texturaBotonSalirHover.dispose();
-        if (texturaBotonSalirDown != null) texturaBotonSalirDown.dispose();
-
-        if (texturaBotonOpciones != null) texturaBotonOpciones.dispose();
-        if (texturaBotonOpcionesHover != null) texturaBotonOpcionesHover.dispose();
-        if (texturaBotonOpcionesDown != null) texturaBotonOpcionesDown.dispose();
-
-        if(texturaBotonAyuda != null) texturaBotonAyuda.dispose();
-        if(texturaBotonAyudaHover != null) texturaBotonAyudaHover.dispose();
-        if(texturaBotonAyudaDown != null) texturaBotonAyudaDown.dispose();
-
+        if (atlasBotones != null) atlasBotones.dispose();
     }
 }
