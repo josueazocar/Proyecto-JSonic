@@ -104,6 +104,12 @@
    <frame tileid="1035" duration="300"/>
   </animation>
  </tile>
+ <tile id="1060">
+  <animation>
+   <frame tileid="1060" duration="1000"/>
+   <frame tileid="1062" duration="1000"/>
+  </animation>
+ </tile>
  <tile id="1084">
   <animation>
    <frame tileid="1084" duration="600"/>
