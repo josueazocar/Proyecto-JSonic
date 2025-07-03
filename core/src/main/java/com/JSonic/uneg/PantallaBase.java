@@ -3,20 +3,31 @@ package com.JSonic.uneg;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.graphics.GL20;
 import com.badlogic.gdx.Screen;
+import com.badlogic.gdx.graphics.OrthographicCamera;
 import com.badlogic.gdx.scenes.scene2d.Stage;
+import com.badlogic.gdx.scenes.scene2d.ui.Skin;
 import com.badlogic.gdx.scenes.scene2d.ui.Table;
+import com.badlogic.gdx.utils.viewport.FitViewport;
+import com.badlogic.gdx.utils.viewport.Viewport;
+import com.badlogic.gdx.graphics.g2d.TextureAtlas;
 
 public abstract class PantallaBase implements Screen {
     protected Stage mainStage;
     protected Stage uiStage;
     protected Table uiTable;
+    protected Skin skin;
+    protected Viewport viewport;
+    protected TextureAtlas atlas;
 
     public PantallaBase(){
-        mainStage = new Stage();
-        uiStage = new Stage();
+        viewport = new FitViewport(1280, 720, new OrthographicCamera());
+        mainStage = new Stage(viewport);
+        uiStage = new Stage(viewport);
+
         uiTable = new Table();
         uiTable.setFillParent(true);
         uiStage.addActor(uiTable);
+        skin = new Skin(Gdx.files.internal("Skin/ui.json"));
 
         inicializar();
     }
@@ -37,6 +48,14 @@ public abstract class PantallaBase implements Screen {
         uiStage.draw();
     }
 
+    public Skin getSkin() {
+        return skin;
+    }
+
+    public Viewport getViewport() {
+        return viewport;
+    }
+
     //Metodos requeridos por la interface Screen
 
     @Override
@@ -46,6 +65,9 @@ public abstract class PantallaBase implements Screen {
         }
         if (uiStage != null) {
             uiStage.getViewport().update(width, height, true);   // 'true' para centrar la cámara
+        }
+        if (viewport != null) {
+            viewport.update(width, height, true);
         }
     };
 
@@ -63,6 +85,8 @@ public abstract class PantallaBase implements Screen {
     public void dispose() {
         if (mainStage != null) mainStage.dispose();
         if (uiStage != null) uiStage.dispose();
+        if (skin != null) skin.dispose();
+        if (atlas != null) atlas.dispose();
     }
 
     @Override
