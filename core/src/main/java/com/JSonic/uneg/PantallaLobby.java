@@ -71,7 +71,7 @@ public class PantallaLobby extends PantallaBase {
             iniciarPartida.addListener(new ClickListener() {
                 @Override public void clicked(InputEvent e, float x, float y) {
                     // TODO: La lógica de red debería iniciar la partida para todos.
-                    juegoApp.setScreen(new PantallaDeJuego(juegoApp));
+                    juegoApp.iniciarJuegoOnline();
                 }
             });
             root.add(iniciarPartida).size(250, 75).pad(10);
