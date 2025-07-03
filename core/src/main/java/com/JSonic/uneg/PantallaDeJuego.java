@@ -1,4 +1,4 @@
-// Archivo: src/com/JSonic/uneg/PantallaDeJuego.java (COMPLETO Y CORREGIDO)
+// Archivo: src/com/JSonic/uneg/PantallaDeJuego.java (FUSIONADO)
 package com.JSonic.uneg;
 
 // Imports...
@@ -21,6 +21,9 @@ import java.util.HashMap;
 import com.badlogic.gdx.scenes.scene2d.ui.Table;
 import com.badlogic.gdx.scenes.scene2d.ui.Image;
 import com.badlogic.gdx.graphics.Texture;
+// ---[AGREGADO]--- Importaciones de la segunda clase
+import com.badlogic.gdx.math.Vector2;
+import com.JSonic.uneg.RobotnikVisual;
 
 public class PantallaDeJuego extends PantallaBase {
 
@@ -34,7 +37,8 @@ public class PantallaDeJuego extends PantallaBase {
     private LevelManager manejadorNivel;
     private final IGameClient gameClient;
     private final IGameServer localServer;
-    private Sonic sonic;
+    //private Sonic sonic;
+    private Knuckles sonic;
     private PlayerState sonicEstado;
     private final HashMap<Integer, Player> otrosJugadores = new HashMap<>();
     private SoundManager soundManager;
@@ -50,13 +54,34 @@ public class PantallaDeJuego extends PantallaBase {
     private int anillosTotal = 0;
     private int basuraTotal = 0;
 
+    //para el teletransporte
+    private float tiempoTranscurrido = 0f;
+    private boolean teletransporteCreado = false;
+
+    // ---[AGREGADO]--- Instancia de RobotnikVisual (eggman)
+    private RobotnikVisual eggman;
+
+    // ---[AGREGADO]--- Variables para la lógica de movimiento de RobotnikVisual
+    private static final float VELOCIDAD_ROBOTNIK = 60f;
+    private static final float RANGO_DETENERSE_ROBOTNIK = 30f;
+
+    // ---[AGREGADO]--- Variables de "desatasco" declaradas por si se usan en el futuro
+    private float stuckTimerX;
+    private float stuckTimerY;
+    private boolean forceMoveY;
+    private boolean forceMoveX;
+    private float forceMoveTimer;
+    private static final float STUCK_TIMEOUT = 0.5f;
+    private static final float UNSTICK_DURATION = 8.0f;
+    private static final float UNSTICK_SPEED_MULTIPLIER = 3.5f;
+
 
     public PantallaDeJuego(JSonicJuego juego, IGameClient client, IGameServer server) {
         super();
         this.juegoPrincipal = juego;
         this.batch = juego.batch;
         this.gameClient = client; // Asignamos el cliente recibido
-        this.localServer = server;  // Asignamos el servidor recibido (puede ser null)
+        this.localServer = server; // Asignamos el servidor recibido (puede ser null)
     }
 
     public PantallaDeJuego(JSonicJuego juego) {
@@ -64,16 +89,24 @@ public class PantallaDeJuego extends PantallaBase {
     }
 
     @Override
-    /* Tu método inicializar original (SIN CAMBIOS... por ahora)*/
     public void inicializar() {
         camaraJuego = new OrthographicCamera();
         viewport = new FitViewport(VIRTUAL_WIDTH, VIRTUAL_HEIGHT, camaraJuego);
         manejadorNivel = new LevelManager(camaraJuego, batch);
+        // Java
         manejadorNivel.cargarNivel("maps/Zona1N1.tmx");
         sonicEstado = new PlayerState();
-        sonicEstado.x = 100;
-        sonicEstado.y = 100;
-        sonic = new Sonic(sonicEstado, manejadorNivel);
+
+        if (manejadorNivel.getMapaActual().equals("maps/Zona1N1.tmx")) {
+            sonicEstado.x = 100;
+            sonicEstado.y = 100;
+        } else if (manejadorNivel.getMapaActual().equals("maps/ZonaJefeN1.tmx")) {
+            sonicEstado.x = 12.01f;
+            sonicEstado.y = 156.08f;
+        }
+
+        //sonic = new Sonic(sonicEstado, manejadorNivel);
+        sonic = new Knuckles(sonicEstado,manejadorNivel);
         assetManager = new AssetManager();
         soundManager = new SoundManager(assetManager);
         manejadorNivel.setPlayer(sonic);
@@ -103,10 +136,43 @@ public class PantallaDeJuego extends PantallaBase {
         tablaUI.add(contadorBasura.getTabla()).padLeft(5);
 
         mainStage.addActor(tablaUI);
+
+        // ---[AGREGADO]--- Instanciación de RobotnikVisual (eggman)
+        EnemigoState eggmanState = new EnemigoState(999, 300, 100, 100, EnemigoState.EnemigoType.ROBOT);
+        eggman = new RobotnikVisual(eggmanState, manejadorNivel);
+    }
+
+    //para poder crear varios portales se necesita reiniciar el teletransporte
+    private void reiniciarTeletransporte() {
+        teletransporteCreado = false;
+        tiempoTranscurrido = 0f;
     }
 
     @Override
     public void actualizar(float deltat) {
+        tiempoTranscurrido += deltat;
+        if (!teletransporteCreado && tiempoTranscurrido >= 20f) {
+            var layer = manejadorNivel.getMapaActual().getLayers().get("destinox");
+            if (layer != null) {
+                MapObjects objetos = layer.getObjects();
+                int idBase = 999;
+                for (com.badlogic.gdx.maps.MapObject obj : objetos) {
+                    if (obj instanceof com.badlogic.gdx.maps.objects.RectangleMapObject rectObj) {
+                        Rectangle rect = rectObj.getRectangle();
+                        ItemState estadoTele = new ItemState(
+                            idBase++,
+                            rect.x,
+                            rect.y,
+                            ItemState.ItemType.TELETRANSPORTE
+                        );
+                        crearItemVisual(estadoTele);
+                    }
+                }
+            } else {
+                System.out.println("[CLIENT_DEBUG] Capa 'destinox' no encontrada en el mapa actual.");
+            }
+            teletransporteCreado = true;
+        }
         if (localServer != null) {
             localServer.update(deltat, this.manejadorNivel);
         }
@@ -114,18 +180,14 @@ public class PantallaDeJuego extends PantallaBase {
         if (gameClient != null) {
             while (!gameClient.getPaquetesRecibidos().isEmpty()) {
                 Object paquete = gameClient.getPaquetesRecibidos().poll();
-                // LÍNEA DE DEPURACIÓN ===
                 System.out.println("[CLIENT_DEBUG] Procesando paquete de tipo: " + paquete.getClass().getSimpleName());
 
                 if (paquete instanceof Network.RespuestaAccesoPaquete p) {
                     if (p.tuEstado != null) {
                         inicializarJugadorLocal(p.tuEstado);
-
                         System.out.println("[CLIENT] Conexión aceptada. Extrayendo y enviando plano del mapa...");
-
                         java.util.ArrayList<Rectangle> paredes = new java.util.ArrayList<>();
                         MapObjects objetosColision = manejadorNivel.getCollisionObjects();
-
                         if (objetosColision != null) {
                             for (com.badlogic.gdx.maps.MapObject obj : objetosColision) {
                                 if (obj instanceof com.badlogic.gdx.maps.objects.RectangleMapObject) {
@@ -133,14 +195,12 @@ public class PantallaDeJuego extends PantallaBase {
                                 }
                             }
                         }
-
                         Network.PaqueteInformacionMapa paqueteMapa = new Network.PaqueteInformacionMapa();
                         paqueteMapa.paredes = paredes;
                         gameClient.send(paqueteMapa);
                         System.out.println("[CLIENT] Plano del mapa con " + paredes.size() + " paredes enviado.");
                     }
-                }
-                else if (paquete instanceof Network.PaqueteJugadorConectado p) {
+                } else if (paquete instanceof Network.PaqueteJugadorConectado p) {
                     if (sonicEstado != null && p.nuevoJugador.id != sonicEstado.id) {
                         agregarOActualizarOtroJugador(p.nuevoJugador);
                     }
@@ -149,41 +209,34 @@ public class PantallaDeJuego extends PantallaBase {
                         actualizarPosicionOtroJugador(p.id, p.x, p.y, p.estadoAnimacion);
                     }
                 } else if (paquete instanceof Network.PaqueteEnemigoNuevo p) {
-                    // El servidor nos ordena crear un enemigo
                     crearEnemigoVisual(p.estadoEnemigo);
                 } else if (paquete instanceof Network.PaqueteItemNuevo p) {
-                    // El servidor nos ordena crear un ítem
                     crearItemVisual(p.estadoItem);
                 } else if (paquete instanceof Network.PaqueteItemEliminado p) {
-                    // El servidor nos ordena eliminar un ítem
                     ItemVisual itemEliminado = itemsEnPantalla.remove(p.idItem);
                     if (itemEliminado != null) {
                         System.out.println("[CLIENT] Obedeciendo orden de eliminar ítem con ID: " + p.idItem);
                         itemEliminado.dispose();
                     }
                 } else if (paquete instanceof Network.PaqueteActualizacionEnemigos p) {
-                    // Recibimos la lista completa de estados de enemigos del servidor
                     for (EnemigoState estadoServidor : p.estadosEnemigos.values()) {
                         RobotVisual enemigoVisual = enemigosEnPantalla.get(estadoServidor.id);
                         if (enemigoVisual != null) {
-                            // Actualizamos la posición y el estado del enemigo visual
-                            // para que coincida con lo que dice el servidor.
                             enemigoVisual.estado.x = estadoServidor.x;
                             enemigoVisual.estado.y = estadoServidor.y;
-                            enemigoVisual.setEstadoActual(estadoServidor.estadoAnimacion); // Asumiendo que RobotVisual tiene este método
+                            enemigoVisual.setEstadoActual(estadoServidor.estadoAnimacion);
                         }
                     }
                 }
             }
         }
 
-        // Primero, actualizamos todos los ítems
         for (ItemVisual item : itemsEnPantalla.values()) {
             item.update(deltat);
         }
 
-
-        // Usamos un iterador para poder eliminar elementos de forma segura mientras recorremos la colección.
+        // --- CORRECCIÓN: Manejo seguro del teletransporte ---
+        Integer idTeletransporteAEliminar = null;
         Iterator<Map.Entry<Integer, ItemVisual>> iter = itemsEnPantalla.entrySet().iterator();
         while (iter.hasNext()) {
             Map.Entry<Integer, ItemVisual> entry = iter.next();
@@ -194,7 +247,6 @@ public class PantallaDeJuego extends PantallaBase {
                 Network.PaqueteSolicitudRecogerItem paquete = new Network.PaqueteSolicitudRecogerItem();
                 paquete.idItem = item.estado.id;
                 gameClient.send(paquete);
-
                 System.out.println("[CLIENT_DEBUG] Colisión detectada con item tipo: " + item.estado.tipo);
 
                 boolean itemRecogido = false;
@@ -207,20 +259,66 @@ public class PantallaDeJuego extends PantallaBase {
                     contadorBasura.setValor(basuraTotal);
                     itemRecogido = true;
                 }
+                // Teletransporte: solo guardamos el ID y salimos del ciclo
+                else if (item.estado.tipo == ItemState.ItemType.TELETRANSPORTE) {
+                    manejadorNivel.cargarNivel("maps/ZonaJefeN1.tmx");
+                    crearRobotsPorNivel("maps/ZonaJefeN1.tmx");
+                    reiniciarTeletransporte();
 
-                // 3. Lógica de prueba: Eliminar el ítem visualmente.
-                // En la versión final, esto solo debe ocurrir cuando el servidor lo ordene.
+                    // Asigna las coordenadas iniciales según el mapa cargado
+                    if (manejadorNivel.getMapaActual().equals("maps/ZonaJefeN1.tmx")) {
+                        com.badlogic.gdx.maps.tiled.TiledMap map = manejadorNivel.getTiledMap();
+                        boolean llegadaEncontrada = false;
+                        if (map != null) {
+                            com.badlogic.gdx.maps.MapLayer destinoxLayer = map.getLayers().get("destinox");
+                            if (destinoxLayer != null) {
+                                for (com.badlogic.gdx.maps.MapObject obj : destinoxLayer.getObjects()) {
+                                    String nombre = obj.getName() != null ? obj.getName() : "";
+                                    String clase = obj.getProperties().containsKey("class") ? obj.getProperties().get("class", String.class) : "";
+                                    if ((nombre.toLowerCase().contains("llegada") || clase.toLowerCase().contains("llegada"))
+                                        && obj instanceof com.badlogic.gdx.maps.objects.RectangleMapObject) {
+                                        com.badlogic.gdx.maps.objects.RectangleMapObject rectObj = (com.badlogic.gdx.maps.objects.RectangleMapObject) obj;
+                                        com.badlogic.gdx.math.Rectangle rect = rectObj.getRectangle();
+                                        float alturaMapa = map.getProperties().get("height", Integer.class) * map.getProperties().get("tileheight", Integer.class);
+                                        float xFinal = rect.x;
+                                        float yFinal = alturaMapa - rect.y - rect.height;
+                                        sonic.estado.x = xFinal;
+                                        sonic.estado.y = yFinal;
+                                        System.out.println("[DEBUG] Llegada encontrada en destinox: rect.x=" + rect.x + ", rect.y=" + rect.y + ", width=" + rect.width + ", height=" + rect.height + ". Sonic en x=" + sonic.estado.x + ", y=" + sonic.estado.y);
+                                        llegadaEncontrada = true;
+                                        break;
+                                    }
+                                }
+                            }
+                        }
+                        if (!llegadaEncontrada) {
+                            sonic.estado.x = 12.01f;
+                            sonic.estado.y = 156.08f;
+                        }
+                    }
+
+                    idTeletransporteAEliminar = item.estado.id;
+                    System.out.println("[CLIENT_DEBUG] Teletransporte activado, cambiando de mapa.");
+                    break;
+                }
+
                 if (itemRecogido) {
-                    iter.remove(); // Elimina el ítem del HashMap de forma segura.
-                    item.dispose(); // Libera los recursos del ítem.
+                    iter.remove();
+                    item.dispose();
                     System.out.println("[CLIENT_DEBUG] Ítem " + item.estado.id + " eliminado visualmente para la prueba.");
-                    break; // Rompemos el bucle para procesar solo una recogida por fotograma.
+                    break;
                 }
             }
         }
 
-        // --- LÓGICA DE JUGADOR Y ENEMIGOS ---
-        sonic.KeyHandler(); // Esto ahora maneja el movimiento Y la colisión con el mapa
+        // Fuera del ciclo: limpiar enemigos/ítems y eliminar el teletransporte
+        if (idTeletransporteAEliminar != null) {
+            limpiarEnemigosEItems();
+            ItemVisual item = itemsEnPantalla.remove(idTeletransporteAEliminar);
+            if (item != null) item.dispose();
+        }
+
+        sonic.KeyHandler();
         sonic.update(deltat);
 
         for (Player otro : otrosJugadores.values()) {
@@ -229,14 +327,51 @@ public class PantallaDeJuego extends PantallaBase {
 
         for (RobotVisual enemigo : enemigosEnPantalla.values()) enemigo.update(deltat);
 
-        // Actualizar cámara
+        // ---[AGREGADO]--- Lógica de actualización de RobotnikVisual (eggman)
+        if (eggman != null) {
+            eggman.update(deltat); // Primero actualizamos su animación
+
+            if (sonic != null && sonic.estado != null) {
+                float robotnikCenterX = eggman.estado.x + eggman.getBounds().width / 2;
+                float robotnikCenterY = eggman.estado.y + eggman.getBounds().height / 2;
+                float sonicCenterX = sonic.estado.x + sonic.getBounds().width / 2;
+                float sonicCenterY = sonic.estado.y + sonic.getBounds().height / 2;
+                float distanciaX = sonicCenterX - robotnikCenterX;
+                float distanciaY = sonicCenterY - robotnikCenterY;
+                float distancia = (float) Math.sqrt(distanciaX * distanciaX + distanciaY * distanciaY);
+
+                if (distancia > RANGO_DETENERSE_ROBOTNIK) {
+                    float velocidadMovimiento = VELOCIDAD_ROBOTNIK * deltat;
+                    Vector2 direccionDeseada = new Vector2(distanciaX, distanciaY).nor();
+
+                    eggman.estado.x += direccionDeseada.x * velocidadMovimiento;
+                    eggman.estado.y += direccionDeseada.y * velocidadMovimiento;
+                    eggman.getBounds().x = eggman.estado.x;
+                    eggman.getBounds().y = eggman.estado.y;
+
+                    if (Math.abs(direccionDeseada.x) > 0.001f) {
+                        eggman.estado.mirandoDerecha = (direccionDeseada.x > 0);
+                        eggman.setEstadoActual(eggman.estado.mirandoDerecha ? EnemigoState.EstadoEnemigo.RUN_RIGHT : EnemigoState.EstadoEnemigo.RUN_LEFT);
+                    } else if (Math.abs(direccionDeseada.y) > 0.001f) {
+                        eggman.setEstadoActual(eggman.estado.mirandoDerecha ? EnemigoState.EstadoEnemigo.RUN_RIGHT : EnemigoState.EstadoEnemigo.RUN_LEFT);
+                    } else {
+                        eggman.setEstadoActual(eggman.estado.mirandoDerecha ? EnemigoState.EstadoEnemigo.IDLE_RIGHT : EnemigoState.EstadoEnemigo.IDLE_LEFT);
+                    }
+                } else {
+                    eggman.setEstadoActual(eggman.estado.mirandoDerecha ? EnemigoState.EstadoEnemigo.IDLE_RIGHT : EnemigoState.EstadoEnemigo.IDLE_LEFT);
+                }
+            } else {
+                eggman.setEstadoActual(eggman.estado.mirandoDerecha ? EnemigoState.EstadoEnemigo.IDLE_RIGHT : EnemigoState.EstadoEnemigo.IDLE_LEFT);
+            }
+        }
+        // ---[FIN DEL AGREGADO]---
+
         camaraJuego.position.x = sonic.estado.x;
         camaraJuego.position.y = sonic.estado.y;
         manejadorNivel.limitarCamaraAMapa(camaraJuego);
         camaraJuego.update();
         mainStage.act(Math.min(deltat, 1 / 30f));
     }
-
 
     @Override
     public void render(float delta) {
@@ -251,8 +386,12 @@ public class PantallaDeJuego extends PantallaBase {
         for (Player otro : otrosJugadores.values()) otro.draw(batch);
         for (RobotVisual enemigo : enemigosEnPantalla.values()) enemigo.draw(batch);
 
-        for (ItemVisual item : itemsEnPantalla.values()) item.draw(batch);
+        // ---[AGREGADO]--- Dibujado de RobotnikVisual (eggman)
+        if (eggman != null) {
+            eggman.draw(batch);
+        }
 
+        for (ItemVisual item : itemsEnPantalla.values()) item.draw(batch);
         batch.end();
 
         mainStage.getViewport().apply();
@@ -268,8 +407,6 @@ public class PantallaDeJuego extends PantallaBase {
         }
     }
 
-
-
     @Override
     public void resize(int width, int height) {
         super.resize(width, height);
@@ -284,8 +421,6 @@ public class PantallaDeJuego extends PantallaBase {
             soundManager.pauseBackgroundMusic();
         }
     }
-
-
 
     @Override
     public void resume() {
@@ -309,6 +444,47 @@ public class PantallaDeJuego extends PantallaBase {
         }
     }
 
+    //para limpriar los enemigos en los otros mapas
+    private void limpiarEnemigosEItems() {
+        for (RobotVisual enemigo : enemigosEnPantalla.values()) {
+            enemigo.dispose();
+        }
+        enemigosEnPantalla.clear();
+
+        for (ItemVisual item : itemsEnPantalla.values()) {
+            item.dispose();
+        }
+        itemsEnPantalla.clear();
+    }
+
+    //para delimitar los robots y crearlos por mapa
+    private void crearRobotsPorNivel(String nombreNivel) {
+        limpiarEnemigosEItems();
+        if (nombreNivel.equals("maps/Zona1N1.tmx")) {
+            for (int i = 0; i < 5; i++) {
+                EnemigoState estado = new EnemigoState(
+                    i,
+                    100 + i * 50,
+                    200,
+                    100, // vida
+                    EnemigoState.EnemigoType.ROBOT
+                );
+                crearEnemigoVisual(estado);
+            }
+        } else if (nombreNivel.equals("maps/ZonaJefeN1.tmx")) {
+            for (int i = 10; i < 15; i++) {
+                EnemigoState estado = new EnemigoState(
+                    i,
+                    300 + (i - 10) * 60,
+                    250,
+                    200, // vida
+                    EnemigoState.EnemigoType.ROBOT
+                );
+                crearEnemigoVisual(estado);
+            }
+        }
+    }
+
     private void crearItemVisual(ItemState estadoItem) {
         if (!itemsEnPantalla.containsKey(estadoItem.id)) {
             System.out.println("[CLIENT] Recibida orden de crear ítem tipo " + estadoItem.tipo + " con ID: " + estadoItem.id);
@@ -324,6 +500,9 @@ public class PantallaDeJuego extends PantallaBase {
                 case PIEZA_PLASTICO:
                     nuevoItem = new PiezaDePlasticoVisual(estadoItem);
                     break;
+                case TELETRANSPORTE:
+                    nuevoItem = new TeletransporteVisual(estadoItem);
+                    break;
             }
 
             if (nuevoItem != null) {
@@ -331,6 +510,7 @@ public class PantallaDeJuego extends PantallaBase {
             }
         }
     }
+
     public void agregarOActualizarOtroJugador(PlayerState estadoRecibido) {
         Player jugadorVisual = otrosJugadores.get(estadoRecibido.id);
         if (jugadorVisual == null) {
@@ -353,7 +533,6 @@ public class PantallaDeJuego extends PantallaBase {
         }
     }
 
-    // Tu método dispose original (CON MODIFICACIONES)
     @Override
     public void dispose() {
         super.dispose();
@@ -364,12 +543,15 @@ public class PantallaDeJuego extends PantallaBase {
         if (shapeRenderer != null) shapeRenderer.dispose();
         for (RobotVisual enemigo : enemigosEnPantalla.values()) enemigo.dispose();
 
+        // ---[AGREGADO]--- Dispose de RobotnikVisual (eggman)
+        if (eggman != null) {
+            eggman.dispose();
+        }
+
         for (ItemVisual item : itemsEnPantalla.values()) {
             item.dispose();
         }
         if (contadorAnillos != null) contadorAnillos.dispose();
         if (contadorBasura != null) contadorBasura.dispose();
     }
-
 }
-
