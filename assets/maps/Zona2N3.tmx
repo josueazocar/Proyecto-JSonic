@@ -234,8 +234,8 @@
   </object>
   <object id="3" name="Portal" type="Portal" x="928" y="40" width="134" height="116">
    <properties>
-    <property name="destinoX" type="float" value="568"/>
-    <property name="destinoY" type="float" value="1132"/>
+    <property name="destinoX" type="float" value="638"/>
+    <property name="destinoY" type="float" value="1176"/>
    </properties>
   </object>
  </objectgroup>
