@@ -104,19 +104,42 @@ public class LocalServer implements IGameServer {
                     // No necesitamos retransmitir porque solo hay un jugador.
                 }
             } else if (objeto instanceof Network.PaqueteSolicitudRecogerItem paquete) {
-                // El cliente solicita recoger un ítem. Verificamos si todavía existe.
-                ItemState itemRecogido = itemsActivos.remove(paquete.idItem);
+                // Primero, verificamos si el ítem existe con .get()
+                ItemState itemRecogido = itemsActivos.get(paquete.idItem);
 
                 if (itemRecogido != null) {
-                    // El ítem existía y lo hemos eliminado de nuestra lista maestra.
-                    System.out.println("[LOCAL SERVER] Ítem con ID " + paquete.idItem + " recogido. Notificando al cliente.");
 
-                    // Ahora, creamos y enviamos el paquete de confirmación de eliminación.
-                    Network.PaqueteItemEliminado paqueteEliminado = new Network.PaqueteItemEliminado();
-                    paqueteEliminado.idItem = paquete.idItem;
-                    clienteLocal.recibirPaqueteDelServidor(paqueteEliminado);
+                    // CASO ESPECIAL: Es un teletransportador
+                    if (itemRecogido.tipo == ItemState.ItemType.TELETRANSPORTE) {
+                        System.out.println("[LOCAL SERVER] Jugador ha activado el teletransportador.");
+                        itemsActivos.remove(paquete.idItem); // Lo eliminamos
+
+                        // Creamos la ORDEN de cambio de mapa
+                        Network.PaqueteOrdenCambiarMapa orden = new Network.PaqueteOrdenCambiarMapa();
+                        orden.nuevoMapa = "maps/ZonaJefeN1.tmx";
+                        orden.nuevaPosX = 12.01f;
+                        orden.nuevaPosY = 156.08f;
+
+                        // "Enviamos" la orden al cliente local
+                        clienteLocal.recibirPaqueteDelServidor(orden);
+
+                        // También "enviamos" la notificación de que el portal fue eliminado
+                        Network.PaqueteItemEliminado paqueteEliminado = new Network.PaqueteItemEliminado();
+                        paqueteEliminado.idItem = paquete.idItem;
+                        clienteLocal.recibirPaqueteDelServidor(paqueteEliminado);
+                    }
+                    // CASO GENERAL: Es un ítem normal
+                    else {
+                        itemsActivos.remove(paquete.idItem); // Lo eliminamos
+                        System.out.println("[LOCAL SERVER] Ítem con ID " + paquete.idItem + " recogido.");
+
+                        // "Enviamos" la notificación de eliminación
+                        Network.PaqueteItemEliminado paqueteEliminado = new Network.PaqueteItemEliminado();
+                        paqueteEliminado.idItem = paquete.idItem;
+                        clienteLocal.recibirPaqueteDelServidor(paqueteEliminado);
+                    }
                 }
-            }  else if (objeto instanceof Network.PaqueteAnimacionEnemigoTerminada paquete) {
+            } else if (objeto instanceof Network.PaqueteAnimacionEnemigoTerminada paquete) {
                 // El cliente nos informa que la animación de un enemigo terminó.
                 EnemigoState enemigo = enemigosActivos.get(paquete.idEnemigo);
                 if (enemigo != null) {
@@ -138,6 +161,8 @@ public class LocalServer implements IGameServer {
                 for (com.badlogic.gdx.maps.MapObject obj : objetos) {
                     if (obj instanceof com.badlogic.gdx.maps.objects.RectangleMapObject rectObj) {
                         Rectangle rect = rectObj.getRectangle();
+
+                        System.out.println("[LOCAL SERVER - INFO] Coordenadas del portal del mapa: X=" + rect.x + ", Y=" + rect.y);
 
                         // Creamos el estado del item
                         ItemState estadoTele = new ItemState(idBase++, rect.x, rect.y, ItemState.ItemType.TELETRANSPORTE);

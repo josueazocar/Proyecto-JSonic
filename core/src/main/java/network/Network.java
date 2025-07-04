@@ -42,6 +42,7 @@ public class Network {
         kryo.register(PaqueteInformacionMapa.class);
         kryo.register(java.util.ArrayList.class);
         kryo.register(com.badlogic.gdx.math.Rectangle.class);
+        kryo.register(PaqueteOrdenCambiarMapa.class);
     }
 
     // --- Definición de los Paquetes ---
@@ -96,6 +97,12 @@ public class Network {
     }
     public static class PaqueteInformacionMapa {
         public java.util.ArrayList<com.badlogic.gdx.math.Rectangle> paredes;
+    }
+
+    public static class PaqueteOrdenCambiarMapa {
+        public String nuevoMapa;
+        public float nuevaPosX;
+        public float nuevaPosY;
     }
 }
 

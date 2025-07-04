@@ -104,7 +104,7 @@ public class PantallaDeJuego extends PantallaBase {
         }
 
         //sonic = new Sonic(personajeJugableEstado, manejadorNivel);
-        personajeJugable = new Knuckles(personajeJugableEstado,manejadorNivel);
+        personajeJugable = new Sonic(personajeJugableEstado,manejadorNivel);
         assetManager = new AssetManager();
         soundManager = new SoundManager(assetManager);
         manejadorNivel.setPlayer(personajeJugable);
@@ -239,6 +239,21 @@ public class PantallaDeJuego extends PantallaBase {
                             }
                         }
                     }
+                } else if (paquete instanceof Network.PaqueteOrdenCambiarMapa p) {
+                    System.out.println("[CLIENT] ¡Recibida orden del servidor para cambiar al mapa: " + p.nuevoMapa + "!");
+
+                    // Ejecutamos la lógica de cambio de mapa que eliminamos antes, pero ahora usando los datos del servidor.
+                    manejadorNivel.cargarNivel(p.nuevoMapa);
+
+                    // Limpiamos las entidades visuales del mapa anterior
+                    limpiarEnemigosEItems();
+
+                    // Reseteamos el temporizador para que el portal pueda volver a generarse en el futuro
+                    reiniciarTeletransporte();
+
+                    // Reposicionamos a nuestro jugador en las coordenadas que nos dictó el servidor
+                    personajeJugable.estado.x = p.nuevaPosX;
+                    personajeJugable.estado.y = p.nuevaPosY;
                 }
             }
         }
@@ -273,45 +288,54 @@ public class PantallaDeJuego extends PantallaBase {
                 }
                 // Teletransporte: solo guardamos el ID y salimos del ciclo
                 else if (item.estado.tipo == ItemState.ItemType.TELETRANSPORTE) {
-                    manejadorNivel.cargarNivel("maps/ZonaJefeN1.tmx");
-                    crearRobotsPorNivel("maps/ZonaJefeN1.tmx");
-                    reiniciarTeletransporte();
-
-                    // Asigna las coordenadas iniciales según el mapa cargado
-                    if (manejadorNivel.getMapaActual().equals("maps/ZonaJefeN1.tmx")) {
-                        com.badlogic.gdx.maps.tiled.TiledMap map = manejadorNivel.getTiledMap();
-                        boolean llegadaEncontrada = false;
-                        if (map != null) {
-                            com.badlogic.gdx.maps.MapLayer destinoxLayer = map.getLayers().get("destinox");
-                            if (destinoxLayer != null) {
-                                for (com.badlogic.gdx.maps.MapObject obj : destinoxLayer.getObjects()) {
-                                    String nombre = obj.getName() != null ? obj.getName() : "";
-                                    String clase = obj.getProperties().containsKey("class") ? obj.getProperties().get("class", String.class) : "";
-                                    if ((nombre.toLowerCase().contains("llegada") || clase.toLowerCase().contains("llegada"))
-                                        && obj instanceof com.badlogic.gdx.maps.objects.RectangleMapObject) {
-                                        com.badlogic.gdx.maps.objects.RectangleMapObject rectObj = (com.badlogic.gdx.maps.objects.RectangleMapObject) obj;
-                                        com.badlogic.gdx.math.Rectangle rect = rectObj.getRectangle();
-                                        float alturaMapa = map.getProperties().get("height", Integer.class) * map.getProperties().get("tileheight", Integer.class);
-                                        float xFinal = rect.x;
-                                        float yFinal = alturaMapa - rect.y - rect.height;
-                                        personajeJugable.estado.x = xFinal;
-                                        personajeJugable.estado.y = yFinal;
-                                        System.out.println("[DEBUG] Llegada encontrada en destinox: rect.x=" + rect.x + ", rect.y=" + rect.y + ", width=" + rect.width + ", height=" + rect.height + ". Sonic en x=" + personajeJugable.estado.x + ", y=" + personajeJugable.estado.y);
-                                        llegadaEncontrada = true;
-                                        break;
-                                    }
-                                }
-                            }
-                        }
-                        if (!llegadaEncontrada) {
-                            personajeJugable.estado.x = 12.01f;
-                            personajeJugable.estado.y = 156.08f;
-                        }
-                    }
-
-                    idTeletransporteAEliminar = item.estado.id;
-                    System.out.println("[CLIENT_DEBUG] Teletransporte activado, cambiando de mapa.");
+                    // YA NO cambiamos de mapa. Solo informamos al servidor que hemos tocado el portal.
+                    System.out.println("[CLIENT] Tocado el teletransportador. Solicitando viaje al servidor...");
+                    paquete = new Network.PaqueteSolicitudRecogerItem();
+                    paquete.idItem = item.estado.id;
+                    gameClient.send(paquete);
+                    // Para evitar enviar múltiples solicitudes, salimos del bucle una vez que tocamos el portal.
                     break;
+
+
+//                    manejadorNivel.cargarNivel("maps/ZonaJefeN1.tmx");
+//                    crearRobotsPorNivel("maps/ZonaJefeN1.tmx");
+//                    reiniciarTeletransporte();
+//
+//                    // Asigna las coordenadas iniciales según el mapa cargado
+//                    if (manejadorNivel.getMapaActual().equals("maps/ZonaJefeN1.tmx")) {
+//                        com.badlogic.gdx.maps.tiled.TiledMap map = manejadorNivel.getTiledMap();
+//                        boolean llegadaEncontrada = false;
+//                        if (map != null) {
+//                            com.badlogic.gdx.maps.MapLayer destinoxLayer = map.getLayers().get("destinox");
+//                            if (destinoxLayer != null) {
+//                                for (com.badlogic.gdx.maps.MapObject obj : destinoxLayer.getObjects()) {
+//                                    String nombre = obj.getName() != null ? obj.getName() : "";
+//                                    String clase = obj.getProperties().containsKey("class") ? obj.getProperties().get("class", String.class) : "";
+//                                    if ((nombre.toLowerCase().contains("llegada") || clase.toLowerCase().contains("llegada"))
+//                                        && obj instanceof com.badlogic.gdx.maps.objects.RectangleMapObject) {
+//                                        com.badlogic.gdx.maps.objects.RectangleMapObject rectObj = (com.badlogic.gdx.maps.objects.RectangleMapObject) obj;
+//                                        com.badlogic.gdx.math.Rectangle rect = rectObj.getRectangle();
+//                                        float alturaMapa = map.getProperties().get("height", Integer.class) * map.getProperties().get("tileheight", Integer.class);
+//                                        float xFinal = rect.x;
+//                                        float yFinal = alturaMapa - rect.y - rect.height;
+//                                        personajeJugable.estado.x = xFinal;
+//                                        personajeJugable.estado.y = yFinal;
+//                                        System.out.println("[DEBUG] Llegada encontrada en destinox: rect.x=" + rect.x + ", rect.y=" + rect.y + ", width=" + rect.width + ", height=" + rect.height + ". Sonic en x=" + personajeJugable.estado.x + ", y=" + personajeJugable.estado.y);
+//                                        llegadaEncontrada = true;
+//                                        break;
+//                                    }
+//                                }
+//                            }
+//                        }
+//                        if (!llegadaEncontrada) {
+//                            personajeJugable.estado.x = 12.01f;
+//                            personajeJugable.estado.y = 156.08f;
+//                        }
+//                    }
+//
+//                    idTeletransporteAEliminar = item.estado.id;
+//                    System.out.println("[CLIENT_DEBUG] Teletransporte activado, cambiando de mapa.");
+//                    break;
                 }
 
                 if (itemRecogido) {
@@ -506,6 +530,7 @@ public class PantallaDeJuego extends PantallaBase {
     }
 
     private void crearItemVisual(ItemState estadoItem) {
+        System.out.println("[CLIENT DEBUG] Recibida orden para crear item. TIPO: " + estadoItem.tipo + ", ID: " + estadoItem.id);
         if (!itemsEnPantalla.containsKey(estadoItem.id)) {
             System.out.println("[CLIENT] Recibida orden de crear ítem tipo " + estadoItem.tipo + " con ID: " + estadoItem.id);
             ItemVisual nuevoItem = null;

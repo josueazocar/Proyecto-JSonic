@@ -104,22 +104,44 @@ public class GameServer implements IGameServer {
                     conexion.sendTCP(respuesta);
                 }
                 if (objeto instanceof Network.PaqueteSolicitudRecogerItem paquete) {
-                    // Un cliente solicita recoger un ítem. Verificamos si todavía existe.
-                    // Usamos 'synchronized' para evitar que dos jugadores recojan el mismo ítem a la vez.
+                    // Usamos 'synchronized' para evitar que dos jugadores interactúen con el mismo ítem a la vez.
                     synchronized (itemsActivos) {
-                        ItemState itemRecogido = itemsActivos.remove(paquete.idItem);
+                        // 1. PRIMERO VERIFICAMOS el ítem con .get() en lugar de .remove() para poder saber su tipo.
+                        ItemState itemRecogido = itemsActivos.get(paquete.idItem);
 
+                        // Si el ítem realmente existe...
                         if (itemRecogido != null) {
-                            // El ítem existía. Lo hemos eliminado de nuestra lista maestra.
-                            System.out.println("[SERVER] Ítem con ID" +
-                                " " + paquete.idItem + " recogido por jugador " + conexion.getID() + ". Notificando a todos.");
 
-                            // Creamos el paquete de confirmación.
-                            Network.PaqueteItemEliminado paqueteEliminado = new Network.PaqueteItemEliminado();
-                            paqueteEliminado.idItem = paquete.idItem;
+                            // 2. AHORA DECIDIMOS QUÉ HACER BASADO EN SU TIPO.
+                            // CASO ESPECIAL: Es un teletransportador.
+                            if (itemRecogido.tipo == ItemState.ItemType.TELETRANSPORTE) {
+                                System.out.println("[SERVER] Jugador " + conexion.getID() + " ha activado el teletransportador.");
+                                itemsActivos.remove(paquete.idItem); // Ahora sí lo eliminamos de la lista.
 
-                            // ¡Enviamos la orden de eliminación a TODOS los clientes!
-                            servidor.sendToAllTCP(paqueteEliminado);
+                                // Creamos la ORDEN de cambio de mapa.
+                                Network.PaqueteOrdenCambiarMapa orden = new Network.PaqueteOrdenCambiarMapa();
+                                orden.nuevoMapa = "maps/ZonaJefeN1.tmx";
+                                orden.nuevaPosX = 12.01f;   // Coordenada X de llegada en el nuevo mapa.
+                                orden.nuevaPosY = 156.08f;  // Coordenada Y de llegada en el nuevo mapa.
+
+                                // Enviamos la orden SOLO al jugador que tocó el portal.
+                                conexion.sendTCP(orden);
+
+                                // Adicionalmente, notificamos a TODOS los jugadores que este ítem (el portal) ya no existe.
+                                Network.PaqueteItemEliminado paqueteEliminado = new Network.PaqueteItemEliminado();
+                                paqueteEliminado.idItem = paquete.idItem;
+                                servidor.sendToAllTCP(paqueteEliminado);
+                            }
+                            // CASO GENERAL: Es cualquier otro ítem (anillo, basura, etc.).
+                            else {
+                                itemsActivos.remove(paquete.idItem); // Lo eliminamos de la lista.
+                                System.out.println("[SERVER] Ítem con ID " + paquete.idItem + " recogido por jugador " + conexion.getID());
+
+                                // Notificamos a TODOS los jugadores que el ítem ya no existe.
+                                Network.PaqueteItemEliminado paqueteEliminado = new Network.PaqueteItemEliminado();
+                                paqueteEliminado.idItem = paquete.idItem;
+                                servidor.sendToAllTCP(paqueteEliminado);
+                            }
                         }
                     }
                 }
@@ -298,15 +320,22 @@ public class GameServer implements IGameServer {
     }
     private void updateServerLogic(float deltaTime) {
         this.tiempoGeneracionTeleport += deltaTime;
+        if ((int)this.tiempoGeneracionTeleport % 2 == 0 && (int)this.tiempoGeneracionTeleport != 0) {
+            System.out.println(
+                "[GAMESERVER DEBUG] Tiempo: " + String.format("%.2f", this.tiempoGeneracionTeleport) +
+                    " | Portal Generado?: " + this.teleportGenerado +
+                    " | Jugadores Conectados: " + jugadores.size()
+            );
+        }
 
 // Suponiendo que el teletransportador solo debe aparecer si hay jugadores
-        if (!this.teleportGenerado && this.tiempoGeneracionTeleport >= 20f && !jugadores.isEmpty()) {
+        if (!this.teleportGenerado && this.tiempoGeneracionTeleport >= 5f && !jugadores.isEmpty()) {
             System.out.println("[GAMESERVER] Generando teletransportador...");
 
             // Como el servidor no lee el mapa, definimos aquí las coordenadas.
             // DEBES AJUSTAR ESTAS COORDENADAS a la posición donde quieres que aparezca.
-            float teleX = 1800f;
-            float teleY = 200f;
+            float teleX = 1848.0f;
+            float teleY = 1190.0f;
             int teleId = 10000;
 
             // Creamos el estado del item
