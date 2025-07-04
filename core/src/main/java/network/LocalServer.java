@@ -1,6 +1,7 @@
 package network;
 
 import com.JSonic.uneg.*;
+import com.badlogic.gdx.maps.MapObjects;
 import com.badlogic.gdx.math.MathUtils;
 import com.badlogic.gdx.math.Rectangle;
 import network.interfaces.IGameClient;
@@ -20,10 +21,13 @@ public class LocalServer implements IGameServer {
     private final HashMap<Integer, EnemigoState> enemigosActivos = new HashMap<>();
     private final HashMap<Integer, ItemState> itemsActivos = new HashMap<>();
 
+    private static final float VELOCIDAD_ROBOTNIK = 60f;
+    private static final float RANGO_DETENERSE_ROBOTNIK = 30f;
     private float tiempoGeneracionEnemigo = 0f;
     private final float INTERVALO_GENERACION_ENEMIGO = 5.0f;
     private int proximoIdEnemigo = 0;
-
+    private float tiempoGeneracionTeleport = 0f;
+    private boolean teleportGenerado = false;
     private int proximoIdItem = 0;
     private static final int MAX_ANILLOS = 50;
     private static final int MAX_BASURA = 10;
@@ -56,6 +60,14 @@ public class LocalServer implements IGameServer {
 
         // 1. Creamos la única instancia del cliente local y la guardamos.
         this.clienteLocal = new LocalClient(this);
+
+        EnemigoState estadoRobotnik = new EnemigoState(999, 300, 100, 100, EnemigoState.EnemigoType.ROBOTNIK);
+        this.enemigosActivos.put(estadoRobotnik.id, estadoRobotnik);
+        System.out.println("[LOCAL SERVER] Robotnik ha sido creado en el servidor local.");
+
+        Network.PaqueteEnemigoNuevo paqueteRobotnik = new Network.PaqueteEnemigoNuevo();
+        paqueteRobotnik.estadoEnemigo = estadoRobotnik;
+        this.clienteLocal.recibirPaqueteDelServidor(paqueteRobotnik); // "Enviamos" el paquete
 
         // 2. Simulamos la conexión del jugador inmediatamente.
         // Esto replica la lógica del listener "connected" de tu GameServer.
@@ -115,6 +127,32 @@ public class LocalServer implements IGameServer {
             }
 
         }
+
+        this.tiempoGeneracionTeleport += deltaTime;
+        if (!this.teleportGenerado && this.tiempoGeneracionTeleport >= 20f) {
+            System.out.println("[LOCAL SERVER] Generando teletransportador...");
+            var layer = manejadorNivel.getMapaActual().getLayers().get("destinox");
+            if (layer != null) {
+                MapObjects objetos = layer.getObjects();
+                int idBase = 10000; // Usamos un ID alto para evitar colisiones
+                for (com.badlogic.gdx.maps.MapObject obj : objetos) {
+                    if (obj instanceof com.badlogic.gdx.maps.objects.RectangleMapObject rectObj) {
+                        Rectangle rect = rectObj.getRectangle();
+
+                        // Creamos el estado del item
+                        ItemState estadoTele = new ItemState(idBase++, rect.x, rect.y, ItemState.ItemType.TELETRANSPORTE);
+                        itemsActivos.put(estadoTele.id, estadoTele);
+
+                        // Creamos el paquete para notificar al cliente
+                        Network.PaqueteItemNuevo paquete = new Network.PaqueteItemNuevo();
+                        paquete.estadoItem = estadoTele;
+                        clienteLocal.recibirPaqueteDelServidor(paquete);
+                    }
+                }
+            }
+            this.teleportGenerado = true; // Marcamos como generado para que no se repita
+        }
+
         actualizarEnemigosAI(deltaTime, manejadorNivel);
         generarNuevosItems(deltaTime, manejadorNivel);
         generarNuevosEnemigos(deltaTime, manejadorNivel);
@@ -131,6 +169,34 @@ public class LocalServer implements IGameServer {
         if (jugador == null) return;
 
         for (EnemigoState enemigo : enemigosActivos.values()) {
+
+            if (enemigo.tipo == EnemigoState.EnemigoType.ROBOTNIK) {
+                float distanciaX = jugador.x - enemigo.x;
+                float distanciaY = jugador.y - enemigo.y;
+                // Usamos la clase Vector2 de LibGDX para calcular la distancia y la dirección fácilmente.
+                float distancia = new com.badlogic.gdx.math.Vector2(distanciaX, distanciaY).len();
+
+                // Usamos las constantes que ya definimos en este archivo
+                if (distancia > RANGO_DETENERSE_ROBOTNIK) {
+                    float velocidadMovimiento = VELOCIDAD_ROBOTNIK * deltaTime;
+
+                    // Normalizamos el vector para obtener solo la dirección (un vector de longitud 1)
+                    com.badlogic.gdx.math.Vector2 direccionDeseada = new com.badlogic.gdx.math.Vector2(distanciaX, distanciaY).nor();
+
+                    enemigo.x += direccionDeseada.x * velocidadMovimiento;
+                    enemigo.y += direccionDeseada.y * velocidadMovimiento;
+
+                    enemigo.mirandoDerecha = (direccionDeseada.x > 0);
+                    enemigo.estadoAnimacion = enemigo.mirandoDerecha ? EnemigoState.EstadoEnemigo.RUN_RIGHT : EnemigoState.EstadoEnemigo.RUN_LEFT;
+                } else {
+                    enemigo.estadoAnimacion = enemigo.mirandoDerecha ? EnemigoState.EstadoEnemigo.IDLE_RIGHT : EnemigoState.EstadoEnemigo.IDLE_LEFT;
+                }
+
+                // Ya procesamos a Robotnik, así que saltamos al siguiente enemigo en el bucle
+                // para evitar que se le aplique la lógica de los robots normales.
+                continue;
+            }
+
             int dx = (int) (jugador.x - enemigo.x);
             int dy = (int) (jugador.y - enemigo.y);
             int distance = (int) Math.sqrt(dx * dx + dy * dy);

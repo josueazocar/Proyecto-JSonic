@@ -1,6 +1,7 @@
 package network;
 
 import com.JSonic.uneg.*;
+import com.badlogic.gdx.math.Vector2;
 import com.esotericsoftware.kryonet.Connection;
 import com.esotericsoftware.kryonet.Listener;
 import com.esotericsoftware.kryonet.Server;
@@ -20,6 +21,8 @@ public class GameServer implements IGameServer {
     private volatile ArrayList<com.badlogic.gdx.math.Rectangle> paredesDelMapa = null;
 
     // --- VARIABLES DE CONTROL DE SPAWNING ---
+    private static final float VELOCIDAD_ROBOTNIK = 60f;
+    private static final float RANGO_DETENERSE_ROBOTNIK = 30f;
     private int proximoIdEnemigo = 0;
     private int proximoIdItem = 0;
     private float tiempoGeneracionEnemigo = 0f;
@@ -36,7 +39,8 @@ public class GameServer implements IGameServer {
     private static final float ROBOT_SPEED = 1.0f;
     private static final float ROBOT_DETECTION_RANGE = 300f;
     private static final float ROBOT_ATTACK_RANGE = 10f;
-
+    private float tiempoGeneracionTeleport = 0f;
+    private boolean teleportGenerado = false;
 
 
     public GameServer() {
@@ -152,6 +156,16 @@ public class GameServer implements IGameServer {
         }
         servidor.start();
 
+        // Damos vida a Robotnik en el servidor.
+        // Usamos un ID alto como 999 para distinguirlo fácilmente.
+        EnemigoState estadoRobotnik = new EnemigoState(999, 300, 100, 100, EnemigoState.EnemigoType.ROBOTNIK);
+        this.enemigosActivos.put(estadoRobotnik.id, estadoRobotnik);
+        System.out.println("[SERVER] Robotnik ha sido creado en el servidor.");
+
+        Network.PaqueteEnemigoNuevo paqueteRobotnik = new Network.PaqueteEnemigoNuevo();
+        paqueteRobotnik.estadoEnemigo = estadoRobotnik;
+        servidor.sendToAllTCP(paqueteRobotnik);
+
         new Thread(() -> {
             System.out.println("[SERVER] Hilo de juego iniciado. Esperando el plano del mapa del primer cliente...");
 
@@ -191,6 +205,43 @@ public class GameServer implements IGameServer {
         }
 
         for (EnemigoState enemigo : enemigosActivos.values()) {
+
+            if (enemigo.tipo == EnemigoState.EnemigoType.ROBOTNIK) { // Asumiendo que tienes un tipo ROBOTNIK
+                PlayerState jugadorMasCercano = null;
+                float distanciaMinima = Float.MAX_VALUE;
+
+                for (PlayerState jugador : jugadores.values()) {
+                    float d = (float) Math.sqrt(Math.pow(jugador.x - enemigo.x, 2) + Math.pow(jugador.y - enemigo.y, 2));
+                    if (d < distanciaMinima) {
+                        distanciaMinima = d;
+                        jugadorMasCercano = jugador;
+                    }
+                }
+
+                if (jugadorMasCercano == null) {
+                    continue; // Si no hay a quién perseguir, no hacemos nada con él
+                }
+
+                float distanciaX = jugadorMasCercano.x - enemigo.x;
+
+                // Lógica de movimiento (adaptada de tu PantallaDeJuego)
+                if (distanciaMinima > RANGO_DETENERSE_ROBOTNIK) { // Usa una constante que debes definir en el servidor
+                    float velocidadMovimiento = VELOCIDAD_ROBOTNIK * deltaTime; // Define VELOCIDAD_ROBOTNIK
+                    Vector2 direccionDeseada = new Vector2(distanciaX, jugadorMasCercano.y - enemigo.y).nor();
+
+                    enemigo.x += direccionDeseada.x * velocidadMovimiento;
+                    enemigo.y += direccionDeseada.y * velocidadMovimiento;
+
+                    enemigo.mirandoDerecha = (direccionDeseada.x > 0);
+                    enemigo.estadoAnimacion = enemigo.mirandoDerecha ? EnemigoState.EstadoEnemigo.RUN_RIGHT : EnemigoState.EstadoEnemigo.RUN_LEFT;
+                } else {
+                    enemigo.estadoAnimacion = enemigo.mirandoDerecha ? EnemigoState.EstadoEnemigo.IDLE_RIGHT : EnemigoState.EstadoEnemigo.IDLE_LEFT;
+                }
+
+                // Ya que este es Robotnik, no queremos que la lógica genérica de abajo lo afecte.
+                // Así que saltamos al siguiente enemigo en el bucle.
+                continue;
+            }
 
             // --- Lógica para encontrar al jugador más cercano ---
             PlayerState jugadorMasCercano = null;
@@ -246,6 +297,30 @@ public class GameServer implements IGameServer {
         }
     }
     private void updateServerLogic(float deltaTime) {
+        this.tiempoGeneracionTeleport += deltaTime;
+
+// Suponiendo que el teletransportador solo debe aparecer si hay jugadores
+        if (!this.teleportGenerado && this.tiempoGeneracionTeleport >= 20f && !jugadores.isEmpty()) {
+            System.out.println("[GAMESERVER] Generando teletransportador...");
+
+            // Como el servidor no lee el mapa, definimos aquí las coordenadas.
+            // DEBES AJUSTAR ESTAS COORDENADAS a la posición donde quieres que aparezca.
+            float teleX = 1800f;
+            float teleY = 200f;
+            int teleId = 10000;
+
+            // Creamos el estado del item
+            ItemState estadoTele = new ItemState(teleId, teleX, teleY, ItemState.ItemType.TELETRANSPORTE);
+            itemsActivos.put(estadoTele.id, estadoTele);
+
+            // Creamos el paquete para notificar a TODOS los clientes
+            Network.PaqueteItemNuevo paquete = new Network.PaqueteItemNuevo();
+            paquete.estadoItem = estadoTele;
+            servidor.sendToAllTCP(paquete);
+
+            this.teleportGenerado = true; // Marcamos como generado
+        }
+
         actualizarEnemigosAI(deltaTime);
 
         generarNuevosItems(deltaTime);

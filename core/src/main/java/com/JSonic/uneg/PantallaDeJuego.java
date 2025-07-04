@@ -16,14 +16,12 @@ import network.interfaces.IGameClient;
 import network.interfaces.IGameServer;
 import java.util.Iterator;
 import java.util.Map;
-import java.util.ArrayList;
 import java.util.HashMap;
 import com.badlogic.gdx.scenes.scene2d.ui.Table;
 import com.badlogic.gdx.scenes.scene2d.ui.Image;
 import com.badlogic.gdx.graphics.Texture;
 // ---[AGREGADO]--- Importaciones de la segunda clase
 import com.badlogic.gdx.math.Vector2;
-import com.JSonic.uneg.RobotnikVisual;
 
 public class PantallaDeJuego extends PantallaBase {
 
@@ -38,8 +36,8 @@ public class PantallaDeJuego extends PantallaBase {
     private final IGameClient gameClient;
     private final IGameServer localServer;
     //private Sonic sonic;
-    private Knuckles sonic;
-    private PlayerState sonicEstado;
+    private Player personajeJugable;
+    private PlayerState personajeJugableEstado;
     private final HashMap<Integer, Player> otrosJugadores = new HashMap<>();
     private SoundManager soundManager;
     private static final String BACKGROUND_MUSIC_PATH2 = "SoundsBackground/Dating Fight.mp3";
@@ -95,21 +93,21 @@ public class PantallaDeJuego extends PantallaBase {
         manejadorNivel = new LevelManager(camaraJuego, batch);
         // Java
         manejadorNivel.cargarNivel("maps/Zona1N1.tmx");
-        sonicEstado = new PlayerState();
+        personajeJugableEstado = new PlayerState();
 
         if (manejadorNivel.getMapaActual().equals("maps/Zona1N1.tmx")) {
-            sonicEstado.x = 100;
-            sonicEstado.y = 100;
+            personajeJugableEstado.x = 100;
+            personajeJugableEstado.y = 100;
         } else if (manejadorNivel.getMapaActual().equals("maps/ZonaJefeN1.tmx")) {
-            sonicEstado.x = 12.01f;
-            sonicEstado.y = 156.08f;
+            personajeJugableEstado.x = 12.01f;
+            personajeJugableEstado.y = 156.08f;
         }
 
-        //sonic = new Sonic(sonicEstado, manejadorNivel);
-        sonic = new Knuckles(sonicEstado,manejadorNivel);
+        //sonic = new Sonic(personajeJugableEstado, manejadorNivel);
+        personajeJugable = new Knuckles(personajeJugableEstado,manejadorNivel);
         assetManager = new AssetManager();
         soundManager = new SoundManager(assetManager);
-        manejadorNivel.setPlayer(sonic);
+        manejadorNivel.setPlayer(personajeJugable);
         soundManager.loadMusic(BACKGROUND_MUSIC_PATH2);
         soundManager.playBackgroundMusic(BACKGROUND_MUSIC_PATH2, 0.5f, true);
         assetManager.finishLoading();
@@ -138,8 +136,8 @@ public class PantallaDeJuego extends PantallaBase {
         mainStage.addActor(tablaUI);
 
         // ---[AGREGADO]--- Instanciación de RobotnikVisual (eggman)
-        EnemigoState eggmanState = new EnemigoState(999, 300, 100, 100, EnemigoState.EnemigoType.ROBOT);
-        eggman = new RobotnikVisual(eggmanState, manejadorNivel);
+//        EnemigoState eggmanState = new EnemigoState(999, 300, 100, 100, EnemigoState.EnemigoType.ROBOTNIK);
+//        eggman = new RobotnikVisual(eggmanState, manejadorNivel);
     }
 
     //para poder crear varios portales se necesita reiniciar el teletransporte
@@ -150,29 +148,29 @@ public class PantallaDeJuego extends PantallaBase {
 
     @Override
     public void actualizar(float deltat) {
-        tiempoTranscurrido += deltat;
-        if (!teletransporteCreado && tiempoTranscurrido >= 20f) {
-            var layer = manejadorNivel.getMapaActual().getLayers().get("destinox");
-            if (layer != null) {
-                MapObjects objetos = layer.getObjects();
-                int idBase = 999;
-                for (com.badlogic.gdx.maps.MapObject obj : objetos) {
-                    if (obj instanceof com.badlogic.gdx.maps.objects.RectangleMapObject rectObj) {
-                        Rectangle rect = rectObj.getRectangle();
-                        ItemState estadoTele = new ItemState(
-                            idBase++,
-                            rect.x,
-                            rect.y,
-                            ItemState.ItemType.TELETRANSPORTE
-                        );
-                        crearItemVisual(estadoTele);
-                    }
-                }
-            } else {
-                System.out.println("[CLIENT_DEBUG] Capa 'destinox' no encontrada en el mapa actual.");
-            }
-            teletransporteCreado = true;
-        }
+//        tiempoTranscurrido += deltat;
+//        if (!teletransporteCreado && tiempoTranscurrido >= 20f) {
+//            var layer = manejadorNivel.getMapaActual().getLayers().get("destinox");
+//            if (layer != null) {
+//                MapObjects objetos = layer.getObjects();
+//                int idBase = 999;
+//                for (com.badlogic.gdx.maps.MapObject obj : objetos) {
+//                    if (obj instanceof com.badlogic.gdx.maps.objects.RectangleMapObject rectObj) {
+//                        Rectangle rect = rectObj.getRectangle();
+//                        ItemState estadoTele = new ItemState(
+//                            idBase++,
+//                            rect.x,
+//                            rect.y,
+//                            ItemState.ItemType.TELETRANSPORTE
+//                        );
+//                        crearItemVisual(estadoTele);
+//                    }
+//                }
+//            } else {
+//                System.out.println("[CLIENT_DEBUG] Capa 'destinox' no encontrada en el mapa actual.");
+//            }
+//            teletransporteCreado = true;
+//        }
         if (localServer != null) {
             localServer.update(deltat, this.manejadorNivel);
         }
@@ -201,11 +199,11 @@ public class PantallaDeJuego extends PantallaBase {
                         System.out.println("[CLIENT] Plano del mapa con " + paredes.size() + " paredes enviado.");
                     }
                 } else if (paquete instanceof Network.PaqueteJugadorConectado p) {
-                    if (sonicEstado != null && p.nuevoJugador.id != sonicEstado.id) {
+                    if (personajeJugableEstado != null && p.nuevoJugador.id != personajeJugableEstado.id) {
                         agregarOActualizarOtroJugador(p.nuevoJugador);
                     }
                 } else if (paquete instanceof Network.PaquetePosicionJugador p) {
-                    if (sonicEstado != null && p.id != sonicEstado.id) {
+                    if (personajeJugableEstado != null && p.id != personajeJugableEstado.id) {
                         actualizarPosicionOtroJugador(p.id, p.x, p.y, p.estadoAnimacion);
                     }
                 } else if (paquete instanceof Network.PaqueteEnemigoNuevo p) {
@@ -219,12 +217,26 @@ public class PantallaDeJuego extends PantallaBase {
                         itemEliminado.dispose();
                     }
                 } else if (paquete instanceof Network.PaqueteActualizacionEnemigos p) {
+                    // Recorremos todos los estados de enemigos que nos envió el servidor
                     for (EnemigoState estadoServidor : p.estadosEnemigos.values()) {
-                        RobotVisual enemigoVisual = enemigosEnPantalla.get(estadoServidor.id);
-                        if (enemigoVisual != null) {
-                            enemigoVisual.estado.x = estadoServidor.x;
-                            enemigoVisual.estado.y = estadoServidor.y;
-                            enemigoVisual.setEstadoActual(estadoServidor.estadoAnimacion);
+
+                        // CASO ESPECIAL: ¿Es la actualización para Robotnik?
+                        if (estadoServidor.tipo == EnemigoState.EnemigoType.ROBOTNIK) {
+                            if (eggman != null) { // Si ya hemos creado el objeto visual de eggman...
+                                // ...le aplicamos el estado que nos manda el servidor.
+                                eggman.estado.x = estadoServidor.x;
+                                eggman.estado.y = estadoServidor.y;
+                                eggman.setEstadoActual(estadoServidor.estadoAnimacion);
+                            }
+                        }
+                        // CASO GENERAL: Es un robot normal
+                        else {
+                            RobotVisual enemigoVisual = enemigosEnPantalla.get(estadoServidor.id);
+                            if (enemigoVisual != null) {
+                                enemigoVisual.estado.x = estadoServidor.x;
+                                enemigoVisual.estado.y = estadoServidor.y;
+                                enemigoVisual.setEstadoActual(estadoServidor.estadoAnimacion);
+                            }
                         }
                     }
                 }
@@ -242,7 +254,7 @@ public class PantallaDeJuego extends PantallaBase {
             Map.Entry<Integer, ItemVisual> entry = iter.next();
             ItemVisual item = entry.getValue();
 
-            if (sonic.getBounds() != null && item.getBounds() != null && Intersector.overlaps(sonic.getBounds(), item.getBounds())) {
+            if (personajeJugable.getBounds() != null && item.getBounds() != null && Intersector.overlaps(personajeJugable.getBounds(), item.getBounds())) {
 
                 Network.PaqueteSolicitudRecogerItem paquete = new Network.PaqueteSolicitudRecogerItem();
                 paquete.idItem = item.estado.id;
@@ -282,9 +294,9 @@ public class PantallaDeJuego extends PantallaBase {
                                         float alturaMapa = map.getProperties().get("height", Integer.class) * map.getProperties().get("tileheight", Integer.class);
                                         float xFinal = rect.x;
                                         float yFinal = alturaMapa - rect.y - rect.height;
-                                        sonic.estado.x = xFinal;
-                                        sonic.estado.y = yFinal;
-                                        System.out.println("[DEBUG] Llegada encontrada en destinox: rect.x=" + rect.x + ", rect.y=" + rect.y + ", width=" + rect.width + ", height=" + rect.height + ". Sonic en x=" + sonic.estado.x + ", y=" + sonic.estado.y);
+                                        personajeJugable.estado.x = xFinal;
+                                        personajeJugable.estado.y = yFinal;
+                                        System.out.println("[DEBUG] Llegada encontrada en destinox: rect.x=" + rect.x + ", rect.y=" + rect.y + ", width=" + rect.width + ", height=" + rect.height + ". Sonic en x=" + personajeJugable.estado.x + ", y=" + personajeJugable.estado.y);
                                         llegadaEncontrada = true;
                                         break;
                                     }
@@ -292,8 +304,8 @@ public class PantallaDeJuego extends PantallaBase {
                             }
                         }
                         if (!llegadaEncontrada) {
-                            sonic.estado.x = 12.01f;
-                            sonic.estado.y = 156.08f;
+                            personajeJugable.estado.x = 12.01f;
+                            personajeJugable.estado.y = 156.08f;
                         }
                     }
 
@@ -318,8 +330,8 @@ public class PantallaDeJuego extends PantallaBase {
             if (item != null) item.dispose();
         }
 
-        sonic.KeyHandler();
-        sonic.update(deltat);
+        personajeJugable.KeyHandler();
+        personajeJugable.update(deltat);
 
         for (Player otro : otrosJugadores.values()) {
             otro.update(deltat);
@@ -331,43 +343,43 @@ public class PantallaDeJuego extends PantallaBase {
         if (eggman != null) {
             eggman.update(deltat); // Primero actualizamos su animación
 
-            if (sonic != null && sonic.estado != null) {
-                float robotnikCenterX = eggman.estado.x + eggman.getBounds().width / 2;
-                float robotnikCenterY = eggman.estado.y + eggman.getBounds().height / 2;
-                float sonicCenterX = sonic.estado.x + sonic.getBounds().width / 2;
-                float sonicCenterY = sonic.estado.y + sonic.getBounds().height / 2;
-                float distanciaX = sonicCenterX - robotnikCenterX;
-                float distanciaY = sonicCenterY - robotnikCenterY;
-                float distancia = (float) Math.sqrt(distanciaX * distanciaX + distanciaY * distanciaY);
-
-                if (distancia > RANGO_DETENERSE_ROBOTNIK) {
-                    float velocidadMovimiento = VELOCIDAD_ROBOTNIK * deltat;
-                    Vector2 direccionDeseada = new Vector2(distanciaX, distanciaY).nor();
-
-                    eggman.estado.x += direccionDeseada.x * velocidadMovimiento;
-                    eggman.estado.y += direccionDeseada.y * velocidadMovimiento;
-                    eggman.getBounds().x = eggman.estado.x;
-                    eggman.getBounds().y = eggman.estado.y;
-
-                    if (Math.abs(direccionDeseada.x) > 0.001f) {
-                        eggman.estado.mirandoDerecha = (direccionDeseada.x > 0);
-                        eggman.setEstadoActual(eggman.estado.mirandoDerecha ? EnemigoState.EstadoEnemigo.RUN_RIGHT : EnemigoState.EstadoEnemigo.RUN_LEFT);
-                    } else if (Math.abs(direccionDeseada.y) > 0.001f) {
-                        eggman.setEstadoActual(eggman.estado.mirandoDerecha ? EnemigoState.EstadoEnemigo.RUN_RIGHT : EnemigoState.EstadoEnemigo.RUN_LEFT);
-                    } else {
-                        eggman.setEstadoActual(eggman.estado.mirandoDerecha ? EnemigoState.EstadoEnemigo.IDLE_RIGHT : EnemigoState.EstadoEnemigo.IDLE_LEFT);
-                    }
-                } else {
-                    eggman.setEstadoActual(eggman.estado.mirandoDerecha ? EnemigoState.EstadoEnemigo.IDLE_RIGHT : EnemigoState.EstadoEnemigo.IDLE_LEFT);
-                }
-            } else {
-                eggman.setEstadoActual(eggman.estado.mirandoDerecha ? EnemigoState.EstadoEnemigo.IDLE_RIGHT : EnemigoState.EstadoEnemigo.IDLE_LEFT);
-            }
+//            if (personajeJugable != null && personajeJugable.estado != null) {
+//                float robotnikCenterX = eggman.estado.x + eggman.getBounds().width / 2;
+//                float robotnikCenterY = eggman.estado.y + eggman.getBounds().height / 2;
+//                float sonicCenterX = personajeJugable.estado.x + personajeJugable.getBounds().width / 2;
+//                float sonicCenterY = personajeJugable.estado.y + personajeJugable.getBounds().height / 2;
+//                float distanciaX = sonicCenterX - robotnikCenterX;
+//                float distanciaY = sonicCenterY - robotnikCenterY;
+//                float distancia = (float) Math.sqrt(distanciaX * distanciaX + distanciaY * distanciaY);
+//
+//                if (distancia > RANGO_DETENERSE_ROBOTNIK) {
+//                    float velocidadMovimiento = VELOCIDAD_ROBOTNIK * deltat;
+//                    Vector2 direccionDeseada = new Vector2(distanciaX, distanciaY).nor();
+//
+//                    eggman.estado.x += direccionDeseada.x * velocidadMovimiento;
+//                    eggman.estado.y += direccionDeseada.y * velocidadMovimiento;
+//                    eggman.getBounds().x = eggman.estado.x;
+//                    eggman.getBounds().y = eggman.estado.y;
+//
+//                    if (Math.abs(direccionDeseada.x) > 0.001f) {
+//                        eggman.estado.mirandoDerecha = (direccionDeseada.x > 0);
+//                        eggman.setEstadoActual(eggman.estado.mirandoDerecha ? EnemigoState.EstadoEnemigo.RUN_RIGHT : EnemigoState.EstadoEnemigo.RUN_LEFT);
+//                    } else if (Math.abs(direccionDeseada.y) > 0.001f) {
+//                        eggman.setEstadoActual(eggman.estado.mirandoDerecha ? EnemigoState.EstadoEnemigo.RUN_RIGHT : EnemigoState.EstadoEnemigo.RUN_LEFT);
+//                    } else {
+//                        eggman.setEstadoActual(eggman.estado.mirandoDerecha ? EnemigoState.EstadoEnemigo.IDLE_RIGHT : EnemigoState.EstadoEnemigo.IDLE_LEFT);
+//                    }
+//                } else {
+//                    eggman.setEstadoActual(eggman.estado.mirandoDerecha ? EnemigoState.EstadoEnemigo.IDLE_RIGHT : EnemigoState.EstadoEnemigo.IDLE_LEFT);
+//                }
+//            } else {
+//                eggman.setEstadoActual(eggman.estado.mirandoDerecha ? EnemigoState.EstadoEnemigo.IDLE_RIGHT : EnemigoState.EstadoEnemigo.IDLE_LEFT);
+//            }
         }
         // ---[FIN DEL AGREGADO]---
 
-        camaraJuego.position.x = sonic.estado.x;
-        camaraJuego.position.y = sonic.estado.y;
+        camaraJuego.position.x = personajeJugable.estado.x;
+        camaraJuego.position.y = personajeJugable.estado.y;
         manejadorNivel.limitarCamaraAMapa(camaraJuego);
         camaraJuego.update();
         mainStage.act(Math.min(deltat, 1 / 30f));
@@ -382,7 +394,7 @@ public class PantallaDeJuego extends PantallaBase {
         manejadorNivel.dibujar();
 
         batch.begin();
-        sonic.draw(batch);
+        personajeJugable.draw(batch);
         for (Player otro : otrosJugadores.values()) otro.draw(batch);
         for (RobotVisual enemigo : enemigosEnPantalla.values()) enemigo.draw(batch);
 
@@ -397,12 +409,12 @@ public class PantallaDeJuego extends PantallaBase {
         mainStage.getViewport().apply();
         mainStage.draw();
 
-        if (gameClient != null && sonic != null && sonic.estado != null && sonic.estado.id != 0) {
+        if (gameClient != null && personajeJugable != null && personajeJugable.estado != null && personajeJugable.estado.id != 0) {
             Network.PaquetePosicionJugador paquete = new Network.PaquetePosicionJugador();
-            paquete.id = sonic.estado.id;
-            paquete.x = sonic.estado.x;
-            paquete.y = sonic.estado.y;
-            paquete.estadoAnimacion = sonic.getEstadoActual();
+            paquete.id = personajeJugable.estado.id;
+            paquete.x = personajeJugable.estado.x;
+            paquete.y = personajeJugable.estado.y;
+            paquete.estadoAnimacion = personajeJugable.getEstadoActual();
             gameClient.send(paquete); // Usa el método de la interfaz
         }
     }
@@ -430,21 +442,29 @@ public class PantallaDeJuego extends PantallaBase {
     }
 
     public void inicializarJugadorLocal(PlayerState estadoRecibido) {
-        this.sonic.estado = estadoRecibido;
-        System.out.println("[CLIENT] ID asignado por el servidor: " + this.sonic.estado.id);
+        this.personajeJugable.estado = estadoRecibido;
+        System.out.println("[CLIENT] ID asignado por el servidor: " + this.personajeJugable.estado.id);
     }
 
     private void crearEnemigoVisual(EnemigoState estadoEnemigo) {
-        // Nos aseguramos de no crear un enemigo que ya exista
+        // Primero, comprobamos si es el caso especial de Robotnik.
+        if (estadoEnemigo.tipo == EnemigoState.EnemigoType.ROBOTNIK) {
+            if (this.eggman == null) { // Solo lo creamos si no lo tenemos ya.
+                System.out.println("[CLIENT] Recibida orden de crear a ROBOTNIK (ID: " + estadoEnemigo.id + ")");
+                this.eggman = new RobotnikVisual(estadoEnemigo, manejadorNivel);
+            }
+            return; // Importante: Salimos del método para no tratarlo como un enemigo normal.
+        }
+
+        // Si NO es Robotnik, aplicamos la lógica para los enemigos normales.
         if (!enemigosEnPantalla.containsKey(estadoEnemigo.id)) {
-            System.out.println("[CLIENT] Recibida orden de crear enemigo con ID: " + estadoEnemigo.id);
-            // Creamos el objeto visual usando el estado que nos dio el servidor
+            System.out.println("[CLIENT] Recibida orden de crear enemigo normal con ID: " + estadoEnemigo.id);
             RobotVisual nuevoRobot = new RobotVisual(estadoEnemigo, manejadorNivel, this.gameClient);
             enemigosEnPantalla.put(estadoEnemigo.id, nuevoRobot);
         }
     }
 
-    //para limpriar los enemigos en los otros mapas
+    //para limpiar los enemigos en los otros mapasaaaaaaaa
     private void limpiarEnemigosEItems() {
         for (RobotVisual enemigo : enemigosEnPantalla.values()) {
             enemigo.dispose();
@@ -537,7 +557,7 @@ public class PantallaDeJuego extends PantallaBase {
     public void dispose() {
         super.dispose();
         manejadorNivel.dispose();
-        sonic.dispose();
+        personajeJugable.dispose();
         if (assetManager != null) assetManager.dispose();
         if (soundManager != null) soundManager.dispose();
         if (shapeRenderer != null) shapeRenderer.dispose();

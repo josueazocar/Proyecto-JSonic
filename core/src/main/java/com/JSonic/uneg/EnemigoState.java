@@ -14,6 +14,7 @@ public class EnemigoState {
     public enum EnemigoType {
         ROBOT,
         // Puedes añadir más tipos de enemigos aquí
+        ROBOTNIK,
     }
 
     public enum EstadoEnemigo {
