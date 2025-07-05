@@ -29,8 +29,6 @@ public class AnillosVisual extends ItemVisual {
         TextureRegion[][] tmp = TextureRegion.split(spriteSheet, frameWidth, frameHeight);
 
         // 4. Crear un array con los frames de la animación
-
-
         TextureRegion[] framesAnimacion = new TextureRegion[frameCount];
         for (int i = 0; i < frameCount; i++) {
             framesAnimacion[i] = tmp[0][i];

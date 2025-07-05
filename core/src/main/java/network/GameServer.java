@@ -49,7 +49,7 @@ public class GameServer implements IGameServer {
     private float tiempoSpawnAnillo = 0f;
     private float tiempoSpawnBasura = 0f;
     private float tiempoSpawnPlastico = 0f;
-    private static final float ROBOT_SPEED = 1.0f;
+    private static final int ROBOT_SPEED = 1;
     private static final float ROBOT_DETECTION_RANGE = 300f;
     private static final float ROBOT_ATTACK_RANGE = 10f;
     private float tiempoGeneracionTeleport = 0f;
@@ -276,15 +276,15 @@ public class GameServer implements IGameServer {
 
         System.out.println("[SERVER] Servidor online iniciado y escuchando en el puerto " + Network.PORT);
     }
+
     private void actualizarEnemigosAI(float deltaTime) {
-        // Si no hay jugadores conectados, no hay nada que hacer.
         if (jugadores.isEmpty()) {
             return;
         }
 
         for (EnemigoState enemigo : enemigosActivos.values()) {
-
-            if (enemigo.tipo == EnemigoState.EnemigoType.ROBOTNIK) { // Asumiendo que tienes un tipo ROBOTNIK
+            // --- Lógica para Robotnik (Jefe) ---
+            if (enemigo.tipo == EnemigoState.EnemigoType.ROBOTNIK) {
                 PlayerState jugadorMasCercano = null;
                 float distanciaMinima = Float.MAX_VALUE;
 
@@ -296,32 +296,27 @@ public class GameServer implements IGameServer {
                     }
                 }
 
-                if (jugadorMasCercano == null) {
-                    continue; // Si no hay a quién perseguir, no hacemos nada con él
-                }
+                if (jugadorMasCercano == null) continue;
 
                 float distanciaX = jugadorMasCercano.x - enemigo.x;
+                float distanciaY = jugadorMasCercano.y - enemigo.y;
 
-                // Lógica de movimiento (adaptada de tu PantallaDeJuego)
-                if (distanciaMinima > RANGO_DETENERSE_ROBOTNIK) { // Usa una constante que debes definir en el servidor
-                    float velocidadMovimiento = VELOCIDAD_ROBOTNIK * deltaTime; // Define VELOCIDAD_ROBOTNIK
-                    Vector2 direccionDeseada = new Vector2(distanciaX, jugadorMasCercano.y - enemigo.y).nor();
+                if (distanciaMinima > RANGO_DETENERSE_ROBOTNIK) {
+                    Vector2 direccionDeseada = new Vector2(distanciaX, distanciaY).nor();
+                    enemigo.x += direccionDeseada.x * VELOCIDAD_ROBOTNIK * deltaTime;
+                    enemigo.y += direccionDeseada.y * VELOCIDAD_ROBOTNIK * deltaTime;
 
-                    enemigo.x += direccionDeseada.x * velocidadMovimiento;
-                    enemigo.y += direccionDeseada.y * velocidadMovimiento;
-
-                    enemigo.mirandoDerecha = (direccionDeseada.x > 0);
+                    if (Math.abs(direccionDeseada.x) > 0.1f) {
+                        enemigo.mirandoDerecha = direccionDeseada.x > 0;
+                    }
                     enemigo.estadoAnimacion = enemigo.mirandoDerecha ? EnemigoState.EstadoEnemigo.RUN_RIGHT : EnemigoState.EstadoEnemigo.RUN_LEFT;
                 } else {
                     enemigo.estadoAnimacion = enemigo.mirandoDerecha ? EnemigoState.EstadoEnemigo.IDLE_RIGHT : EnemigoState.EstadoEnemigo.IDLE_LEFT;
                 }
-
-                // Ya que este es Robotnik, no queremos que la lógica genérica de abajo lo afecte.
-                // Así que saltamos al siguiente enemigo en el bucle.
-                continue;
+                continue; // Saltamos al siguiente enemigo.
             }
 
-            // --- Lógica para encontrar al jugador más cercano ---
+            // --- Lógica para Robots Normales ---
             PlayerState jugadorMasCercano = null;
             float distanciaMinima = Float.MAX_VALUE;
 
@@ -333,15 +328,11 @@ public class GameServer implements IGameServer {
                 }
             }
 
-            // Si por alguna razón no encontramos a nadie, saltamos a la siguiente iteración.
-            if (jugadorMasCercano == null) {
-                continue;
-            }
-
+            if (jugadorMasCercano == null) continue;
 
             float dx = jugadorMasCercano.x - enemigo.x;
             float dy = jugadorMasCercano.y - enemigo.y;
-            float distance = distanciaMinima; // Ya la calculamos
+            float distance = distanciaMinima;
 
             if (enemigo.estadoAnimacion == EnemigoState.EstadoEnemigo.HIT_RIGHT || enemigo.estadoAnimacion == EnemigoState.EstadoEnemigo.HIT_LEFT) {
                 continue;
@@ -350,12 +341,21 @@ public class GameServer implements IGameServer {
             EnemigoState.EstadoEnemigo estadoAnterior = enemigo.estadoAnimacion;
 
             if (distance <= ROBOT_ATTACK_RANGE) {
-                enemigo.estadoAnimacion = dx > 0 ? EnemigoState.EstadoEnemigo.HIT_RIGHT : EnemigoState.EstadoEnemigo.HIT_LEFT;
+                if (Math.abs(dx) > 1.0f) {
+                    enemigo.mirandoDerecha = dx > 0;
+                }
+                enemigo.estadoAnimacion = enemigo.mirandoDerecha ? EnemigoState.EstadoEnemigo.HIT_RIGHT : EnemigoState.EstadoEnemigo.HIT_LEFT;
+
             } else if (distance <= ROBOT_DETECTION_RANGE) {
-                enemigo.mirandoDerecha = dx > 0;
+                if (Math.abs(dx) > 1.0f) { // Usamos un umbral para evitar "temblores" de sprite.
+                    enemigo.mirandoDerecha = dx > 0;
+                }
+                // La animación de correr siempre se basará en la dirección actual (que puede ser la anterior).
                 enemigo.estadoAnimacion = enemigo.mirandoDerecha ? EnemigoState.EstadoEnemigo.RUN_RIGHT : EnemigoState.EstadoEnemigo.RUN_LEFT;
+
             } else {
-                enemigo.mirandoDerecha = dx > 0;
+                // Si está quieto (idle), no debería cambiar de dirección espontáneamente.
+                // Mantenemos la dirección que ya tenía.
                 enemigo.estadoAnimacion = enemigo.mirandoDerecha ? EnemigoState.EstadoEnemigo.IDLE_RIGHT : EnemigoState.EstadoEnemigo.IDLE_LEFT;
             }
 
@@ -363,6 +363,7 @@ public class GameServer implements IGameServer {
                 enemigo.tiempoEnEstado = 0;
             }
 
+            // Lógica de Movimiento
             if (enemigo.estadoAnimacion == EnemigoState.EstadoEnemigo.RUN_RIGHT || enemigo.estadoAnimacion == EnemigoState.EstadoEnemigo.RUN_LEFT) {
                 float nextX = enemigo.x;
                 float nextY = enemigo.y;
@@ -371,7 +372,6 @@ public class GameServer implements IGameServer {
 
                 com.badlogic.gdx.math.Rectangle robotBounds = new com.badlogic.gdx.math.Rectangle(enemigo.x, enemigo.y, 48, 48);
 
-                // Comprobamos el movimiento en X
                 robotBounds.setX(nextX);
                 boolean colisionEnX = false;
                 for (com.badlogic.gdx.math.Rectangle pared : paredesDelMapa) {
@@ -381,11 +381,10 @@ public class GameServer implements IGameServer {
                     }
                 }
                 if (!colisionEnX) {
-                    enemigo.x = nextX; // Si no hay colisión, aplicamos el movimiento en X
+                    enemigo.x = nextX;
                 }
 
-                // Comprobamos el movimiento en Y
-                robotBounds.setX(enemigo.x); // Volvemos a la X actual (que puede haber cambiado) para comprobar Y
+                robotBounds.setX(enemigo.x);
                 robotBounds.setY(nextY);
                 boolean colisionEnY = false;
                 for (com.badlogic.gdx.math.Rectangle pared : paredesDelMapa) {
@@ -395,11 +394,12 @@ public class GameServer implements IGameServer {
                     }
                 }
                 if (!colisionEnY) {
-                    enemigo.y = nextY; // Si no hay colisión, aplicamos el movimiento en Y
+                    enemigo.y = nextY;
                 }
             }
         }
     }
+
     private void updateServerLogic(float deltaTime) {
         //Lógica de Aumento y Sincronización de la Contaminación
         contaminationState.increase(CONTAMINATION_RATE_PER_SECOND * deltaTime);
@@ -423,7 +423,7 @@ public class GameServer implements IGameServer {
             );
         }
 
-// Suponiendo que el teletransportador solo debe aparecer si hay jugadores
+        // Suponiendo que el teletransportador solo debe aparecer si hay jugadores
         if (!this.teleportGenerado && this.tiempoGeneracionTeleport >= 5f && !jugadores.isEmpty()) {
             System.out.println("[GAMESERVER] Generando teletransportador...");
 

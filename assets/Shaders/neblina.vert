@@ -1,4 +1,4 @@
-// Archivo: shaders/neblina.vert (ACTUALIZADO)
+// Archivo: shaders/neblina.vert
 attribute vec4 a_position;
 
 // La matriz de transformación combinada (proyección * vista)

@@ -10,6 +10,7 @@ import com.badlogic.gdx.maps.MapObjects;
 import com.badlogic.gdx.math.Intersector;
 import com.badlogic.gdx.assets.AssetManager;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
+import com.badlogic.gdx.math.Vector3;
 import com.badlogic.gdx.scenes.scene2d.ui.Label;
 import com.badlogic.gdx.utils.viewport.FitViewport;
 import com.badlogic.gdx.utils.viewport.Viewport;
@@ -60,6 +61,7 @@ public class PantallaDeJuego extends PantallaBase {
     private Mesh quadMesh;
     private BitmapFont font;
     private Label contaminationLabel;
+    private Vector3 screenCoords = new Vector3();
 
     //para el teletransporte
     private float tiempoTranscurrido = 0f;
@@ -85,7 +87,6 @@ public class PantallaDeJuego extends PantallaBase {
         camaraJuego = new OrthographicCamera();
         viewport = new FitViewport(VIRTUAL_WIDTH, VIRTUAL_HEIGHT, camaraJuego);
         manejadorNivel = new LevelManager(camaraJuego, batch);
-        // Java
         manejadorNivel.cargarNivel("maps/Zona1N1.tmx");
         personajeJugableEstado = new PlayerState();
 
@@ -170,7 +171,7 @@ public class PantallaDeJuego extends PantallaBase {
         quadMesh.setVertices(vertices);
         quadMesh.setIndices(indices);
 
-        // --- INICIO: CONFIGURACIÓN UI Anillos ---
+        // CONFIGURACIÓN UI Anillos ---
         String numerosTexturaPath = "Fondos/numerosContadorAnillos.png";
         contadorAnillos = new ContadorUI(numerosTexturaPath);
         contadorBasura = new ContadorUI(numerosTexturaPath);
@@ -484,6 +485,9 @@ public class PantallaDeJuego extends PantallaBase {
         float factorLimpieza = 1.0f - (porcentajeContaminacionActual / 100.0f);
         float radioActual = minRadius + (maxRadius - minRadius) * (factorLimpieza * factorLimpieza);
 
+        // Usamos la cámara del juego (camaraJuego) para saber dónde se está dibujando el personaje.
+        camaraJuego.project(screenCoords.set(personajeJugable.estado.x, personajeJugable.estado.y, 0));
+
         Gdx.gl.glEnable(GL20.GL_BLEND);
         Gdx.gl.glBlendFunc(GL20.GL_SRC_ALPHA, GL20.GL_ONE_MINUS_SRC_ALPHA);
 
@@ -494,6 +498,7 @@ public class PantallaDeJuego extends PantallaBase {
         shaderNeblina.setUniformf("u_radius", radioActual);
         shaderNeblina.setUniformf("u_smoothness", 0.3f);
         shaderNeblina.setUniformf("u_fogColor", 0.1f, 0.6f, 0.2f, 0.65f);
+        shaderNeblina.setUniformf("u_fogCenter", screenCoords.x, screenCoords.y);
 
         // Pasamos la matriz de la cámara al shader
         shaderNeblina.setUniformMatrix("u_projTrans", uiCamera.combined);
