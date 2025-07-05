@@ -43,6 +43,9 @@ public class Network {
         kryo.register(java.util.ArrayList.class);
         kryo.register(com.badlogic.gdx.math.Rectangle.class);
         kryo.register(PaqueteOrdenCambiarMapa.class);
+        kryo.register(PaqueteActualizacionPuntuacion.class);
+        kryo.register(PlayerState.CharacterType.class);
+        kryo.register(PaqueteActualizacionContaminacion.class);
     }
 
     // --- Definición de los Paquetes ---
@@ -51,6 +54,7 @@ public class Network {
     // Paquete enviado por el cliente al servidor para solicitar unirse
     public static class SolicitudAccesoPaquete {
         public String nombreJugador;
+        public PlayerState.CharacterType characterType;
     }
 
     // Paquete enviado por el servidor al cliente como respuesta
@@ -104,5 +108,17 @@ public class Network {
         public float nuevaPosX;
         public float nuevaPosY;
     }
+
+    public static class PaqueteActualizacionPuntuacion {
+        // No necesitamos el ID del jugador, porque el servidor
+        // se lo enviará solo al cliente que corresponda.
+        public int nuevosAnillos;
+        public int nuevaBasura;
+    }
+
+    public static class PaqueteActualizacionContaminacion {
+        public float contaminationPercentage;
+    }
+
 }
 

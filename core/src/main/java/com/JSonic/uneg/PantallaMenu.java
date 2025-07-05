@@ -195,6 +195,7 @@ public class PantallaMenu extends PantallaBase {
         botonOnline.addListener(new ClickListener() {
             @Override
             public void clicked(InputEvent event, float x, float y) {
+
                 juegoApp.direccionIp = "20.112.50.29";
                 mostrarMenuCrearUnirse();
             }

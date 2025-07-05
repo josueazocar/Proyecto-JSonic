@@ -19,7 +19,7 @@ public class GameClient implements IGameClient {
     public ConcurrentLinkedQueue<Object> paquetesRecibidos = new ConcurrentLinkedQueue<>();
 
     public GameClient(PantallaDeJuego juego) {
-        this.juego= juego;
+        this.juego = juego;
         cliente = new Client();
 
         Network.registrar(cliente);
@@ -45,9 +45,10 @@ public class GameClient implements IGameClient {
             }
         });
 
-       cliente.start(); // El cliente se inicia en un nuevo hilo
+        cliente.start(); // El cliente se inicia en un nuevo hilo
 
     }
+
 
     @Override
     public void connect(String host) {
@@ -75,7 +76,7 @@ public class GameClient implements IGameClient {
 
     @Override
     public void dispose() {
-        if(cliente != null) {
+        if (cliente != null) {
             cliente.close();
         }
     }

@@ -6,8 +6,12 @@ public class PlayerState {
         public float x;
         public float y;
 
+        public CharacterType characterType;
         public Player.EstadoPlayer estadoAnimacion;
 
+    public enum CharacterType {
+        SONIC, TAILS, KNUCKLES
+    }
      public void setPosition(float x, float y) {
         this.x = x;
         this.y = y;

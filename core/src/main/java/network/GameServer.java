@@ -19,6 +19,19 @@ public class GameServer implements IGameServer {
     private final HashMap<Integer, EnemigoState> enemigosActivos = new HashMap<>();
     private final HashMap<Integer, ItemState> itemsActivos = new HashMap<>();
     private volatile ArrayList<com.badlogic.gdx.math.Rectangle> paredesDelMapa = null;
+    private final HashMap<Integer, Integer> puntajesAnillosIndividuales = new HashMap<>();
+    private final HashMap<Integer, Integer> puntajesBasuraIndividuales = new HashMap<>();
+
+    // Estado global compartido por todo el equipo.
+    private final ContaminationState contaminationState = new ContaminationState();
+    public int totalAnillosGlobal = 0;
+    public int totalBasuraGlobal = 0;
+
+    //  Variables de control para la contaminación.
+    private static final float CONTAMINATION_RATE_PER_SECOND = 0.65f; // El % sube 0.65 puntos por segundo.
+    private static final float TRASH_CLEANUP_VALUE = 3f; // Cada basura recogida reduce el % en 3 puntos.
+    private float tiempoDesdeUltimaContaminacion = 0f;
+    private static final float INTERVALO_ACTUALIZACION_CONTAMINACION = 1.0f; // Enviaremos una actualización cada segundo.
 
     // --- VARIABLES DE CONTROL DE SPAWNING ---
     private static final float VELOCIDAD_ROBOTNIK = 60f;
@@ -59,6 +72,8 @@ public class GameServer implements IGameServer {
                 nuevoEstado.y = 100;
                 nuevoEstado.estadoAnimacion = Player.EstadoPlayer.IDLE_RIGHT;
                 jugadores.put(conexion.getID(), nuevoEstado);
+                puntajesAnillosIndividuales.put(conexion.getID(), 0);
+                puntajesBasuraIndividuales.put(conexion.getID(), 0);
 
                 Network.PaqueteJugadorConectado packetNuevoJugador = new Network.PaqueteJugadorConectado();
                 packetNuevoJugador.nuevoJugador = nuevoEstado;
@@ -83,6 +98,11 @@ public class GameServer implements IGameServer {
                     paqueteEnemigo.estadoEnemigo = enemigoExistente;
                     conexion.sendTCP(paqueteEnemigo);
                 }
+
+                // Sincronizamos el estado de la contaminación para el nuevo jugador.
+                Network.PaqueteActualizacionContaminacion paqueteContaminacion = new Network.PaqueteActualizacionContaminacion();
+                paqueteContaminacion.contaminationPercentage = contaminationState.getPercentage();
+                conexion.sendTCP(paqueteContaminacion);
             }
 
             public void received(Connection conexion, Object objeto) {
@@ -100,6 +120,9 @@ public class GameServer implements IGameServer {
                     Network.RespuestaAccesoPaquete respuesta = new Network.RespuestaAccesoPaquete();
                     respuesta.mensajeRespuesta = "Bienvenido al servidor, " + solicitud.nombreJugador + "!";
                     PlayerState estadoAsignado = jugadores.get(conexion.getID());
+
+                    estadoAsignado.characterType = solicitud.characterType;
+
                     respuesta.tuEstado = estadoAsignado;
                     conexion.sendTCP(respuesta);
                 }
@@ -121,21 +144,54 @@ public class GameServer implements IGameServer {
                                 // Creamos la ORDEN de cambio de mapa.
                                 Network.PaqueteOrdenCambiarMapa orden = new Network.PaqueteOrdenCambiarMapa();
                                 orden.nuevoMapa = "maps/ZonaJefeN1.tmx";
-                                orden.nuevaPosX = 12.01f;   // Coordenada X de llegada en el nuevo mapa.
-                                orden.nuevaPosY = 156.08f;  // Coordenada Y de llegada en el nuevo mapa.
+                                orden.nuevaPosX = 70f;   // Coordenada X de llegada en el nuevo mapa.
+                                orden.nuevaPosY = 250f;  // Coordenada Y de llegada en el nuevo mapa.
 
-                                // Enviamos la orden SOLO al jugador que tocó el portal.
-                                conexion.sendTCP(orden);
+                                // Enviamos la orden A TODOS los jugadores conectados para cambiar de mapa.
+                                servidor.sendToAllTCP(orden);
 
                                 // Adicionalmente, notificamos a TODOS los jugadores que este ítem (el portal) ya no existe.
                                 Network.PaqueteItemEliminado paqueteEliminado = new Network.PaqueteItemEliminado();
                                 paqueteEliminado.idItem = paquete.idItem;
                                 servidor.sendToAllTCP(paqueteEliminado);
+                                paredesDelMapa = null; // El servidor "olvida" el mapa anterior.
                             }
                             // CASO GENERAL: Es cualquier otro ítem (anillo, basura, etc.).
                             else {
                                 itemsActivos.remove(paquete.idItem); // Lo eliminamos de la lista.
                                 System.out.println("[SERVER] Ítem con ID " + paquete.idItem + " recogido por jugador " + conexion.getID());
+
+                                if (itemRecogido.tipo == ItemState.ItemType.ANILLO) {
+                                    int puntajeActual = puntajesAnillosIndividuales.getOrDefault(conexion.getID(), 0);
+                                    puntajesAnillosIndividuales.put(conexion.getID(), puntajeActual + 1);
+
+                                    // Actualizamos el puntaje GLOBAL del equipo.
+                                    totalAnillosGlobal++;
+                                    System.out.println("[SERVER] Anillo recogido. Total de equipo: " + totalAnillosGlobal);
+
+                                } else if (itemRecogido.tipo == ItemState.ItemType.BASURA || itemRecogido.tipo == ItemState.ItemType.PIEZA_PLASTICO) {
+                                    int puntajeActual = puntajesBasuraIndividuales.getOrDefault(conexion.getID(), 0);
+                                    puntajesBasuraIndividuales.put(conexion.getID(), puntajeActual + 1);
+
+                                    // Actualizamos el puntaje GLOBAL del equipo.
+                                    totalBasuraGlobal++;
+
+                                    // ¡La acción individual impacta el estado GLOBAL de la contaminación!
+                                    contaminationState.decrease(TRASH_CLEANUP_VALUE);
+                                    System.out.println("[SERVER] Basura recogida. Total de equipo: " + totalBasuraGlobal +
+                                        ". Contaminación GLOBAL reducida a: " + String.format("%.2f", contaminationState.getPercentage()) + "%!");
+
+                                    // Como la contaminación cambió, enviamos una actualización inmediata a TODOS.
+                                    Network.PaqueteActualizacionContaminacion paqueteContaminacion = new Network.PaqueteActualizacionContaminacion();
+                                    paqueteContaminacion.contaminationPercentage = contaminationState.getPercentage();
+                                    servidor.sendToAllTCP(paqueteContaminacion);
+                                }
+
+                                // Creamos y enviamos el paquete de actualización de puntuación SOLO al jugador que recogió el ítem.
+                                Network.PaqueteActualizacionPuntuacion paquetePuntaje = new Network.PaqueteActualizacionPuntuacion();
+                                paquetePuntaje.nuevosAnillos = puntajesAnillosIndividuales.get(conexion.getID());
+                                paquetePuntaje.nuevaBasura = puntajesBasuraIndividuales.get(conexion.getID());
+                                conexion.sendTCP(paquetePuntaje);
 
                                 // Notificamos a TODOS los jugadores que el ítem ya no existe.
                                 Network.PaqueteItemEliminado paqueteEliminado = new Network.PaqueteItemEliminado();
@@ -313,12 +369,51 @@ public class GameServer implements IGameServer {
                 if (dx > 0) nextX += ROBOT_SPEED; else if (dx < 0) nextX -= ROBOT_SPEED;
                 if (dy > 0) nextY += ROBOT_SPEED; else if (dy < 0) nextY -= ROBOT_SPEED;
 
-                enemigo.x = nextX;
-                enemigo.y = nextY;
+                com.badlogic.gdx.math.Rectangle robotBounds = new com.badlogic.gdx.math.Rectangle(enemigo.x, enemigo.y, 48, 48);
+
+                // Comprobamos el movimiento en X
+                robotBounds.setX(nextX);
+                boolean colisionEnX = false;
+                for (com.badlogic.gdx.math.Rectangle pared : paredesDelMapa) {
+                    if (pared.overlaps(robotBounds)) {
+                        colisionEnX = true;
+                        break;
+                    }
+                }
+                if (!colisionEnX) {
+                    enemigo.x = nextX; // Si no hay colisión, aplicamos el movimiento en X
+                }
+
+                // Comprobamos el movimiento en Y
+                robotBounds.setX(enemigo.x); // Volvemos a la X actual (que puede haber cambiado) para comprobar Y
+                robotBounds.setY(nextY);
+                boolean colisionEnY = false;
+                for (com.badlogic.gdx.math.Rectangle pared : paredesDelMapa) {
+                    if (pared.overlaps(robotBounds)) {
+                        colisionEnY = true;
+                        break;
+                    }
+                }
+                if (!colisionEnY) {
+                    enemigo.y = nextY; // Si no hay colisión, aplicamos el movimiento en Y
+                }
             }
         }
     }
     private void updateServerLogic(float deltaTime) {
+        //Lógica de Aumento y Sincronización de la Contaminación
+        contaminationState.increase(CONTAMINATION_RATE_PER_SECOND * deltaTime);
+        tiempoDesdeUltimaContaminacion += deltaTime;
+
+        // Si ha pasado un segundo, enviamos una actualización a TODOS los jugadores.
+        if (tiempoDesdeUltimaContaminacion >= INTERVALO_ACTUALIZACION_CONTAMINACION) {
+            Network.PaqueteActualizacionContaminacion paquete = new Network.PaqueteActualizacionContaminacion();
+            paquete.contaminationPercentage = contaminationState.getPercentage();
+            servidor.sendToAllTCP(paquete); // Transmisión a todos
+
+            tiempoDesdeUltimaContaminacion = 0f; // Reseteamos el temporizador
+        }
+
         this.tiempoGeneracionTeleport += deltaTime;
         if ((int)this.tiempoGeneracionTeleport % 2 == 0 && (int)this.tiempoGeneracionTeleport != 0) {
             System.out.println(

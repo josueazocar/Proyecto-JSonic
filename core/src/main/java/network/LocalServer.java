@@ -20,6 +20,10 @@ public class LocalServer implements IGameServer {
     private final HashMap<Integer, PlayerState> jugadores = new HashMap<>();
     private final HashMap<Integer, EnemigoState> enemigosActivos = new HashMap<>();
     private final HashMap<Integer, ItemState> itemsActivos = new HashMap<>();
+    private final HashMap<Integer, Integer> puntajesAnillos = new HashMap<>();
+    private final HashMap<Integer, Integer> puntajesBasura = new HashMap<>();
+    private final ContaminationState contaminationState = new ContaminationState();
+
 
     private static final float VELOCIDAD_ROBOTNIK = 60f;
     private static final float RANGO_DETENERSE_ROBOTNIK = 30f;
@@ -30,14 +34,18 @@ public class LocalServer implements IGameServer {
     private boolean teleportGenerado = false;
     private int proximoIdItem = 0;
     private static final int MAX_ANILLOS = 50;
-    private static final int MAX_BASURA = 10;
-    private static final int MAX_PLASTICO = 10;
+    private static final int MAX_BASURA = 12;
+    private static final int MAX_PLASTICO = 12;
     private static final float INTERVALO_SPAWN_ANILLO = 1.0f;
     private static final float INTERVALO_SPAWN_BASURA = 5.0f;
     private static final float INTERVALO_SPAWN_PLASTICO = 5.0f;
     private float tiempoSpawnAnillo = 0f;
     private float tiempoSpawnBasura = 0f;
     private float tiempoSpawnPlastico = 0f;
+    private static final float CONTAMINATION_RATE_PER_SECOND = 0.65f; // El % sube 0.65 puntos por segundo
+    private static final float TRASH_CLEANUP_VALUE = 3f; // Cada basura recogida reduce el % en 2 puntos
+    private float tiempoDesdeUltimaContaminacion = 0f;
+    private static final float INTERVALO_ACTUALIZACION_CONTAMINACION = 1.0f; // 1 segundo
 
     // Cola para paquetes que vienen "desde el cliente" hacia el servidor
     private final Queue<Object> paquetesEntrantes = new ConcurrentLinkedQueue<>();
@@ -77,6 +85,8 @@ public class LocalServer implements IGameServer {
         nuevoEstado.y = 100; // Posición inicial Y
         nuevoEstado.estadoAnimacion = Player.EstadoPlayer.IDLE_RIGHT;
         jugadores.put(nuevoEstado.id, nuevoEstado);
+        puntajesAnillos.put(nuevoEstado.id, 0);
+        puntajesBasura.put(nuevoEstado.id, 0);
 
         // 3. "Enviamos" el paquete de bienvenida al cliente local.
         Network.RespuestaAccesoPaquete respuesta = new Network.RespuestaAccesoPaquete();
@@ -117,8 +127,8 @@ public class LocalServer implements IGameServer {
                         // Creamos la ORDEN de cambio de mapa
                         Network.PaqueteOrdenCambiarMapa orden = new Network.PaqueteOrdenCambiarMapa();
                         orden.nuevoMapa = "maps/ZonaJefeN1.tmx";
-                        orden.nuevaPosX = 12.01f;
-                        orden.nuevaPosY = 156.08f;
+                        orden.nuevaPosX = 70f;
+                        orden.nuevaPosY = 250f;
 
                         // "Enviamos" la orden al cliente local
                         clienteLocal.recibirPaqueteDelServidor(orden);
@@ -132,6 +142,25 @@ public class LocalServer implements IGameServer {
                     else {
                         itemsActivos.remove(paquete.idItem); // Lo eliminamos
                         System.out.println("[LOCAL SERVER] Ítem con ID " + paquete.idItem + " recogido.");
+
+                        int idJugador = 1;
+                        if (itemRecogido.tipo == ItemState.ItemType.ANILLO) {
+                            int puntajeActual = puntajesAnillos.getOrDefault(idJugador, 0);
+                            puntajesAnillos.put(idJugador, puntajeActual + 1);
+                        } else if (itemRecogido.tipo == ItemState.ItemType.BASURA || itemRecogido.tipo == ItemState.ItemType.PIEZA_PLASTICO) {
+                            int puntajeActual = puntajesBasura.getOrDefault(idJugador, 0);
+                            puntajesBasura.put(idJugador, puntajeActual + 1);
+                            contaminationState.decrease(TRASH_CLEANUP_VALUE);
+                            System.out.println("[LOCAL SERVER] Basura recogida. Contaminación reducida a: " + contaminationState.getPercentage() + "%");
+                        }
+
+                        // Creamos el paquete de actualización de puntuación
+                        Network.PaqueteActualizacionPuntuacion paquetePuntaje = new Network.PaqueteActualizacionPuntuacion();
+                        paquetePuntaje.nuevosAnillos = puntajesAnillos.get(idJugador);
+                        paquetePuntaje.nuevaBasura = puntajesBasura.get(idJugador);
+
+                        // "Enviamos" el paquete de puntuación al cliente local
+                        clienteLocal.recibirPaqueteDelServidor(paquetePuntaje);
 
                         // "Enviamos" la notificación de eliminación
                         Network.PaqueteItemEliminado paqueteEliminado = new Network.PaqueteItemEliminado();
@@ -149,6 +178,17 @@ public class LocalServer implements IGameServer {
                 }
             }
 
+        }
+        // --- LÓGICA DE AUMENTO DE CONTAMINACIÓN ---
+        contaminationState.increase(CONTAMINATION_RATE_PER_SECOND * deltaTime);
+
+        tiempoDesdeUltimaContaminacion += deltaTime;
+        if (tiempoDesdeUltimaContaminacion >= INTERVALO_ACTUALIZACION_CONTAMINACION) {
+            Network.PaqueteActualizacionContaminacion paquete = new Network.PaqueteActualizacionContaminacion();
+            paquete.contaminationPercentage = contaminationState.getPercentage();
+            clienteLocal.recibirPaqueteDelServidor(paquete); // "Enviamos" el paquete
+
+            tiempoDesdeUltimaContaminacion = 0f; // Reseteamos el temporizador
         }
 
         this.tiempoGeneracionTeleport += deltaTime;

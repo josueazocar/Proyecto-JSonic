@@ -1,5 +1,6 @@
 package network;
 
+import com.JSonic.uneg.PlayerState;
 import network.interfaces.IGameClient;
 
 import java.util.Queue;
@@ -63,11 +64,13 @@ public class LocalClient implements IGameClient {
         // No hay recursos de red que liberar.
     }
 
+
     /**
      * Método para que el LocalServer nos "envíe" paquetes.
      * Añade un paquete a nuestra cola de recibidos para que el juego lo procese.
      * @param paquete El paquete enviado por el servidor.
      */
+
     public void recibirPaqueteDelServidor(Object paquete) {
         this.paquetesRecibidos.add(paquete);
     }

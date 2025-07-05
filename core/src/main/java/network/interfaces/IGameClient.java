@@ -23,4 +23,5 @@ public interface IGameClient {
     Queue<Object> getPaquetesRecibidos();
 
     void dispose();
+
 }

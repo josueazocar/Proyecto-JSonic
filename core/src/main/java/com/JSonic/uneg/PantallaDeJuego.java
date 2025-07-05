@@ -1,12 +1,16 @@
-// Archivo: src/com/JSonic/uneg/PantallaDeJuego.java (FUSIONADO)
+// Archivo: src/com/JSonic/uneg/PantallaDeJuego.java
 package com.JSonic.uneg;
 
 // Imports...
+import com.badlogic.gdx.Gdx;
+import com.badlogic.gdx.graphics.*;
+import com.badlogic.gdx.graphics.g2d.BitmapFont;
+import com.badlogic.gdx.graphics.glutils.ShaderProgram;
 import com.badlogic.gdx.maps.MapObjects;
 import com.badlogic.gdx.math.Intersector;
 import com.badlogic.gdx.assets.AssetManager;
-import com.badlogic.gdx.graphics.OrthographicCamera;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
+import com.badlogic.gdx.scenes.scene2d.ui.Label;
 import com.badlogic.gdx.utils.viewport.FitViewport;
 import com.badlogic.gdx.utils.viewport.Viewport;
 import network.Network;
@@ -19,7 +23,6 @@ import java.util.Map;
 import java.util.HashMap;
 import com.badlogic.gdx.scenes.scene2d.ui.Table;
 import com.badlogic.gdx.scenes.scene2d.ui.Image;
-import com.badlogic.gdx.graphics.Texture;
 // ---[AGREGADO]--- Importaciones de la segunda clase
 import com.badlogic.gdx.math.Vector2;
 
@@ -35,7 +38,6 @@ public class PantallaDeJuego extends PantallaBase {
     private LevelManager manejadorNivel;
     private final IGameClient gameClient;
     private final IGameServer localServer;
-    //private Sonic sonic;
     private Player personajeJugable;
     private PlayerState personajeJugableEstado;
     private final HashMap<Integer, Player> otrosJugadores = new HashMap<>();
@@ -51,6 +53,13 @@ public class PantallaDeJuego extends PantallaBase {
 
     private int anillosTotal = 0;
     private int basuraTotal = 0;
+    private float porcentajeContaminacionActual = 0f;
+    private OrthographicCamera uiCamera;
+
+    private ShaderProgram shaderNeblina;
+    private Mesh quadMesh;
+    private BitmapFont font;
+    private Label contaminationLabel;
 
     //para el teletransporte
     private float tiempoTranscurrido = 0f;
@@ -58,21 +67,6 @@ public class PantallaDeJuego extends PantallaBase {
 
     // ---[AGREGADO]--- Instancia de RobotnikVisual (eggman)
     private RobotnikVisual eggman;
-
-    // ---[AGREGADO]--- Variables para la lógica de movimiento de RobotnikVisual
-    private static final float VELOCIDAD_ROBOTNIK = 60f;
-    private static final float RANGO_DETENERSE_ROBOTNIK = 30f;
-
-    // ---[AGREGADO]--- Variables de "desatasco" declaradas por si se usan en el futuro
-    private float stuckTimerX;
-    private float stuckTimerY;
-    private boolean forceMoveY;
-    private boolean forceMoveX;
-    private float forceMoveTimer;
-    private static final float STUCK_TIMEOUT = 0.5f;
-    private static final float UNSTICK_DURATION = 8.0f;
-    private static final float UNSTICK_SPEED_MULTIPLIER = 3.5f;
-
 
     public PantallaDeJuego(JSonicJuego juego, IGameClient client, IGameServer server) {
         super();
@@ -103,8 +97,32 @@ public class PantallaDeJuego extends PantallaBase {
             personajeJugableEstado.y = 156.08f;
         }
 
-        //sonic = new Sonic(personajeJugableEstado, manejadorNivel);
-        personajeJugable = new Sonic(personajeJugableEstado,manejadorNivel);
+        // 1. Elige el personaje que quieres ser para esta prueba.
+        PlayerState.CharacterType miPersonaje = PlayerState.CharacterType.KNUCKLES;
+
+        // 2. Asigna el tipo de personaje al estado que se usará para el jugador local.
+        personajeJugableEstado.characterType = miPersonaje;
+
+        // 3. Crea la instancia del personaje jugable localmente.
+        // Este switch se asegura de que TÚ estás controlando al personaje correcto en tu pantalla.
+        System.out.println("[CLIENT] Creando jugador local como: " + miPersonaje);
+        switch (miPersonaje) {
+            case SONIC:
+                personajeJugable = new Sonic(personajeJugableEstado, manejadorNivel);
+                break;
+            case TAILS:
+                // Asegúrate de que tienes una clase Tails que hereda de Player
+                personajeJugable = new Tails(personajeJugableEstado, manejadorNivel);
+                break;
+            case KNUCKLES:
+                personajeJugable = new Knuckles(personajeJugableEstado, manejadorNivel);
+                break;
+            default:
+                // Si algo sale mal, por defecto será Sonic
+                personajeJugable = new Sonic(personajeJugableEstado, manejadorNivel);
+                break;
+        }
+
         assetManager = new AssetManager();
         soundManager = new SoundManager(assetManager);
         manejadorNivel.setPlayer(personajeJugable);
@@ -112,6 +130,45 @@ public class PantallaDeJuego extends PantallaBase {
         soundManager.playBackgroundMusic(BACKGROUND_MUSIC_PATH2, 0.5f, true);
         assetManager.finishLoading();
         shapeRenderer = new ShapeRenderer();
+
+        uiCamera = new OrthographicCamera();
+
+        ShaderProgram.pedantic = false; // Evita errores si no se usan todos los uniformes
+        shaderNeblina = new ShaderProgram(
+            Gdx.files.internal("shaders/neblina.vert"),
+            Gdx.files.internal("shaders/neblina.frag")
+        );
+
+        if (!shaderNeblina.isCompiled()) {
+            Gdx.app.error("Shader Error", "No se pudo compilar el shader de neblina: " + shaderNeblina.getLog());
+        }
+
+        if (!shaderNeblina.isCompiled()) {
+            Gdx.app.error("Shader Error", "No se pudo compilar el shader: " + shaderNeblina.getLog());
+        }
+
+        quadMesh = new Mesh(
+            true, // es estático, no cambiará
+            4,    // 4 vértices
+            4,    // 4 índices
+            new VertexAttribute(VertexAttributes.Usage.Position, 3, "a_position") // 3 floats por vértice (x,y,z)
+        );
+
+        // Definimos los 4 vértices de un rectángulo que cubre la pantalla
+        float screenWidth = Gdx.graphics.getWidth();
+        float screenHeight = Gdx.graphics.getHeight();
+        float[] vertices = {
+            0, 0, 0,                      // Vértice 0: Abajo-izquierda
+            screenWidth, 0, 0,            // Vértice 1: Abajo-derecha
+            0, screenHeight, 0,           // Vértice 2: Arriba-izquierda
+            screenWidth, screenHeight, 0  // Vértice 3: Arriba-derecha
+        };
+
+        // Definimos el orden en que se dibujan los vértices para formar dos triángulos
+        short[] indices = { 0, 1, 2, 3 };
+
+        quadMesh.setVertices(vertices);
+        quadMesh.setIndices(indices);
 
         // --- INICIO: CONFIGURACIÓN UI Anillos ---
         String numerosTexturaPath = "Fondos/numerosContadorAnillos.png";
@@ -135,9 +192,29 @@ public class PantallaDeJuego extends PantallaBase {
 
         mainStage.addActor(tablaUI);
 
-        // ---[AGREGADO]--- Instanciación de RobotnikVisual (eggman)
-//        EnemigoState eggmanState = new EnemigoState(999, 300, 100, 100, EnemigoState.EnemigoType.ROBOTNIK);
-//        eggman = new RobotnikVisual(eggmanState, manejadorNivel);
+        font = new BitmapFont(Gdx.files.internal("Fuentes/juego_fuente2.fnt"));
+        font.getData().setScale(0.65f);
+        // 2. Define un estilo para nuestro texto (Label).
+        Label.LabelStyle labelStyle = new Label.LabelStyle(font, Color.PURPLE);
+
+        // 3. Crea el objeto Label con un texto inicial.
+        contaminationLabel = new Label("TOXIC: 0%", labelStyle);
+
+        // 4. Crea una NUEVA tabla para los elementos de la parte inferior de la pantalla.
+        //    Es buena práctica tener tablas separadas para distintas esquinas de la UI.
+        Table tablaInferior = new Table();
+        tablaInferior.setFillParent(true); // Hace que la tabla ocupe todo el Stage
+        tablaInferior.bottom().right();    // ¡La alinea abajo a la derecha!
+
+        // 5. Añade un poco de espacio para que no quede pegado a los bordes.
+        tablaInferior.pad(15);
+
+       // 6. Añade nuestro Label a la tabla.
+        tablaInferior.add(contaminationLabel);
+
+        // 7. Finalmente, añade la nueva tabla al Stage principal.
+        mainStage.addActor(tablaInferior);
+
     }
 
     //para poder crear varios portales se necesita reiniciar el teletransporte
@@ -148,29 +225,7 @@ public class PantallaDeJuego extends PantallaBase {
 
     @Override
     public void actualizar(float deltat) {
-//        tiempoTranscurrido += deltat;
-//        if (!teletransporteCreado && tiempoTranscurrido >= 20f) {
-//            var layer = manejadorNivel.getMapaActual().getLayers().get("destinox");
-//            if (layer != null) {
-//                MapObjects objetos = layer.getObjects();
-//                int idBase = 999;
-//                for (com.badlogic.gdx.maps.MapObject obj : objetos) {
-//                    if (obj instanceof com.badlogic.gdx.maps.objects.RectangleMapObject rectObj) {
-//                        Rectangle rect = rectObj.getRectangle();
-//                        ItemState estadoTele = new ItemState(
-//                            idBase++,
-//                            rect.x,
-//                            rect.y,
-//                            ItemState.ItemType.TELETRANSPORTE
-//                        );
-//                        crearItemVisual(estadoTele);
-//                    }
-//                }
-//            } else {
-//                System.out.println("[CLIENT_DEBUG] Capa 'destinox' no encontrada en el mapa actual.");
-//            }
-//            teletransporteCreado = true;
-//        }
+
         if (localServer != null) {
             localServer.update(deltat, this.manejadorNivel);
         }
@@ -254,6 +309,37 @@ public class PantallaDeJuego extends PantallaBase {
                     // Reposicionamos a nuestro jugador en las coordenadas que nos dictó el servidor
                     personajeJugable.estado.x = p.nuevaPosX;
                     personajeJugable.estado.y = p.nuevaPosY;
+
+                    // Ahora que el nuevo mapa está cargado, enviamos su plano al servidor.
+                    System.out.println("[CLIENT] Enviando nuevo plano del mapa al servidor...");
+                    java.util.ArrayList<com.badlogic.gdx.math.Rectangle> paredes = new java.util.ArrayList<>();
+                    MapObjects objetosColision = manejadorNivel.getCollisionObjects();
+                    if (objetosColision != null) {
+                        for (com.badlogic.gdx.maps.MapObject obj : objetosColision) {
+                            if (obj instanceof com.badlogic.gdx.maps.objects.RectangleMapObject) {
+                                paredes.add(((com.badlogic.gdx.maps.objects.RectangleMapObject) obj).getRectangle());
+                            }
+                        }
+                    }
+                    Network.PaqueteInformacionMapa paqueteMapa = new Network.PaqueteInformacionMapa();
+                    paqueteMapa.paredes = paredes;
+                    gameClient.send(paqueteMapa);
+                    System.out.println("[CLIENT] Nuevo plano del mapa con " + paredes.size() + " paredes enviado.");
+
+                } else if (paquete instanceof Network.PaqueteActualizacionPuntuacion p) {
+                    System.out.println("[CLIENT] ¡Recibida actualización de puntuación! Anillos: " + p.nuevosAnillos + ", Basura: " + p.nuevaBasura);
+
+                    // Actualizamos nuestras variables locales y la UI con los datos del servidor.
+                    this.anillosTotal = p.nuevosAnillos;
+                    this.basuraTotal = p.nuevaBasura;
+                    contadorAnillos.setValor(this.anillosTotal);
+                    contadorBasura.setValor(this.basuraTotal);
+
+                } else if (paquete instanceof Network.PaqueteActualizacionContaminacion p) {
+                    // Guardamos el porcentaje recibido del servidor
+                    this.porcentajeContaminacionActual = p.contaminationPercentage;
+                    contaminationLabel.setText("TOXIC: " + Math.round(this.porcentajeContaminacionActual) + "%");
+
                 }
             }
         }
@@ -262,7 +348,6 @@ public class PantallaDeJuego extends PantallaBase {
             item.update(deltat);
         }
 
-        // --- CORRECCIÓN: Manejo seguro del teletransporte ---
         Integer idTeletransporteAEliminar = null;
         Iterator<Map.Entry<Integer, ItemVisual>> iter = itemsEnPantalla.entrySet().iterator();
         while (iter.hasNext()) {
@@ -278,12 +363,8 @@ public class PantallaDeJuego extends PantallaBase {
 
                 boolean itemRecogido = false;
                 if (item.estado.tipo == ItemState.ItemType.ANILLO) {
-                    anillosTotal++;
-                    contadorAnillos.setValor(anillosTotal);
                     itemRecogido = true;
                 } else if (item.estado.tipo == ItemState.ItemType.BASURA || item.estado.tipo == ItemState.ItemType.PIEZA_PLASTICO) {
-                    basuraTotal++;
-                    contadorBasura.setValor(basuraTotal);
                     itemRecogido = true;
                 }
                 // Teletransporte: solo guardamos el ID y salimos del ciclo
@@ -295,47 +376,6 @@ public class PantallaDeJuego extends PantallaBase {
                     gameClient.send(paquete);
                     // Para evitar enviar múltiples solicitudes, salimos del bucle una vez que tocamos el portal.
                     break;
-
-
-//                    manejadorNivel.cargarNivel("maps/ZonaJefeN1.tmx");
-//                    crearRobotsPorNivel("maps/ZonaJefeN1.tmx");
-//                    reiniciarTeletransporte();
-//
-//                    // Asigna las coordenadas iniciales según el mapa cargado
-//                    if (manejadorNivel.getMapaActual().equals("maps/ZonaJefeN1.tmx")) {
-//                        com.badlogic.gdx.maps.tiled.TiledMap map = manejadorNivel.getTiledMap();
-//                        boolean llegadaEncontrada = false;
-//                        if (map != null) {
-//                            com.badlogic.gdx.maps.MapLayer destinoxLayer = map.getLayers().get("destinox");
-//                            if (destinoxLayer != null) {
-//                                for (com.badlogic.gdx.maps.MapObject obj : destinoxLayer.getObjects()) {
-//                                    String nombre = obj.getName() != null ? obj.getName() : "";
-//                                    String clase = obj.getProperties().containsKey("class") ? obj.getProperties().get("class", String.class) : "";
-//                                    if ((nombre.toLowerCase().contains("llegada") || clase.toLowerCase().contains("llegada"))
-//                                        && obj instanceof com.badlogic.gdx.maps.objects.RectangleMapObject) {
-//                                        com.badlogic.gdx.maps.objects.RectangleMapObject rectObj = (com.badlogic.gdx.maps.objects.RectangleMapObject) obj;
-//                                        com.badlogic.gdx.math.Rectangle rect = rectObj.getRectangle();
-//                                        float alturaMapa = map.getProperties().get("height", Integer.class) * map.getProperties().get("tileheight", Integer.class);
-//                                        float xFinal = rect.x;
-//                                        float yFinal = alturaMapa - rect.y - rect.height;
-//                                        personajeJugable.estado.x = xFinal;
-//                                        personajeJugable.estado.y = yFinal;
-//                                        System.out.println("[DEBUG] Llegada encontrada en destinox: rect.x=" + rect.x + ", rect.y=" + rect.y + ", width=" + rect.width + ", height=" + rect.height + ". Sonic en x=" + personajeJugable.estado.x + ", y=" + personajeJugable.estado.y);
-//                                        llegadaEncontrada = true;
-//                                        break;
-//                                    }
-//                                }
-//                            }
-//                        }
-//                        if (!llegadaEncontrada) {
-//                            personajeJugable.estado.x = 12.01f;
-//                            personajeJugable.estado.y = 156.08f;
-//                        }
-//                    }
-//
-//                    idTeletransporteAEliminar = item.estado.id;
-//                    System.out.println("[CLIENT_DEBUG] Teletransporte activado, cambiando de mapa.");
-//                    break;
                 }
 
                 if (itemRecogido) {
@@ -363,44 +403,11 @@ public class PantallaDeJuego extends PantallaBase {
 
         for (RobotVisual enemigo : enemigosEnPantalla.values()) enemigo.update(deltat);
 
-        // ---[AGREGADO]--- Lógica de actualización de RobotnikVisual (eggman)
+     // Lógica de actualización de RobotnikVisual (eggman)
         if (eggman != null) {
             eggman.update(deltat); // Primero actualizamos su animación
-
-//            if (personajeJugable != null && personajeJugable.estado != null) {
-//                float robotnikCenterX = eggman.estado.x + eggman.getBounds().width / 2;
-//                float robotnikCenterY = eggman.estado.y + eggman.getBounds().height / 2;
-//                float sonicCenterX = personajeJugable.estado.x + personajeJugable.getBounds().width / 2;
-//                float sonicCenterY = personajeJugable.estado.y + personajeJugable.getBounds().height / 2;
-//                float distanciaX = sonicCenterX - robotnikCenterX;
-//                float distanciaY = sonicCenterY - robotnikCenterY;
-//                float distancia = (float) Math.sqrt(distanciaX * distanciaX + distanciaY * distanciaY);
-//
-//                if (distancia > RANGO_DETENERSE_ROBOTNIK) {
-//                    float velocidadMovimiento = VELOCIDAD_ROBOTNIK * deltat;
-//                    Vector2 direccionDeseada = new Vector2(distanciaX, distanciaY).nor();
-//
-//                    eggman.estado.x += direccionDeseada.x * velocidadMovimiento;
-//                    eggman.estado.y += direccionDeseada.y * velocidadMovimiento;
-//                    eggman.getBounds().x = eggman.estado.x;
-//                    eggman.getBounds().y = eggman.estado.y;
-//
-//                    if (Math.abs(direccionDeseada.x) > 0.001f) {
-//                        eggman.estado.mirandoDerecha = (direccionDeseada.x > 0);
-//                        eggman.setEstadoActual(eggman.estado.mirandoDerecha ? EnemigoState.EstadoEnemigo.RUN_RIGHT : EnemigoState.EstadoEnemigo.RUN_LEFT);
-//                    } else if (Math.abs(direccionDeseada.y) > 0.001f) {
-//                        eggman.setEstadoActual(eggman.estado.mirandoDerecha ? EnemigoState.EstadoEnemigo.RUN_RIGHT : EnemigoState.EstadoEnemigo.RUN_LEFT);
-//                    } else {
-//                        eggman.setEstadoActual(eggman.estado.mirandoDerecha ? EnemigoState.EstadoEnemigo.IDLE_RIGHT : EnemigoState.EstadoEnemigo.IDLE_LEFT);
-//                    }
-//                } else {
-//                    eggman.setEstadoActual(eggman.estado.mirandoDerecha ? EnemigoState.EstadoEnemigo.IDLE_RIGHT : EnemigoState.EstadoEnemigo.IDLE_LEFT);
-//                }
-//            } else {
-//                eggman.setEstadoActual(eggman.estado.mirandoDerecha ? EnemigoState.EstadoEnemigo.IDLE_RIGHT : EnemigoState.EstadoEnemigo.IDLE_LEFT);
-//            }
         }
-        // ---[FIN DEL AGREGADO]---
+
 
         camaraJuego.position.x = personajeJugable.estado.x;
         camaraJuego.position.y = personajeJugable.estado.y;
@@ -422,13 +429,15 @@ public class PantallaDeJuego extends PantallaBase {
         for (Player otro : otrosJugadores.values()) otro.draw(batch);
         for (RobotVisual enemigo : enemigosEnPantalla.values()) enemigo.draw(batch);
 
-        // ---[AGREGADO]--- Dibujado de RobotnikVisual (eggman)
+        // Dibujado de RobotnikVisual (eggman)
         if (eggman != null) {
             eggman.draw(batch);
         }
 
         for (ItemVisual item : itemsEnPantalla.values()) item.draw(batch);
         batch.end();
+
+        renderizarNeblinaConShader();
 
         mainStage.getViewport().apply();
         mainStage.draw();
@@ -449,6 +458,11 @@ public class PantallaDeJuego extends PantallaBase {
         if (viewport != null) {
             viewport.update(width, height, true);
         }
+        mainStage.getViewport().update(width, height, true);
+        if (uiCamera != null) {
+            uiCamera.setToOrtho(false, width, height);
+
+        }
     }
 
     @Override
@@ -463,6 +477,32 @@ public class PantallaDeJuego extends PantallaBase {
         if (soundManager != null) {
             soundManager.resumeBackgroundMusic();
         }
+    }
+    private void renderizarNeblinaConShader() {
+        float maxRadius = (float) Math.sqrt(Math.pow(Gdx.graphics.getWidth(), 2) + Math.pow(Gdx.graphics.getHeight(), 2)) / 2f;
+        float minRadius = 45.0f;
+        float factorLimpieza = 1.0f - (porcentajeContaminacionActual / 100.0f);
+        float radioActual = minRadius + (maxRadius - minRadius) * (factorLimpieza * factorLimpieza);
+
+        Gdx.gl.glEnable(GL20.GL_BLEND);
+        Gdx.gl.glBlendFunc(GL20.GL_SRC_ALPHA, GL20.GL_ONE_MINUS_SRC_ALPHA);
+
+        shaderNeblina.begin();
+
+        // Pasamos nuestros uniforms de siempre
+        shaderNeblina.setUniformf("u_resolution", Gdx.graphics.getWidth(), Gdx.graphics.getHeight());
+        shaderNeblina.setUniformf("u_radius", radioActual);
+        shaderNeblina.setUniformf("u_smoothness", 0.3f);
+        shaderNeblina.setUniformf("u_fogColor", 0.1f, 0.6f, 0.2f, 0.65f);
+
+        // Pasamos la matriz de la cámara al shader
+        shaderNeblina.setUniformMatrix("u_projTrans", uiCamera.combined);
+
+        // Dibujamos nuestra malla pre-construida. Es mucho más eficiente.
+        quadMesh.render(shaderNeblina, GL20.GL_TRIANGLE_STRIP, 0, 4);
+
+        shaderNeblina.end();
+        Gdx.gl.glDisable(GL20.GL_BLEND);
     }
 
     public void inicializarJugadorLocal(PlayerState estadoRecibido) {
@@ -560,7 +600,24 @@ public class PantallaDeJuego extends PantallaBase {
         Player jugadorVisual = otrosJugadores.get(estadoRecibido.id);
         if (jugadorVisual == null) {
             System.out.println("Creando nuevo jugador gráfico con ID: " + estadoRecibido.id);
-            jugadorVisual = new Sonic(estadoRecibido);
+
+            switch (personajeJugableEstado.characterType) {
+                case SONIC:
+                    jugadorVisual = new Sonic(estadoRecibido);
+                    break;
+                case TAILS:
+                    // Asegúrate de que tienes una clase Tails que hereda de Player
+                    jugadorVisual = new Tails(estadoRecibido);
+                    break;
+                case KNUCKLES:
+                    jugadorVisual = new Knuckles(estadoRecibido);
+                    break;
+                default:
+                    // Si algo sale mal, por defecto será Sonic
+                    personajeJugable = new Sonic(personajeJugableEstado, manejadorNivel);
+                    break;
+            }
+
             otrosJugadores.put(estadoRecibido.id, jugadorVisual);
         } else {
             jugadorVisual.estado.x = estadoRecibido.x;
@@ -588,7 +645,7 @@ public class PantallaDeJuego extends PantallaBase {
         if (shapeRenderer != null) shapeRenderer.dispose();
         for (RobotVisual enemigo : enemigosEnPantalla.values()) enemigo.dispose();
 
-        // ---[AGREGADO]--- Dispose de RobotnikVisual (eggman)
+        // Dispose de RobotnikVisual (eggman)
         if (eggman != null) {
             eggman.dispose();
         }
@@ -598,5 +655,8 @@ public class PantallaDeJuego extends PantallaBase {
         }
         if (contadorAnillos != null) contadorAnillos.dispose();
         if (contadorBasura != null) contadorBasura.dispose();
+        if (shaderNeblina != null) shaderNeblina.dispose();
+        if (quadMesh != null) quadMesh.dispose();
+        if (font != null) font.dispose();
     }
 }
