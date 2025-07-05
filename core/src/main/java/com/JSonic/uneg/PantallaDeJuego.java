@@ -3,6 +3,7 @@ package com.JSonic.uneg;
 
 // Imports...
 import com.badlogic.gdx.Gdx;
+import com.badlogic.gdx.Input;
 import com.badlogic.gdx.graphics.*;
 import com.badlogic.gdx.graphics.g2d.BitmapFont;
 import com.badlogic.gdx.graphics.glutils.ShaderProgram;
@@ -226,6 +227,14 @@ public class PantallaDeJuego extends PantallaBase {
 
     @Override
     public void actualizar(float deltat) {
+
+        if (Gdx.input.isKeyJustPressed(Input.Keys.ESCAPE)) {
+            this.pause();
+            PantallaMenu pantallaMenu = new PantallaMenu(juegoPrincipal, true);
+            pantallaMenu.setEstadoMenu(PantallaMenu.EstadoMenu.JUGAR);
+            juegoPrincipal.setPantallaActiva(pantallaMenu);
+            return;
+        }
 
         if (localServer != null) {
             localServer.update(deltat, this.manejadorNivel);
