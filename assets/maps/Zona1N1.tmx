@@ -414,8 +414,9 @@
   <object id="104" x="1285.8" y="744.312" width="21.7317" height="21.7317"/>
  </objectgroup>
  <objectgroup id="9" name="destinox">
-  <object id="105" x="1848" y="28" width="66" height="62">
+  <object id="105" name="Portal" type="Portal" x="1848" y="28" width="66" height="62">
    <properties>
+    <property name="destinoMapa" value="maps/ZonaJefeN1.tmx"/>
     <property name="destinoX" type="float" value="12.01"/>
     <property name="destinoY" type="float" value="156.08"/>
    </properties>

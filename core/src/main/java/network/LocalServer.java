@@ -23,7 +23,8 @@ public class LocalServer implements IGameServer {
     private final HashMap<Integer, Integer> puntajesAnillos = new HashMap<>();
     private final HashMap<Integer, Integer> puntajesBasura = new HashMap<>();
     private final ContaminationState contaminationState = new ContaminationState();
-
+    //Declara un HashMap para asociar el ID del portal con su destino (para los portales
+    private final HashMap<Integer, String> destinosPortales = new HashMap<>();
 
     private static final float VELOCIDAD_ROBOTNIK = 60f;
     private static final float RANGO_DETENERSE_ROBOTNIK = 30f;
@@ -32,6 +33,7 @@ public class LocalServer implements IGameServer {
     private int proximoIdEnemigo = 0;
     private float tiempoGeneracionTeleport = 0f;
     private boolean teleportGenerado = false;
+    private String ultimoMapaProcesado = "";
     private int proximoIdItem = 0;
     private static final int MAX_ANILLOS = 50;
     private static final int MAX_BASURA = 12;
@@ -95,6 +97,33 @@ public class LocalServer implements IGameServer {
         this.clienteLocal.recibirPaqueteDelServidor(respuesta);
     }
 
+    //funcion para portales generar portales
+    private void generarPortales(LevelManager manejadorNivel) {
+        var layer = manejadorNivel.getMapaActual().getLayers().get("destinox");
+        if (layer != null) {
+            MapObjects objetos = layer.getObjects();
+            int idBase = 10000; // Usamos un ID alto para evitar colisiones
+            for (com.badlogic.gdx.maps.MapObject obj : objetos) {
+                if (obj instanceof com.badlogic.gdx.maps.objects.RectangleMapObject rectObj) {
+                    String nombreObjeto = obj.getName();
+                    if (nombreObjeto != null && nombreObjeto.equals("Portal")) {
+                        Rectangle rect = rectObj.getRectangle();
+                        String destinoMapa = obj.getProperties().get("destinoMapa", String.class);
+                        //crear nuevo item
+                        ItemState estadoTele = new ItemState(idBase++, rect.x, rect.y, ItemState.ItemType.TELETRANSPORTE);
+                        itemsActivos.put(estadoTele.id, estadoTele);
+                        destinosPortales.put(estadoTele.id, destinoMapa);
+                        //
+                        Network.PaqueteItemNuevo paquete = new Network.PaqueteItemNuevo();
+                        paquete.estadoItem = estadoTele;
+                        clienteLocal.recibirPaqueteDelServidor(paquete);
+                    }
+                }
+            }
+        }
+    }
+    //-----------fin de la funcion para genrar portales------------
+
     /**
      * Este es el "game loop" del servidor. Se llamará desde PantallaDeJuego.
      * @param deltaTime El tiempo transcurrido desde el último fotograma.
@@ -123,12 +152,13 @@ public class LocalServer implements IGameServer {
                     if (itemRecogido.tipo == ItemState.ItemType.TELETRANSPORTE) {
                         System.out.println("[LOCAL SERVER] Jugador ha activado el teletransportador.");
                         itemsActivos.remove(paquete.idItem); // Lo eliminamos
-
+                        //usar destino para lograr guardar los de los maps
+                        String destinoMapa = destinosPortales.get(paquete.idItem);
                         // Creamos la ORDEN de cambio de mapa
                         Network.PaqueteOrdenCambiarMapa orden = new Network.PaqueteOrdenCambiarMapa();
-                        orden.nuevoMapa = "maps/ZonaJefeN1.tmx";
-                        orden.nuevaPosX = 70f;
-                        orden.nuevaPosY = 250f;
+                        orden.nuevoMapa = destinoMapa != null ? destinoMapa : "maps/ZonaJefeN1.tmx";
+                        //orden.nuevaPosX = 70f;
+                        //orden.nuevaPosY = 250f;
 
                         // "Enviamos" la orden al cliente local
                         clienteLocal.recibirPaqueteDelServidor(orden);
@@ -137,6 +167,9 @@ public class LocalServer implements IGameServer {
                         Network.PaqueteItemEliminado paqueteEliminado = new Network.PaqueteItemEliminado();
                         paqueteEliminado.idItem = paquete.idItem;
                         clienteLocal.recibirPaqueteDelServidor(paqueteEliminado);
+
+                        //para teletransporte
+                        destinosPortales.remove(paquete.idItem); // Limpieza
                     }
                     // CASO GENERAL: Es un ítem normal
                     else {
@@ -191,31 +224,23 @@ public class LocalServer implements IGameServer {
             tiempoDesdeUltimaContaminacion = 0f; // Reseteamos el temporizador
         }
 
+        //para que se genere mas de un portal y en diferentes mapas
+        String mapaActual = manejadorNivel.getNombreMapaActual();
+        if (!mapaActual.equals(ultimoMapaProcesado)) {
+            teleportGenerado = false;
+            tiempoGeneracionTeleport = 0f;
+            ultimoMapaProcesado = mapaActual;
+        }
+        //----------------------------------------------------
+        //aqui se cambio para que la logica donde se llamaba al servidor, fuera una funcion
         this.tiempoGeneracionTeleport += deltaTime;
         if (!this.teleportGenerado && this.tiempoGeneracionTeleport >= 20f) {
+
             System.out.println("[LOCAL SERVER] Generando teletransportador...");
-            var layer = manejadorNivel.getMapaActual().getLayers().get("destinox");
-            if (layer != null) {
-                MapObjects objetos = layer.getObjects();
-                int idBase = 10000; // Usamos un ID alto para evitar colisiones
-                for (com.badlogic.gdx.maps.MapObject obj : objetos) {
-                    if (obj instanceof com.badlogic.gdx.maps.objects.RectangleMapObject rectObj) {
-                        Rectangle rect = rectObj.getRectangle();
-
-                        System.out.println("[LOCAL SERVER - INFO] Coordenadas del portal del mapa: X=" + rect.x + ", Y=" + rect.y);
-
-                        // Creamos el estado del item
-                        ItemState estadoTele = new ItemState(idBase++, rect.x, rect.y, ItemState.ItemType.TELETRANSPORTE);
-                        itemsActivos.put(estadoTele.id, estadoTele);
-
-                        // Creamos el paquete para notificar al cliente
-                        Network.PaqueteItemNuevo paquete = new Network.PaqueteItemNuevo();
-                        paquete.estadoItem = estadoTele;
-                        clienteLocal.recibirPaqueteDelServidor(paquete);
-                    }
-                }
-            }
-            this.teleportGenerado = true; // Marcamos como generado para que no se repita
+            System.out.println("[DEBUG] Intentando generar portales...");
+            //llamamos a la funcion generar portales
+            generarPortales(manejadorNivel);
+            this.teleportGenerado = true;
         }
 
         actualizarEnemigosAI(deltaTime, manejadorNivel);

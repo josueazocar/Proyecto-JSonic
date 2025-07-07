@@ -97,6 +97,21 @@ public class PantallaDeJuego extends PantallaBase {
         } else if (manejadorNivel.getMapaActual().equals("maps/ZonaJefeN1.tmx")) {
             personajeJugableEstado.x = 12.01f;
             personajeJugableEstado.y = 156.08f;
+        }else if (manejadorNivel.getMapaActual().equals("maps/Zona1N2.tmx")) {
+            personajeJugableEstado.x = 22.00f;
+            personajeJugableEstado.y = 296.00f;
+        }else if (manejadorNivel.getMapaActual().equals("maps/ZonaJefeN2.tmx")) {
+            personajeJugableEstado.x = 98.00f;
+            personajeJugableEstado.y = 984.00f;
+        }else if (manejadorNivel.getMapaActual().equals("maps/Zona1N3.tmx")) {
+            personajeJugableEstado.x = 52.00f;
+            personajeJugableEstado.y = 88.00f;
+        }else if (manejadorNivel.getMapaActual().equals("maps/Zona2N3.tmx")) {
+            personajeJugableEstado.x = 68.00f;
+            personajeJugableEstado.y = 1150.00f;
+        }else if (manejadorNivel.getMapaActual().equals("maps/ZonaJefeN3.tmx")) {
+            personajeJugableEstado.x = 638.00f;
+            personajeJugableEstado.y = 1176.00f;
         }
 
         // 1. Elige el personaje que quieres ser para esta prueba.
@@ -216,6 +231,7 @@ public class PantallaDeJuego extends PantallaBase {
 
         // 7. Finalmente, añade la nueva tabla al Stage principal.
         mainStage.addActor(tablaInferior);
+
 
     }
 
@@ -609,6 +625,7 @@ public class PantallaDeJuego extends PantallaBase {
             }
         }
     }
+
 
     public void agregarOActualizarOtroJugador(PlayerState estadoRecibido) {
         Player jugadorVisual = otrosJugadores.get(estadoRecibido.id);

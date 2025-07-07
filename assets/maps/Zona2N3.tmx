@@ -226,14 +226,10 @@
   <object id="50" x="1770" y="1006" width="50" height="78"/>
  </objectgroup>
  <objectgroup id="2" name="destinox">
-  <object id="1" name="Llegada" x="68" y="1150" width="146" height="100">
-   <properties>
-    <property name="destinoX" type="float" value="0"/>
-    <property name="destinoY" type="float" value="0"/>
-   </properties>
-  </object>
+  <object id="1" name="Llegada" x="68" y="1150" width="146" height="100"/>
   <object id="3" name="Portal" type="Portal" x="928" y="40" width="134" height="116">
    <properties>
+    <property name="ZonaJefeN3" value="maps/ZonaJefeN3"/>
     <property name="destinoX" type="float" value="638"/>
     <property name="destinoY" type="float" value="1176"/>
    </properties>

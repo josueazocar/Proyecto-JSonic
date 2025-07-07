@@ -9,13 +9,15 @@ import com.badlogic.gdx.maps.tiled.renderers.OrthogonalTiledMapRenderer;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch; // Necesario para el constructor, aunque no se usa directamente en dibujar()
 import com.badlogic.gdx.math.MathUtils; // Importar para MathUtils.clamp
 import com.badlogic.gdx.math.Rectangle;
+import java.util.ArrayList;
+import java.util.List;
 
 public class LevelManager {
 
     private TiledMap mapaActual;
     private OrthogonalTiledMapRenderer renderizadorMapa;
     private final OrthographicCamera camaraJuego; // Referencia a la cámara principal del juego
-
+    private String nombreMapaActual;
     private float anchoMapaPixels;
     private float altoMapaPixels;
     private int tileWidth;
@@ -46,8 +48,11 @@ public class LevelManager {
         return mapaActual;
     }
 
+    //para el teletransporte
+    private List<TeletransporteVisual> portalesVisuales = new ArrayList<>();
     // Método para cargar un nivel (mapa Tiled)
     public void cargarNivel(String rutaMapa) {
+        nombreMapaActual = rutaMapa;
         // Si ya hay un mapa cargado, liberamos sus recursos antes de cargar uno nuevo
         if (mapaActual != null) {
             mapaActual.dispose();
@@ -72,6 +77,43 @@ public class LevelManager {
 
         // El '1' es la escala, si tu mapa ya está a la resolución que quieres, déjalo en 1.
         renderizadorMapa = new OrthogonalTiledMapRenderer(mapaActual, 1);
+        procesarPortales();
+
+    }
+
+    public String getNombreMapaActual() {
+        return nombreMapaActual;
+    }
+
+    // Dentro de LevelManager.java
+
+    private void procesarPortales() {
+        portalesVisuales.clear();
+        com.badlogic.gdx.maps.MapLayer capaDestinox = mapaActual.getLayers().get("destinox");
+        if (capaDestinox == null) return;
+
+        MapObjects objetos = capaDestinox.getObjects();
+        for (com.badlogic.gdx.maps.MapObject obj : objetos) {
+            if ("Portal".equals(obj.getName())) {
+                float x = ((com.badlogic.gdx.maps.objects.RectangleMapObject)obj).getRectangle().x;
+                float y = ((com.badlogic.gdx.maps.objects.RectangleMapObject)obj).getRectangle().y;
+                float destinoX = obj.getProperties().get("destinoX", Float.class);
+                float destinoY = obj.getProperties().get("destinoY", Float.class);
+                String destinoMapa = obj.getProperties().get("destinoMapa", String.class);
+
+                ItemState estado = new ItemState(x, y, ItemState.ItemType.TELETRANSPORTE, destinoX, destinoY, destinoMapa);
+                TeletransporteVisual portalVisual = new TeletransporteVisual(estado);
+                portalVisual.cargarAnimacion();
+                portalesVisuales.add(portalVisual);
+            }
+        }
+    }
+
+    // Para dibujar los portales visuales
+    public void dibujarPortales(SpriteBatch batch, float delta) {
+        for (TeletransporteVisual portal : portalesVisuales) {
+            portal.render(batch, delta);
+        }
     }
 
     // Método para actualizar la lógica del nivel (si es necesario)

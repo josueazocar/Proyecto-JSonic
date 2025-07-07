@@ -19,6 +19,10 @@ public class ItemState {
     public float x;
     public float y;
     public ItemType tipo;
+    //campos de teletransporte
+    public float destinoX;
+    public float destinoY;
+    public String destinoMapa;
 
     // Constructor vacío es útil para la serialización en red (KryoNet).
     public ItemState() {}
@@ -29,5 +33,25 @@ public class ItemState {
         this.x = x;
         this.y = y;
         this.tipo = tipo;
+    }
+
+    //constructor para portales
+    public ItemState(int id, float x, float y, ItemType tipo, float destinoX, float destinoY, String destinoMapa) {
+        this.id = id;
+        this.x = x;
+        this.y = y;
+        this.tipo = tipo;
+        this.destinoX = destinoX;
+        this.destinoY = destinoY;
+        this.destinoMapa = destinoMapa;
+    }
+
+    public ItemState(float x, float y, ItemType tipo, float destinoX, float destinoY, String destinoMapa) {
+        this.x = x;
+        this.y = y;
+        this.tipo = tipo;
+        this.destinoX = destinoX;
+        this.destinoY = destinoY;
+        this.destinoMapa = destinoMapa;
     }
 }

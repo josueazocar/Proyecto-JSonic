@@ -328,15 +328,11 @@
  <objectgroup id="12" name="destinox">
   <object id="60" name="Portal" type="Portal" x="1132.59" y="32.0167" width="65.3674" height="68.0354">
    <properties>
+    <property name="destinoMapa" value="maps/Zona1N2"/>
     <property name="destinoX" type="float" value="22"/>
     <property name="destinoY" type="float" value="296"/>
    </properties>
   </object>
-  <object id="61" name="Llegada" type="Llegada" x="12.0063" y="156.081" width="70.7035" height="60.0313">
-   <properties>
-    <property name="destinoX" type="float" value="0"/>
-    <property name="destinoY" type="float" value="0"/>
-   </properties>
-  </object>
+  <object id="61" name="Llegada" type="Llegada" x="12.0063" y="156.081" width="70.7035" height="60.0313"/>
  </objectgroup>
 </map>

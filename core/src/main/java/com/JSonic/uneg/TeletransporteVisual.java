@@ -6,10 +6,12 @@ import com.badlogic.gdx.graphics.g2d.TextureRegion;
 
 public class TeletransporteVisual extends ItemVisual {
     private float destinoX, destinoY;
+    private float stateTime = 0f;
     public TeletransporteVisual(ItemState estado) {
         super(estado);
-        this.destinoX = destinoX;
-        this.destinoY = destinoY;
+        this.destinoX = estado.destinoX;
+        this.destinoY = estado.destinoY;
+
     }
 
     @Override
@@ -31,6 +33,12 @@ public class TeletransporteVisual extends ItemVisual {
         animacion = new Animation<>(0.1f, frames);
     }
 
+    //
+    public void render(com.badlogic.gdx.graphics.g2d.SpriteBatch batch, float delta) {
+        stateTime += delta;
+        com.badlogic.gdx.graphics.g2d.TextureRegion frame = animacion.getKeyFrame(stateTime, true);
+        batch.draw(frame, estado.x, estado.y);
+    }
 
     public void onCollect(PlayerState player) {
         player.setPosition(destinoX, destinoY);

@@ -367,15 +367,11 @@
  <objectgroup id="2" name="destinox">
   <object id="3" name="Portal" type="Portal" x="1738" y="136" width="126" height="144">
    <properties>
+    <property name="destinoMapa" value="maps/ZonaJefeN2"/>
     <property name="destinoX" type="float" value="98"/>
     <property name="destinoY" type="float" value="984"/>
    </properties>
   </object>
-  <object id="4" name="Llegada" type="Llegada" x="22" y="296" width="124" height="130">
-   <properties>
-    <property name="destinoX" type="float" value="0"/>
-    <property name="destinoY" type="float" value="0"/>
-   </properties>
-  </object>
+  <object id="4" name="Llegada" type="Llegada" x="22" y="296" width="124" height="130"/>
  </objectgroup>
 </map>
