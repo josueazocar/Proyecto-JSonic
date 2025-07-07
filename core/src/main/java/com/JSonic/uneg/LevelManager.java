@@ -175,6 +175,51 @@ public class LevelManager {
         return mapaActual;
     }
 
+    // Devuelve la posición del objeto Llegada en la capa "destinox"
+    public com.badlogic.gdx.math.Vector2 obtenerPosicionLlegada() {
+        com.badlogic.gdx.maps.MapLayer capaDestinox = mapaActual.getLayers().get("destinox");
+        if (capaDestinox != null) {
+            for (com.badlogic.gdx.maps.MapObject obj : capaDestinox.getObjects()) {
+                if ("Llegada".equals(obj.getName()) && obj instanceof com.badlogic.gdx.maps.objects.RectangleMapObject rectObj) {
+                    Rectangle rect = rectObj.getRectangle();
+                    return new com.badlogic.gdx.math.Vector2(rect.x, rect.y);
+                }
+            }
+        }
+        // Valor por defecto si no se encuentra
+        return new com.badlogic.gdx.math.Vector2(70f, 250f);
+    }
+
+    public static class PortalInfo {
+        public float x, y;
+        public float destinoX, destinoY;
+        public String destinoMapa;
+        public PortalInfo(float x, float y, float destinoX, float destinoY, String destinoMapa) {
+            this.x = x;
+            this.y = y;
+            this.destinoX = destinoX;
+            this.destinoY = destinoY;
+            this.destinoMapa = destinoMapa;
+        }
+    }
+
+    public List<PortalInfo> obtenerPortales() {
+        List<PortalInfo> portales = new ArrayList<>();
+        com.badlogic.gdx.maps.MapLayer capaDestinox = mapaActual.getLayers().get("destinox");
+        if (capaDestinox != null) {
+            for (com.badlogic.gdx.maps.MapObject obj : capaDestinox.getObjects()) {
+                if ("Portal".equals(obj.getName()) && obj instanceof com.badlogic.gdx.maps.objects.RectangleMapObject rectObj) {
+                    Rectangle rect = rectObj.getRectangle();
+                    float destinoX = obj.getProperties().get("destinoX", Float.class);
+                    float destinoY = obj.getProperties().get("destinoY", Float.class);
+                    String destinoMapa = obj.getProperties().get("destinoMapa", String.class);
+                    portales.add(new PortalInfo(rect.x, rect.y, destinoX, destinoY, destinoMapa));
+                }
+            }
+        }
+        return portales;
+    }
+
     // --- Nuevos getters para las dimensiones del mapa (útiles para colisiones) ---
     public float getAnchoMapaPixels() {
         return anchoMapaPixels;

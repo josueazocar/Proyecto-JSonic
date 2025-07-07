@@ -341,7 +341,7 @@
   <object id="1" name="Llegada" type="Llegada" x="98" y="984" width="130" height="110"/>
   <object id="2" name="Portal" type="Portal" x="1154" y="46" width="128" height="118">
    <properties>
-    <property name="destinoMapa" value="maps/Zona1N3"/>
+    <property name="destinoMapa" value="maps/Zona1N3.tmx"/>
     <property name="destinoX" type="float" value="52"/>
     <property name="destinoY" type="float" value="88"/>
    </properties>

@@ -367,7 +367,7 @@
  <objectgroup id="2" name="destinox">
   <object id="3" name="Portal" type="Portal" x="1738" y="136" width="126" height="144">
    <properties>
-    <property name="destinoMapa" value="maps/ZonaJefeN2"/>
+    <property name="destinoMapa" value="maps/ZonaJefeN2.tmx"/>
     <property name="destinoX" type="float" value="98"/>
     <property name="destinoY" type="float" value="984"/>
    </properties>

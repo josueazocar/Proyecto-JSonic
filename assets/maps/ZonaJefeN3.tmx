@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<map version="1.10" tiledversion="1.11.2" orientation="orthogonal" renderorder="right-down" width="50" height="45" tilewidth="32" tileheight="32" infinite="0" nextlayerid="10" nextobjectid="100">
+<map version="1.10" tiledversion="1.11.2" orientation="orthogonal" renderorder="right-down" width="50" height="45" tilewidth="32" tileheight="32" infinite="0" nextlayerid="10" nextobjectid="101">
  <tileset firstgid="1" source="fondo Green Hill.tsx"/>
  <tileset firstgid="161" source="Petroleo.tsx"/>
  <tileset firstgid="177" source="CuadrosParaElTerreno.tsx"/>
@@ -352,9 +352,9 @@
  <objectgroup id="6" name="destinox">
   <object id="3" name="Portal" type="Portal" x="694" y="114" width="234" height="110">
    <properties>
-    <property name="destinoMapa" value=""/>
-    <property name="destinoX" type="float" value="0"/>
-    <property name="destinoY" type="float" value="0"/>
+    <property name="destinoMapa" value="maps/Zona1N1.tmx"/>
+    <property name="destinoX" type="float" value="56"/>
+    <property name="destinoY" type="float" value="1128"/>
    </properties>
   </object>
   <object id="4" name="Llegada" type="Llegada" x="638" y="1176" width="362" height="132"/>

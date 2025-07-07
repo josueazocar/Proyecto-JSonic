@@ -99,27 +99,15 @@ public class LocalServer implements IGameServer {
 
     //funcion para portales generar portales
     private void generarPortales(LevelManager manejadorNivel) {
-        var layer = manejadorNivel.getMapaActual().getLayers().get("destinox");
-        if (layer != null) {
-            MapObjects objetos = layer.getObjects();
-            int idBase = 10000; // Usamos un ID alto para evitar colisiones
-            for (com.badlogic.gdx.maps.MapObject obj : objetos) {
-                if (obj instanceof com.badlogic.gdx.maps.objects.RectangleMapObject rectObj) {
-                    String nombreObjeto = obj.getName();
-                    if (nombreObjeto != null && nombreObjeto.equals("Portal")) {
-                        Rectangle rect = rectObj.getRectangle();
-                        String destinoMapa = obj.getProperties().get("destinoMapa", String.class);
-                        //crear nuevo item
-                        ItemState estadoTele = new ItemState(idBase++, rect.x, rect.y, ItemState.ItemType.TELETRANSPORTE);
-                        itemsActivos.put(estadoTele.id, estadoTele);
-                        destinosPortales.put(estadoTele.id, destinoMapa);
-                        //
-                        Network.PaqueteItemNuevo paquete = new Network.PaqueteItemNuevo();
-                        paquete.estadoItem = estadoTele;
-                        clienteLocal.recibirPaqueteDelServidor(paquete);
-                    }
-                }
-            }
+        int idBase = 10000;
+        for (LevelManager.PortalInfo portal : manejadorNivel.obtenerPortales()) {
+            ItemState estadoTele = new ItemState(idBase++, portal.x, portal.y, ItemState.ItemType.TELETRANSPORTE);
+            itemsActivos.put(estadoTele.id, estadoTele);
+            destinosPortales.put(estadoTele.id, portal.destinoMapa);
+
+            Network.PaqueteItemNuevo paquete = new Network.PaqueteItemNuevo();
+            paquete.estadoItem = estadoTele;
+            clienteLocal.recibirPaqueteDelServidor(paquete);
         }
     }
     //-----------fin de la funcion para genrar portales------------
@@ -151,12 +139,34 @@ public class LocalServer implements IGameServer {
                     // CASO ESPECIAL: Es un teletransportador
                     if (itemRecogido.tipo == ItemState.ItemType.TELETRANSPORTE) {
                         System.out.println("[LOCAL SERVER] Jugador ha activado el teletransportador.");
-                        itemsActivos.remove(paquete.idItem); // Lo eliminamos
+                        //itemsActivos.remove(paquete.idItem); // Lo eliminamos
                         //usar destino para lograr guardar los de los maps
                         String destinoMapa = destinosPortales.get(paquete.idItem);
+                        if (destinoMapa == null) {
+                            System.err.println("[LOCAL SERVER] Error: El portal con ID " + paquete.idItem + " no tiene un mapa de destino definido.");
+                            return; // Salimos para evitar el error.
+                        }
+                        // 3. AHORA sí, eliminamos el portal de las listas activas.
+                        itemsActivos.remove(paquete.idItem);
+                        destinosPortales.remove(paquete.idItem); // Limpieza del mapa de destinos.
+
+                        manejadorNivel.cargarNivel(destinoMapa);
+                        com.badlogic.gdx.math.Vector2 llegada = manejadorNivel.obtenerPosicionLlegada();
+                        float llegadaX = llegada.x;
+                        float llegadaY = llegada.y; // Valor por defecto
+
+                        /*if (destinoMapa != null) {
+                            manejadorNivel.cargarNivel(destinoMapa);
+                            com.badlogic.gdx.math.Vector2 llegada = manejadorNivel.obtenerPosicionLlegada();
+                            llegadaX = llegada.x;
+                            llegadaY = llegada.y;
+                        }*/
                         // Creamos la ORDEN de cambio de mapa
                         Network.PaqueteOrdenCambiarMapa orden = new Network.PaqueteOrdenCambiarMapa();
-                        orden.nuevoMapa = destinoMapa != null ? destinoMapa : "maps/ZonaJefeN1.tmx";
+                        orden.nuevoMapa = destinoMapa;
+                            /*!= null ? destinoMapa : "maps/ZonaJefeN1.tmx";*/
+                        orden.nuevaPosX = llegadaX;
+                        orden.nuevaPosY = llegadaY;
                         //orden.nuevaPosX = 70f;
                         //orden.nuevaPosY = 250f;
 
@@ -169,7 +179,7 @@ public class LocalServer implements IGameServer {
                         clienteLocal.recibirPaqueteDelServidor(paqueteEliminado);
 
                         //para teletransporte
-                        destinosPortales.remove(paquete.idItem); // Limpieza
+                       // destinosPortales.remove(paquete.idItem); // Limpieza
                     }
                     // CASO GENERAL: Es un ítem normal
                     else {
