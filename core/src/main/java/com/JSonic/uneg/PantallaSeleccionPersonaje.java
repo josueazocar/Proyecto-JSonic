@@ -42,8 +42,8 @@ public class PantallaSeleccionPersonaje extends PantallaBase {
         tabla.setFillParent(true);
         mainStage.addActor(tabla);
 
-        Label titleLabel = new Label("Selecciona tu personaje", getSkin(), "title");
-        tabla.add(titleLabel).colspan(3).padBottom(40).row();
+        tabla.add(new Image(new Texture(Gdx.files.internal("Fondos/Titulo_seleccion_personaje.png")))).size(396,110).colspan(3).padBottom(10).row();
+        
 
         sonicButton = crearBotonPersonaje("sonic_seleccion", "sonic_seleccion_oscuro", "sonic_seleccion_claro", "sonic_seleccionado", "sonic_disabled");
         tailsButton = crearBotonPersonaje("tails_seleccion", "tails_seleccion_oscuro", "tails_seleccion_claro", "tails_seleccionado", "tails_disabled");
