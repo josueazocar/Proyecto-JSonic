@@ -101,9 +101,9 @@ public class PantallaUnirsePartida extends PantallaBase {
         // Por ahora, es una lista de ejemplo para el frontend.
 
         List<String> hosts = new ArrayList<>();
-        hosts.add("Partida de Juan");
-        hosts.add("Servidor Mega Pro");
-        hosts.add("Aventura Sonic");
+        hosts.add("Partida de Juan [1/3]");         // Simularemos que no tiene a nadie
+        hosts.add("Servidor Mega Pro [2/3]");       // Simularemos que tiene a Sonic
+        hosts.add("Aventura Sonic [3/3]");
         hosts.add("Partida (Simulacion)");
         // Añadir más para probar el scroll
         hosts.add("Servidor 5");
@@ -121,55 +121,80 @@ public class PantallaUnirsePartida extends PantallaBase {
                 unirseButton.getLabel().setFontScale(0.6f);
                 unirseButton.getLabel().setWrap(true);
                 unirseButton.getLabel().setAlignment(Align.center);
+
+                // --- INICIO DE LA LÓGICA INTEGRADA ---
                 unirseButton.addListener(new ClickListener() {
                     @Override
                     public void clicked(InputEvent event, float x, float y) {
+                        // Primero, manejamos el caso especial de error
                         if (host.contains("(Simulacion)")) {
                             new Dialog("Error al unirse", getSkin(), "dialog")
-                                    .text("No se pudo unir, la partida ya ha comenzado.")
-                                    .button("Aceptar")
-                                    .show(uiStage);
-                        } else {
-                            // Crear el campo de texto para el nombre
-                            final TextField nombreJugadorField = new TextField("", getSkin());
-                            nombreJugadorField.setMessageText("Tu nombre...");
-                            nombreJugadorField.setMaxLength(15);
+                                .text("No se pudo unir, la partida ya ha comenzado.")
+                                .button("Aceptar")
+                                .show(uiStage);
+                            return; // Salimos del listener
+                        }
 
-                            // Crear el diálogo para pedir el nombre
-                            Dialog dialog = new Dialog("", getSkin(), "dialog") {
-                                @Override
-                                protected void result(Object object) {
-                                    if (Boolean.TRUE.equals(object)) {
-                                        String nombreJugador = nombreJugadorField.getText();
-                                        // Opcional: Validar que el nombre no esté vacío
-                                        if (!nombreJugador.trim().isEmpty()) {
-                                            System.out.println("Jugador '" + nombreJugador + "' intentando unirse a: " + host);
-                                            juegoApp.setPantallaActiva(new PantallaLobby(juegoApp, false));
+                        // Si no es el caso de error, mostramos el diálogo para pedir el nombre
+                        final TextField nombreJugadorField = new TextField("", getSkin());
+                        nombreJugadorField.setMessageText("Tu nombre...");
+                        nombreJugadorField.setMaxLength(15);
+
+                        Dialog dialog = new Dialog("", getSkin(), "dialog") {
+                            @Override
+                            protected void result(Object object) {
+                                // Este código se ejecuta cuando se presiona "Aceptar" (true) o "Cancelar" (false)
+                                if (Boolean.TRUE.equals(object)) {
+                                    String nombreJugador = nombreJugadorField.getText();
+                                    if (!nombreJugador.trim().isEmpty()) {
+                                        System.out.println("Jugador '" + nombreJugador + "' se prepara para unirse a: " + host);
+
+                                        // --- SIMULACIÓN Y NAVEGACIÓN ---
+                                        // 1. Simulamos que obtenemos los personajes ocupados de esta partida
+                                        JSonicJuego.personajesYaSeleccionados.clear();
+                                        if (host.contains("Mega Pro")) {
+                                            System.out.println("SIMULACIÓN: La partida 'Mega Pro' ya tiene a SONIC.");
+                                            JSonicJuego.personajesYaSeleccionados.add(PlayerState.CharacterType.SONIC);
+                                        } else if (host.contains("Aventura Sonic")) {
+                                            System.out.println("SIMULACIÓN: La partida 'Aventura Sonic' ya tiene a SONIC y TAILS.");
+                                            JSonicJuego.personajesYaSeleccionados.add(PlayerState.CharacterType.SONIC);
+                                            JSonicJuego.personajesYaSeleccionados.add(PlayerState.CharacterType.TAILS);
                                         }
+
+                                        // 2. Navegamos a la pantalla de selección de personaje
+                                        //    'true' indica que es el flujo online.
+                                        juegoApp.setPantallaActiva(new PantallaSeleccionPersonaje(juegoApp, false));
                                     }
                                 }
-                            };
-                            dialog.text("Introduce tu nombre para unirte:");
-                            dialog.getContentTable().row();
-                            dialog.getContentTable().add(nombreJugadorField).size(400, 50).pad(20);
+                            }
+                        };
 
-                            TextButton aceptarButton = new TextButton("Aceptar", getSkin());
-                            aceptarButton.getLabelCell().pad(15, 40, 15, 40);
+                        // Configuración del diálogo (se mantiene tu código)
+                        dialog.text("Introduce tu nombre para unirte:");
+                        dialog.getContentTable().row();
+                        dialog.getContentTable().add(nombreJugadorField).size(400, 50).pad(20);
 
-                            TextButton cancelarButton = new TextButton("Cancelar", getSkin());
-                            cancelarButton.getLabelCell().pad(15, 40, 15, 40);
+                        TextButton aceptarButton = new TextButton("Aceptar", getSkin());
+                        aceptarButton.getLabelCell().pad(15, 40, 15, 40);
 
-                            dialog.button(aceptarButton, true);
-                            dialog.button(cancelarButton, false);
+                        TextButton cancelarButton = new TextButton("Cancelar", getSkin());
+                        cancelarButton.getLabelCell().pad(15, 40, 15, 40);
 
-                            dialog.pad(30);
-                            dialog.show(uiStage);
-                        }
+                        dialog.button(aceptarButton, true);
+                        dialog.button(cancelarButton, false);
+
+                        dialog.pad(30);
+                        dialog.show(uiStage);
                     }
                 });
+                // --- FIN DE LA LÓGICA INTEGRADA ---
+
                 partidasTable.add(unirseButton).pad(10).size(350, 60).center().row();
             }
         }
+
+
+
     }
 
     @Override

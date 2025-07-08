@@ -64,6 +64,9 @@ public class PantallaDeJuego extends PantallaBase {
     private Label contaminationLabel;
     private Vector3 screenCoords = new Vector3();
 
+    //Para la seleccion de personaje
+    public static PlayerState.CharacterType miPersonaje = PlayerState.CharacterType.SONIC;
+
     //para el teletransporte
     private float tiempoTranscurrido = 0f;
     private boolean teletransporteCreado = false;
@@ -96,13 +99,14 @@ public class PantallaDeJuego extends PantallaBase {
         personajeJugableEstado.x = llegada.x;
         personajeJugableEstado.y = llegada.y;
 
-        // 1. Elige el personaje que quieres ser para esta prueba.
-        PlayerState.CharacterType miPersonaje = PlayerState.CharacterType.TAILS;
+        System.out.println("[JUEGO] Personaje recibido del menú: " + miPersonaje);
 
-        // 2. Asigna el tipo de personaje al estado que se usará para el jugador local.
+
+
+        // 1. Asigna el tipo de personaje al estado que se usará para el jugador local.
         personajeJugableEstado.characterType = miPersonaje;
 
-        // 3. Crea la instancia del personaje jugable localmente.
+        // 2. Crea la instancia del personaje jugable localmente.
         // Este switch se asegura de que TÚ estás controlando al personaje correcto en tu pantalla.
         System.out.println("[CLIENT] Creando jugador local como: " + miPersonaje);
         switch (miPersonaje) {
@@ -208,7 +212,7 @@ public class PantallaDeJuego extends PantallaBase {
         // 5. Añade un poco de espacio para que no quede pegado a los bordes.
         tablaInferior.pad(15);
 
-       // 6. Añade nuestro Label a la tabla.
+        // 6. Añade nuestro Label a la tabla.
         tablaInferior.add(contaminationLabel);
 
         // 7. Finalmente, añade la nueva tabla al Stage principal.
@@ -411,7 +415,7 @@ public class PantallaDeJuego extends PantallaBase {
 
         for (RobotVisual enemigo : enemigosEnPantalla.values()) enemigo.update(deltat);
 
-     // Lógica de actualización de RobotnikVisual (eggman)
+        // Lógica de actualización de RobotnikVisual (eggman)
         if (eggman != null) {
             eggman.update(deltat); // Primero actualizamos su animación
         }
@@ -671,5 +675,9 @@ public class PantallaDeJuego extends PantallaBase {
         if (shaderNeblina != null) shaderNeblina.dispose();
         if (quadMesh != null) quadMesh.dispose();
         if (font != null) font.dispose();
+    }
+
+    public SoundManager getSoundManager() {
+        return soundManager;
     }
 }
