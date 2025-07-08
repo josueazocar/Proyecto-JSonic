@@ -1,16 +1,14 @@
 package com.JSonic.uneg;
 import network.LocalServer;
 import network.GameClient;
-import com.badlogic.gdx.assets.AssetManager;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import network.interfaces.IGameClient;
 
 public class JSonicJuego extends JuegoBase {
 
-    public AssetManager assetManager;
-    public SoundManager soundManager;
     public SpriteBatch batch;
     public static String direccionIp = "localhost"; // Dirección IP del servidor al que se conecta el cliente.
+    public static java.util.ArrayList<PlayerState.CharacterType> personajesYaSeleccionados = new java.util.ArrayList<>();
 
     // true  -> Inicia en modo multijugador online.
     // false -> Inicia en modo de un jugador offline.
@@ -22,11 +20,7 @@ public class JSonicJuego extends JuegoBase {
 
     @Override
     public void create() {
-
         batch = new SpriteBatch();
-        assetManager = new AssetManager();
-        soundManager = new SoundManager(assetManager);
-
         // Inicializar la pantalla de menú al iniciar el juego
         setPantallaActiva(new PantallaMenu(this));
 
@@ -64,11 +58,14 @@ public class JSonicJuego extends JuegoBase {
         setPantallaActiva(new PantallaDeJuego(this, client, null));
     }
 
+
+
     @Override
     public void dispose() {
-        super.dispose();
+        if(personajesYaSeleccionados != null) {
+            personajesYaSeleccionados.clear();
+        }
         batch.dispose();
-        assetManager.dispose();
-        soundManager.dispose();
+        super.dispose();
     }
 }

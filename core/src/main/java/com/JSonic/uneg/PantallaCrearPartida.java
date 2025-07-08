@@ -49,7 +49,7 @@ public class PantallaCrearPartida extends PantallaBase {
 
         TextButton.TextButtonStyle estiloBotonConFondo = new TextButton.TextButtonStyle(getSkin().get(TextButton.TextButtonStyle.class));
 
-        TextButton iniciarPartidaButton = new TextButton("Iniciar", estiloBotonConFondo);
+        TextButton iniciarPartidaButton = new TextButton("Seguir", estiloBotonConFondo);
         botonesDerecha.add(iniciarPartidaButton).size(250, 75).padBottom(10).row();
 
         TextButton atrasButton = new TextButton("Atras", estiloBotonConFondo);
@@ -65,9 +65,11 @@ public class PantallaCrearPartida extends PantallaBase {
                 String nombrePartida = nombrePartidaField.getText();
                 String tuNombre = tuNombreField.getText();
                 System.out.println("Iniciando partida con nombre: " + nombrePartida + " | Anfitrión: " + tuNombre);
-                // Lógica para iniciar el servidor y esperar jugadores
-                // juegoApp.iniciarServidor(nombrePartida, tuNombre);
-                juegoApp.setPantallaActiva(new PantallaLobby(juegoApp, true));
+                /// --- SIMULACIÓN ---
+                // Al crear una partida, la lista de personajes ocupados está vacía.
+                JSonicJuego.personajesYaSeleccionados.clear();
+
+                juegoApp.setPantallaActiva(new PantallaSeleccionPersonaje(juegoApp,true));
             }
         });
 

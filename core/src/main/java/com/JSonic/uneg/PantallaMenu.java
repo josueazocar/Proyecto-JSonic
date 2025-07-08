@@ -176,14 +176,16 @@ public class PantallaMenu extends PantallaBase {
         botonAyuda.addListener(new ClickListener(){
             @Override
             public void clicked(InputEvent event, float x, float y) {
-                juegoApp.setPantallaActiva(new PantallaAyuda(juegoApp));
+
+                juegoApp.setPantallaActiva(new PantallaAyuda(juegoApp, PantallaMenu.this));
             }
         });
 
         botonUnJugador.addListener(new ClickListener() {
             @Override
             public void clicked(InputEvent event, float x, float y) {
-                juegoApp.iniciarJuegoLocal();
+                JSonicJuego.personajesYaSeleccionados.clear();
+                juegoApp.setPantallaActiva(new PantallaSeleccionPersonaje(juegoApp));
             }
         });
         botonMultijugador.addListener(new ClickListener() {
