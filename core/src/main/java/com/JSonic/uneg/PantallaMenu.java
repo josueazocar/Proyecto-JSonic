@@ -177,7 +177,7 @@ public class PantallaMenu extends PantallaBase {
             @Override
             public void clicked(InputEvent event, float x, float y) {
 
-                juegoApp.setPantallaActiva(new PantallaAyuda(juegoApp, PantallaMenu.this));
+                //juegoApp.setPantallaActiva(new PantallaAyuda(juegoApp, PantallaMenu.this));
             }
         });
 
