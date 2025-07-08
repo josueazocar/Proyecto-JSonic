@@ -17,7 +17,7 @@ public class PantallaSeleccionPersonaje extends PantallaBase {
     private final Boolean esAnfitrion;
 
     private Button sonicButton, tailsButton, knucklesButton;
-    private TextButton playButton;
+    private Button playButton;
     private ButtonGroup<Button> characterGroup;
     private PlayerState.CharacterType personajeSeleccionado;
 
@@ -43,11 +43,11 @@ public class PantallaSeleccionPersonaje extends PantallaBase {
         mainStage.addActor(tabla);
 
         tabla.add(new Image(new Texture(Gdx.files.internal("Fondos/Titulo_seleccion_personaje.png")))).size(396,110).colspan(3).padBottom(10).row();
-        
 
-        sonicButton = crearBotonPersonaje("sonic_seleccion", "sonic_seleccion_oscuro", "sonic_seleccion_claro", "sonic_seleccionado", "sonic_disabled");
-        tailsButton = crearBotonPersonaje("tails_seleccion", "tails_seleccion_oscuro", "tails_seleccion_claro", "tails_seleccionado", "tails_disabled");
-        knucklesButton = crearBotonPersonaje("knuckles_seleccion", "knuckles_seleccion_oscuro", "knuckles_seleccion_claro", "knuckles_seleccionado", "knuckles_disabled");
+
+        sonicButton = crearBotonPersonaje("sonic_seleccion", "sonic_seleccion_oscuro",  "sonic_seleccionado", "sonic_disabled");
+        tailsButton = crearBotonPersonaje("tails_seleccion", "tails_seleccion_oscuro",  "tails_seleccionado", "tails_disabled");
+        knucklesButton = crearBotonPersonaje("knuckles_seleccion", "knuckles_seleccion_oscuro", "knuckles_seleccionado", "knuckles_disabled");
 
         // ... (código para configurar botones y listeners es el mismo de antes)
         characterGroup = new ButtonGroup<>(sonicButton, tailsButton, knucklesButton);
@@ -58,12 +58,12 @@ public class PantallaSeleccionPersonaje extends PantallaBase {
         tailsButton.addListener(new ClickListener() { @Override public void clicked(InputEvent e, float x, float y) { if (!tailsButton.isDisabled()) personajeSeleccionado = PlayerState.CharacterType.TAILS; }});
         knucklesButton.addListener(new ClickListener() { @Override public void clicked(InputEvent e, float x, float y) { if (!knucklesButton.isDisabled()) personajeSeleccionado = PlayerState.CharacterType.KNUCKLES; }});
 
-
-        playButton = new TextButton("Jugar", getSkin());
-        // Ajustamos el texto del botón según el contexto
-        if (esAnfitrion != null) {
-            playButton.setText("Entrar al Lobby");
-        }
+        
+        Button.ButtonStyle playStyle = new Button.ButtonStyle();
+        playStyle.up = new TextureRegionDrawable(characterAtlas.findRegion("boton_jugar"));
+        playStyle.down = new TextureRegionDrawable(characterAtlas.findRegion("boton_jugar_down"));
+        playStyle.over = new TextureRegionDrawable(characterAtlas.findRegion("boton_jugar_hover"));
+        playButton = new Button(playStyle);
 
         playButton.addListener(new ClickListener() {
             @Override
@@ -87,7 +87,7 @@ public class PantallaSeleccionPersonaje extends PantallaBase {
         tabla.add(sonicButton).size(200, 355).pad(20);
         tabla.add(tailsButton).size(200, 355).pad(20);
         tabla.add(knucklesButton).size(200, 355).pad(20).row();
-        tabla.add(playButton).colspan(3).padTop(40).width(300).height(60);
+        tabla.add(playButton).colspan(3).padTop(40).width(250).height(80);
 
         // La lógica de habilitar/deshabilitar botones aplica a ambos modos,
         // pero la lista de `personajesYaSeleccionados` solo se llenará en online.
@@ -120,16 +120,14 @@ public class PantallaSeleccionPersonaje extends PantallaBase {
 
     @Override
     public void actualizar(float delta) {
-        // La simulación con F1, F2, F3 y R ya no es necesaria aquí,
-        // porque la lista se establece en la pantalla anterior.
+        mainStage.act(delta);
     }
 
 
-    private Button crearBotonPersonaje(String up, String down, String over, String checked, String disabled) {
+    private Button crearBotonPersonaje(String up, String down, String checked, String disabled) {
         Button.ButtonStyle estilo = new Button.ButtonStyle();
         estilo.up = new TextureRegionDrawable(characterAtlas.findRegion(up));
         estilo.down = new TextureRegionDrawable(characterAtlas.findRegion(down));
-        estilo.over = new TextureRegionDrawable(characterAtlas.findRegion(over));
         estilo.checked = new TextureRegionDrawable(characterAtlas.findRegion(checked));
         estilo.disabled = new TextureRegionDrawable(characterAtlas.findRegion(disabled));
         return new Button(estilo);
