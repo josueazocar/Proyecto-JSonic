@@ -97,7 +97,7 @@ public class PantallaDeJuego extends PantallaBase {
         personajeJugableEstado.y = llegada.y;
 
         // 1. Elige el personaje que quieres ser para esta prueba.
-        PlayerState.CharacterType miPersonaje = PlayerState.CharacterType.KNUCKLES;
+        PlayerState.CharacterType miPersonaje = PlayerState.CharacterType.TAILS;
 
         // 2. Asigna el tipo de personaje al estado que se usará para el jugador local.
         personajeJugableEstado.characterType = miPersonaje;

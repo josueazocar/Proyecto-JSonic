@@ -3,9 +3,7 @@ package com.JSonic.uneg;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Input;
 import com.badlogic.gdx.graphics.Texture;
-import com.badlogic.gdx.graphics.g2d.Animation;
-import com.badlogic.gdx.graphics.g2d.SpriteBatch;
-import com.badlogic.gdx.graphics.g2d.TextureRegion;
+import com.badlogic.gdx.graphics.g2d.*;
 import com.badlogic.gdx.math.Rectangle;
 
 
@@ -13,6 +11,13 @@ public class Tails extends Player {
 
     protected TextureRegion[] frameSpinRight;
     protected TextureRegion[] frameSpinLeft;
+    private Dron_Tails miDron;
+
+    private transient BitmapFont font; // Se usa 'transient' para que no se intente serializar en red
+    private transient GlyphLayout glyphLayout; // Ayuda a medir el texto para centrarlo
+    private String mensajeUI;
+    private float tiempoMensajeVisible;
+    private static final float DURACION_MENSAJE = 3.0f; // Mensaje visible por 3 segundos
 
 
     public Tails(PlayerState estadoInicial) {
@@ -26,6 +31,12 @@ public class Tails extends Player {
         if (animacion == null) {
             Gdx.app.error("Sonic", "ERROR: Animación inicial nula para el estado: " + estadoInicialAnimacion + ". Verifique CargarSprites.");
         }
+        miDron = new Dron_Tails(estadoInicial.id);
+
+        this.font = new BitmapFont();
+        this.font.getData().setScale(1);
+        this.glyphLayout = new GlyphLayout();
+        this.mensajeUI = "";
     }
 
     public Tails(PlayerState estadoInicial, LevelManager levelManager) {
@@ -39,6 +50,12 @@ public class Tails extends Player {
         if (animacion == null) {
             Gdx.app.error("Sonic", "ERROR: Animación inicial nula para el estado: " + estadoInicialAnimacion + ". Verifique CargarSprites.");
         }
+        miDron = new Dron_Tails(estadoInicial.id);
+
+        this.font = new BitmapFont();
+        this.font.getData().setScale(1);
+        this.glyphLayout = new GlyphLayout();
+        this.mensajeUI = "";
     }
 
     @Override
@@ -54,6 +71,13 @@ public class Tails extends Player {
 
         // Reinicia actionStateSet para el frame actual
         actionStateSet = false;
+
+        // --- INVOCACIÓN DEL DRON ---
+        // Se coloca aquí para que sea una acción independiente que no interrumpe otras.
+        // Se comprueba en cada frame, permitiendo a Tails llamar al dron en cualquier momento.
+        if (Gdx.input.isKeyJustPressed(Input.Keys.SPACE)) { // O la tecla que prefieras
+            miDron.invocar(this);
+        }
 
         // --- Lógica para MANEJAR TECLAS DE ACCIÓN ---
         // (Golpe, Patada, Spin)
@@ -309,6 +333,13 @@ public class Tails extends Player {
             Gdx.app.log("Sonic", "Advertencia: 'animacion' es nula en update(). No se puede obtener el frame clave para estado: " + getEstadoActual());
             frameActual = null;
         }
+        miDron.update(deltaTime);
+
+        if (tiempoMensajeVisible > 0) {
+            tiempoMensajeVisible -= deltaTime;
+        } else {
+            mensajeUI = ""; // Borramos el mensaje cuando el tiempo se acaba
+        }
     }
 
     @Override
@@ -318,5 +349,39 @@ public class Tails extends Player {
         } else {
             Gdx.app.log("Sonic", "Advertencia: 'frameActual' es nulo en el método draw(). No se puede dibujar a Sonic.");
         }
+        miDron.draw(batch);
+
+        if (tiempoMensajeVisible > 0 && !mensajeUI.isEmpty()) {
+            glyphLayout.setText(font, mensajeUI);
+
+            // 1. Calculamos la posición X para centrar el texto sobre Tails
+            //    (posición de Tails + centro del sprite) - (mitad del ancho del texto)
+            float textX = estado.x + (getTileSize() / 2) - (glyphLayout.width / 2);
+
+            // 2. Calculamos la posición Y para que flote justo encima de Tails
+            //    (posición de Tails + altura del sprite) + (un pequeño espacio)
+            float textY = estado.y + getTileSize() + 20; // 20px de espacio por encima
+
+            // 3. Dibujamos el texto en las coordenadas del mundo del juego
+            font.draw(batch, glyphLayout, textX, textY);
+        }
+    }
+
+    @Override
+    public void dispose() {
+        if (getSpriteSheet() != null) {
+            getSpriteSheet().dispose();
+        }
+        if (miDron != null) {
+            miDron.dispose();
+        }
+        if (font != null) {
+            font.dispose();
+        }
+    }
+
+    public void mostrarMensaje(String texto) {
+        this.mensajeUI = texto;
+        this.tiempoMensajeVisible = DURACION_MENSAJE;
     }
 }
