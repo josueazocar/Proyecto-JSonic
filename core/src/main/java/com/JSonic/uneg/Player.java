@@ -77,7 +77,7 @@ public abstract class Player extends Entity implements Disposable {
      * @param newY La coordenada Y tentativa para el movimiento.
      * @return true si hay colisión, false de lo contrario.
      */
-    private boolean checkCollision(float newX, float newY) {
+    protected boolean checkCollision(float newX, float newY) {
         if (levelManager == null || levelManager.getMapaActual() == null) {
             return false;
         }

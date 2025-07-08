@@ -154,7 +154,19 @@ public class Tails extends Player {
     protected String getSpriteSheetPath() {
         return "Entidades/Player/Tails/tails.png";
     }
+    @Override
+    protected boolean checkCollision(float newX, float newY) {
+        EstadoPlayer estadoActual = getEstadoActual();
 
+        // Si Tails está en el estado de "vuelo" (activado con la tecla 'L'),
+        // ignoramos las colisiones con el mapa.
+        if (estadoActual == EstadoPlayer.SPECIAL_LEFT || estadoActual == EstadoPlayer.SPECIAL_RIGHT) {
+            return false; // Retorna 'false' para indicar que NO hay colisión.
+        }
+
+        // Para cualquier otro estado, usamos la lógica de colisión normal de la clase Player.
+        return super.checkCollision(newX, newY);
+    }
     @Override
     protected void CargarSprites() {
         Texture coleccionDeSprites = new Texture(Gdx.files.internal(getSpriteSheetPath()));
