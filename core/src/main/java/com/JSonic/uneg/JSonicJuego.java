@@ -3,12 +3,13 @@ import network.LocalServer;
 import network.GameClient;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import network.interfaces.IGameClient;
+import java.util.ArrayList;
 
 public class JSonicJuego extends JuegoBase {
 
     public SpriteBatch batch;
     public static String direccionIp = "localhost"; // Dirección IP del servidor al que se conecta el cliente.
-    public static java.util.ArrayList<PlayerState.CharacterType> personajesYaSeleccionados = new java.util.ArrayList<>();
+    public static ArrayList<PlayerState.CharacterType> personajesYaSeleccionados = new ArrayList<>();
 
     // true  -> Inicia en modo multijugador online.
     // false -> Inicia en modo de un jugador offline.
