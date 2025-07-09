@@ -12,7 +12,8 @@ public class ItemState {
         ANILLO,
         BASURA,
         PIEZA_PLASTICO,
-        TELETRANSPORTE
+        TELETRANSPORTE,
+        ANIMAL
     }
 
     public int id;
@@ -26,6 +27,15 @@ public class ItemState {
 
     // Constructor vacío es útil para la serialización en red (KryoNet).
     public ItemState() {}
+
+    // ---[ AÑADIR ESTE NUEVO CONSTRUCTOR ]---
+    // Constructor para ítems simples como los animales, que solo necesitan posición.
+    public ItemState(float x, float y) {
+        this.x = x;
+        this.y = y;
+        this.tipo = ItemType.ANIMAL; // Asigna el tipo por defecto
+    }
+    // ---[ FIN DEL CÓDIGO AÑADIDO ]---
 
     // Constructor para facilitar la creación de ítems.
     public ItemState(int id, float x, float y, ItemType tipo) {

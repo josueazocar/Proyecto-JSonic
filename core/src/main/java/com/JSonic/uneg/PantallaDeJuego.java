@@ -50,9 +50,22 @@ public class PantallaDeJuego extends PantallaBase {
     private ContadorUI contadorAnillos;
     private ContadorUI contadorBasura;
     private AnillosVisual anilloVisual;
+    // ---[AÑADIR]--- Variables para los animales y su muerte
+    private com.badlogic.gdx.utils.Array<AnimalVisual> animales;
+    private float temporizadorMuerte = 0f;
+    private final float INTERVALO_MUERTE = 30f; // 30 segundos
+    private int indiceAnimalAMorir = 0;
+    //--------------------------------------
     private final HashMap<Integer, RobotVisual> enemigosEnPantalla = new HashMap<>();
     private final HashMap<Integer, ItemVisual> itemsEnPantalla = new HashMap<>();
 
+    // ---[AÑADIR]--- Variables para el mensaje de muerte en la UI
+    private com.badlogic.gdx.graphics.Texture iconoAnimalMuerto;
+    private com.badlogic.gdx.scenes.scene2d.ui.Label mensajeMuerteLabel;
+    private com.badlogic.gdx.scenes.scene2d.ui.Table tablaMensajeMuerte;
+    private float tiempoMensajeVisible = 0f;
+    private final float DURACION_MENSAJE = 5f;//5 segundos
+    //---------------------------------
     private int anillosTotal = 0;
     private int basuraTotal = 0;
     private float porcentajeContaminacionActual = 0f;
@@ -420,6 +433,39 @@ public class PantallaDeJuego extends PantallaBase {
             eggman.update(deltat); // Primero actualizamos su animación
         }
 
+        // ---[AÑADIR EN actualizar()]---
+
+// Actualizar estado de los animales
+        for (AnimalVisual animal : animales) {
+            animal.update(deltat);
+        }
+
+// Lógica de muerte de animales por contaminación
+        if (porcentajeContaminacionActual >= 50 && indiceAnimalAMorir < animales.size) {
+            temporizadorMuerte += deltat;
+            if (temporizadorMuerte >= INTERVALO_MUERTE) {
+                AnimalVisual animal = animales.get(indiceAnimalAMorir);
+                if (animal.estaVivo()) {
+                    animal.morir();
+
+                    // Mostrar mensaje en pantalla
+                    tablaMensajeMuerte.setVisible(true);
+                    tiempoMensajeVisible = 0f;
+
+                    indiceAnimalAMorir++;
+                    temporizadorMuerte = 0f; // Reiniciar temporizador para el siguiente
+                }
+            }
+        }
+
+// Ocultar el mensaje de muerte después de un tiempo
+        if (tablaMensajeMuerte.isVisible()) {
+            tiempoMensajeVisible += deltat;
+            if (tiempoMensajeVisible > DURACION_MENSAJE) {
+                tablaMensajeMuerte.setVisible(false);
+            }
+        }
+
 
         camaraJuego.position.x = personajeJugable.estado.x;
         camaraJuego.position.y = personajeJugable.estado.y;
@@ -670,6 +716,17 @@ public class PantallaDeJuego extends PantallaBase {
         for (ItemVisual item : itemsEnPantalla.values()) {
             item.dispose();
         }
+
+        // ---[AÑADIR EN dispose()]---
+        if (animales != null) {
+            for (AnimalVisual animal : animales) {
+                animal.dispose();
+            }
+        }
+        if (iconoAnimalMuerto != null) {
+            iconoAnimalMuerto.dispose();
+        }
+
         if (contadorAnillos != null) contadorAnillos.dispose();
         if (contadorBasura != null) contadorBasura.dispose();
         if (shaderNeblina != null) shaderNeblina.dispose();
