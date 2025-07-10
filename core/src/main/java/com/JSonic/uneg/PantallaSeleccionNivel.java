@@ -17,7 +17,7 @@ public class PantallaSeleccionNivel extends PantallaBase {
     private Button playButton;
     private Button botonNivel1, botonNivel2, botonNivel3;
     private ButtonGroup<Button> grupoBotonesNivel;
-
+    private boolean esMultijugador;
 
     public PantallaSeleccionNivel(JSonicJuego juegoApp) {
         super();
