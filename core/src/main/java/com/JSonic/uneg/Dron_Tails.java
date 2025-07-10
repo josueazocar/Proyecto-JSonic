@@ -6,6 +6,7 @@ import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.Animation;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.graphics.g2d.TextureRegion;
+import com.badlogic.gdx.math.Rectangle;
 import com.badlogic.gdx.math.Vector2; // ¡Importante! Usaremos vectores para el movimiento
 import java.util.EnumMap;
 
@@ -18,15 +19,16 @@ public class Dron_Tails {
     // NUEVO: Factor de suavizado para el movimiento. ¡Puedes experimentar con este valor!
     // Un valor más bajo = más lento y suave. Un valor más alto = más rápido y brusco.
     private static final float LERP_FACTOR = 5.0f;
-
+    public boolean isOnlineMode = false;
     // --- Estado y Referencias ---
     public DronState estado;
-    private Tails objetivo;
-    private float tiempoDeEstado;
+    Tails objetivo;
+    float tiempoDeEstado;
     private float temporizadorSeguimiento;
+    private LevelManager levelManager;
 
     // NUEVO: Vectores para manejar la posición actual y el objetivo del movimiento
-    private Vector2 posicion;
+    Vector2 posicion;
     private Vector2 posicionObjetivo;
 
     // --- Gráficos ---
@@ -36,9 +38,10 @@ public class Dron_Tails {
     protected Texture spriteSheetSeguir;
     protected Texture spriteSheetDesaparecer;
 
-    public Dron_Tails(int id) {
+    public Dron_Tails(int id, LevelManager levelManager) {
         this.estado = new DronState(id);
         this.animations = new EnumMap<>(DronState.EstadoDron.class);
+        this.levelManager = levelManager;
 
         // Inicializamos los nuevos vectores
         this.posicion = new Vector2();
@@ -105,9 +108,29 @@ public class Dron_Tails {
 
             case DESAPARECIENDO:
                 if (animations.get(DronState.EstadoDron.DESAPARECIENDO).isAnimationFinished(tiempoDeEstado)) {
-                    if (objetivo != null) {
-                        objetivo.mostrarMensaje("¡Árbol sembrado!");
+                    if (!isOnlineMode) {
+                        Rectangle hitboxPruebaArbol = new Rectangle(this.posicion.x, this.posicion.y, 64, 64); // Ajusta el tamaño si es necesario
+
+                        // 2. Le preguntamos al LevelManager si ese lugar ya está ocupado.
+                        if (levelManager != null && !levelManager.colisionaConMapa(hitboxPruebaArbol)) {
+
+
+                            levelManager.generarArbol(posicion.x, posicion.y);
+                            System.out.println("[DRON LOCAL] Árbol plantado localmente.");
+
+
+                            if (objetivo != null) {
+                                objetivo.mostrarMensaje("¡Árbol sembrado!");
+                            }
+
+                        } else {
+                            // 4. SI ESTÁ OCUPADO: No generamos nada y mostramos el mensaje de error.
+                            if (objetivo != null) {
+                                objetivo.mostrarMensaje("Lugar no apto para sembrar");
+                            }
+                        }
                     }
+                    // 5. Finalmente, el dron se desactiva como siempre.
                     cambiarEstado(DronState.EstadoDron.INACTIVO);
                 }
                 break;
@@ -142,7 +165,7 @@ public class Dron_Tails {
     }
 
     // ... cambiarEstado y dispose se mantienen igual ...
-    private void cambiarEstado(DronState.EstadoDron nuevoEstado) {
+    void cambiarEstado(DronState.EstadoDron nuevoEstado) {
         estado.estadoActual = nuevoEstado;
         tiempoDeEstado = 0f;
         if (nuevoEstado == DronState.EstadoDron.SIGUIENDO) {

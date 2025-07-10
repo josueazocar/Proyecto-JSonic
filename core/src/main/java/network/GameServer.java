@@ -1,6 +1,7 @@
 package network;
 
 import com.JSonic.uneg.*;
+import com.badlogic.gdx.math.Rectangle;
 import com.badlogic.gdx.math.Vector2;
 import com.esotericsoftware.kryonet.Connection;
 import com.esotericsoftware.kryonet.Listener;
@@ -21,6 +22,9 @@ public class GameServer implements IGameServer {
     private volatile ArrayList<com.badlogic.gdx.math.Rectangle> paredesDelMapa = null;
     private final HashMap<Integer, Integer> puntajesAnillosIndividuales = new HashMap<>();
     private final HashMap<Integer, Integer> puntajesBasuraIndividuales = new HashMap<>();
+    private final HashMap<Integer, DronState> dronesActivos = new HashMap<>();
+    private final ArrayList<Rectangle> colisionesDinamicas = new ArrayList<>(); // Árboles, rocas, etc.
+    private int proximoIdDron = 20000; // Un rango de IDs para los drones
 
     // Estado global compartido por todo el equipo.
     private final ContaminationState contaminationState = new ContaminationState();
@@ -218,6 +222,33 @@ public class GameServer implements IGameServer {
                         System.out.println("[SERVER] Plano del mapa recibido con " + paredesDelMapa.size() + " paredes. ¡Ahora puedo ver las paredes!");
                     }
                 }
+                if (objeto instanceof Network.PaqueteInvocarDron) {
+                    int jugadorId = conexion.getID();
+                    PlayerState jugador = jugadores.get(jugadorId);
+
+                    // Solo se puede invocar si el jugador existe y no tiene un dron ya activo.
+                    if (jugador != null && !dronesActivos.containsKey(jugadorId)) {
+                        // Creamos un nuevo DronState usando el constructor del servidor
+                        DronState nuevoDron = new DronState(proximoIdDron++, jugadorId, jugador.x, jugador.y);
+                        dronesActivos.put(jugadorId, nuevoDron);
+
+                        System.out.println("[SERVER DEBUG] Dron CREADO para jugador " + jugadorId + ". Timer inicial: " + nuevoDron.temporizador);
+                        Network.PaqueteDronEstado paqueteEstado = new Network.PaqueteDronEstado();
+                        paqueteEstado.ownerId = jugador.id;
+                        paqueteEstado.nuevoEstado = DronState.EstadoDron.APARECIENDO;
+                        paqueteEstado.x = jugador.x; // Posición inicial
+                        paqueteEstado.y = jugador.y;
+                        servidor.sendToAllTCP(paqueteEstado);
+                        // Notificamos al dueño que su petición fue exitosa y debe mostrar el mensaje
+                        Network.PaqueteMensajeUI msg = new Network.PaqueteMensajeUI();
+                        msg.mensaje = "Sembrando árbol...";
+                        conexion.sendTCP(msg);
+
+                        System.out.println("[SERVER] Jugador " + jugadorId + " ha invocado un dron.");
+                        // Nota: No necesitamos notificar a otros clientes sobre el dron visual,
+                        // ya que este es un efecto solo del jugador que lo invoca.
+                    }
+                }
             }
 
             public void disconnected(Connection conexion) {
@@ -372,28 +403,16 @@ public class GameServer implements IGameServer {
 
                 com.badlogic.gdx.math.Rectangle robotBounds = new com.badlogic.gdx.math.Rectangle(enemigo.x, enemigo.y, 48, 48);
 
+                // Comprobar colisión en X usando el método centralizado
                 robotBounds.setX(nextX);
-                boolean colisionEnX = false;
-                for (com.badlogic.gdx.math.Rectangle pared : paredesDelMapa) {
-                    if (pared.overlaps(robotBounds)) {
-                        colisionEnX = true;
-                        break;
-                    }
-                }
-                if (!colisionEnX) {
+                if (!hayColision(robotBounds)) {
                     enemigo.x = nextX;
                 }
 
-                robotBounds.setX(enemigo.x);
+                // Comprobar colisión en Y usando el método centralizado
+                robotBounds.setX(enemigo.x); // Volver a la X actual
                 robotBounds.setY(nextY);
-                boolean colisionEnY = false;
-                for (com.badlogic.gdx.math.Rectangle pared : paredesDelMapa) {
-                    if (pared.overlaps(robotBounds)) {
-                        colisionEnY = true;
-                        break;
-                    }
-                }
-                if (!colisionEnY) {
+                if (!hayColision(robotBounds)) {
                     enemigo.y = nextY;
                 }
             }
@@ -416,11 +435,6 @@ public class GameServer implements IGameServer {
 
         this.tiempoGeneracionTeleport += deltaTime;
         if ((int)this.tiempoGeneracionTeleport % 2 == 0 && (int)this.tiempoGeneracionTeleport != 0) {
-            System.out.println(
-                "[GAMESERVER DEBUG] Tiempo: " + String.format("%.2f", this.tiempoGeneracionTeleport) +
-                    " | Portal Generado?: " + this.teleportGenerado +
-                    " | Jugadores Conectados: " + jugadores.size()
-            );
         }
 
         // Suponiendo que el teletransportador solo debe aparecer si hay jugadores
@@ -445,6 +459,7 @@ public class GameServer implements IGameServer {
             this.teleportGenerado = true; // Marcamos como generado
         }
 
+        actualizarDrones(deltaTime);
         actualizarEnemigosAI(deltaTime);
 
         generarNuevosItems(deltaTime);
@@ -572,6 +587,79 @@ public class GameServer implements IGameServer {
             }
             intentos++;
         }
+    }
+    private void actualizarDrones(float deltaTime) {
+        if (dronesActivos.isEmpty()) return;
+
+        // Estas son las mismas constantes de tu clase Dron_Tails para calcular la posición correcta.
+        final float OFFSET_X = -60;
+        final float OFFSET_Y = 50;
+
+        DronState primerDron = dronesActivos.values().iterator().next();
+        System.out.println("[SERVER DEBUG] Tiempo restante del dron de jugador " + primerDron.ownerId + ": " + String.format("%.2f", primerDron.temporizador));
+
+        ArrayList<Integer> dronesParaEliminar = new ArrayList<>();
+        for (DronState dron : dronesActivos.values()) {
+            // El metodo update del dron ahora devuelve 'true' si su tiempo ha terminado
+            if (dron.update(deltaTime)) {
+                PlayerState propietario = jugadores.get(dron.ownerId);
+                if (propietario != null) {
+                    // 1. Calculamos la posición correcta del árbol usando la posición del jugador + el offset del dron.
+                    float arbolX = propietario.x + OFFSET_X;
+                    float arbolY = propietario.y + OFFSET_Y;
+
+                    // 2. Usamos esa posición corregida para crear el hitbox de prueba.
+                    Rectangle hitboxArbol = new Rectangle(arbolX, arbolY, 64, 64);
+
+                    // Verificamos colisión usando el método centralizado del servidor
+                    if (hayColision(hitboxArbol)) {
+                        // LUGAR OCUPADO: Enviar mensaje de error SOLO al propietario
+                        Network.PaqueteMensajeUI paqueteMsg = new Network.PaqueteMensajeUI();
+                        paqueteMsg.mensaje = "Lugar no apto para sembrar";
+                        servidor.sendToTCP(dron.ownerId, paqueteMsg);
+                    } else {
+
+                        // 1. Añadimos la colisión al mundo del servidor
+                        colisionesDinamicas.add(hitboxArbol);
+
+                        // 2. Ordenamos a TODOS los clientes que creen el árbol visual
+                        Network.PaqueteArbolNuevo paqueteArbol = new Network.PaqueteArbolNuevo();
+                        paqueteArbol.x = arbolX;
+                        paqueteArbol.y = arbolY;
+                        servidor.sendToAllTCP(paqueteArbol);
+
+                        // 3. Enviamos el mensaje de éxito SOLO al propietario
+                        Network.PaqueteMensajeUI paqueteMsg = new Network.PaqueteMensajeUI();
+                        paqueteMsg.mensaje = "¡Árbol sembrado!";
+                        servidor.sendToTCP(dron.ownerId, paqueteMsg);
+                    }
+                }
+                // Marcamos el dron para ser eliminado de la lista de activos
+                dronesParaEliminar.add(dron.ownerId);
+            }
+        }
+        // Limpiamos los drones que han terminado su ciclo
+        for (Integer id : dronesParaEliminar) {
+            dronesActivos.remove(id);
+        }
+    }
+    private boolean hayColision(Rectangle bounds) {
+        if (paredesDelMapa != null) {
+            for (Rectangle pared : paredesDelMapa) {
+                if (pared.overlaps(bounds)) return true;
+            }
+        }
+
+
+        if (!colisionesDinamicas.isEmpty()) {
+            System.out.println("[SERVER DEBUG] Comprobando colisión contra " + colisionesDinamicas.size() + " árbol(es)."); // Descomenta esta línea si quieres ver un log muy verboso
+            for (Rectangle obstaculo : colisionesDinamicas) {
+                if (obstaculo.overlaps(bounds)) {
+                    return true;
+                }
+            }
+        }
+        return false;
     }
 
     @Override

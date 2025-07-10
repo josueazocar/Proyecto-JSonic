@@ -330,25 +330,26 @@ public class LocalServer implements IGameServer {
 
             // Lógica de Movimiento (solo se ejecuta si el estado es RUN)
             if (enemigo.estadoAnimacion == EnemigoState.EstadoEnemigo.RUN_RIGHT || enemigo.estadoAnimacion == EnemigoState.EstadoEnemigo.RUN_LEFT) {
-                float nextX = enemigo.x;
-                float nextY = enemigo.y;
+                float targetX = enemigo.x;
+                float targetY = enemigo.y;
 
-                if (dx > 0) nextX += ROBOT_SPEED; else if (dx < 0) nextX -= ROBOT_SPEED;
-                if (dy > 0) nextY += ROBOT_SPEED; else if (dy < 0) nextY -= ROBOT_SPEED;
+                if (dx > 0) targetX += ROBOT_SPEED; else if (dx < 0) targetX -= ROBOT_SPEED;
+                if (dy > 0) targetY += ROBOT_SPEED; else if (dy < 0) targetY -= ROBOT_SPEED;
 
-                Rectangle boundsXY = new Rectangle(nextX, nextY, 48, 48);
-                if (!manejadorNivel.colisionaConMapa(boundsXY)) {
-                    enemigo.x = nextX;
-                    enemigo.y = nextY;
-                } else {
-                    Rectangle boundsX = new Rectangle(nextX, enemigo.y, 48, 48);
-                    if (!manejadorNivel.colisionaConMapa(boundsX)) {
-                        enemigo.x = nextX;
-                    } else {
-                        Rectangle boundsY = new Rectangle(enemigo.x, nextY, 48, 48);
-                        if (!manejadorNivel.colisionaConMapa(boundsY)) {
-                            enemigo.y = nextY;
-                        }
+                if (manejadorNivel != null) {
+                    Rectangle robotBounds = new Rectangle(enemigo.x, enemigo.y, 48, 48);
+
+                    // Comprobar movimiento en X
+                    robotBounds.setX(targetX);
+                    if (!manejadorNivel.colisionaConMapa(robotBounds)) {
+                        enemigo.x = targetX;
+                    }
+
+                    // Comprobar movimiento en Y
+                    robotBounds.setX(enemigo.x);
+                    robotBounds.setY(targetY);
+                    if (!manejadorNivel.colisionaConMapa(robotBounds)) {
+                        enemigo.y = targetY;
                     }
                 }
             }
