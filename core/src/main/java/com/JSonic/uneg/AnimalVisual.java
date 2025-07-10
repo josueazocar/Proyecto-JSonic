@@ -4,6 +4,7 @@ import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.Animation;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.graphics.g2d.TextureRegion;
+import com.badlogic.gdx.math.Rectangle;
 
 public class AnimalVisual {
 
@@ -19,20 +20,19 @@ public class AnimalVisual {
     private transient Animation<TextureRegion> animacionMuerto;
     private float tiempoAnimacion = 0f;
 
+    //para colisiones
+    private transient Rectangle bounds;
+
     // Constructor para crear el objeto visual del animal
     public AnimalVisual(int id, float x, float y, Texture spriteSheet) {
         this.id = id;
         this.x = x;
         this.y = y;
         this.spriteSheet = spriteSheet;
+        this.bounds = new Rectangle(x, y, spriteSheet.getWidth(), spriteSheet.getHeight() / 2f);
         cargarAnimacion();
     }
 
-    // Añade este método a la clase AnimalVisual.java
-
-    public int getId() {
-        return this.id;
-    }
 
     // Carga las animaciones desde la hoja de sprites
     private void cargarAnimacion() {
@@ -50,13 +50,11 @@ public class AnimalVisual {
         this.animacion = animacionVivo;
     }
 
-    // Actualiza el estado del animal (llamado desde la lógica del juego)
-    // En la clase AnimalVisual.java
-
-    // Reemplaza tu método update actual por este
+    //método update
     public void update(AnimalState state) {
         this.x = state.x;
         this.y = state.y;
+        this.bounds.setPosition(this.x, this.y);
 
         // Si el estado del servidor es diferente al estado actual
         if (this.estaVivo != state.estaVivo) {
@@ -74,9 +72,9 @@ public class AnimalVisual {
 
     // Método para cambiar el estado del animal a "muerto"
 
-    public void setEstaVivo(boolean vivo) {
-        this.estaVivo = vivo;
-    }
+   // public void setEstaVivo(boolean vivo) {
+      //  this.estaVivo = vivo;
+    //}
 
     // Cambia el estado y la animación a "muerto"
     /*public void morir() {
@@ -96,9 +94,33 @@ public class AnimalVisual {
         batch.draw(currentFrame, x, y);
     }
 
+    // Getter para el hitbox
+
+    public int getId() {
+        return this.id;
+    }
+
     public boolean estaVivo() {
         return estaVivo;
     }
+
+
+
+    /**
+     * Cambia el estado de vida del animal.
+     * Renombrado de setEstaVivo a setVivo para coincidir con PantallaDeJuego.
+     */
+    public void setVivo(boolean vivo) {
+        this.estaVivo = vivo;
+    }
+
+    /**
+     * Devuelve el rectángulo de colisión para ser usado en Intersector.overlaps().
+     */
+    public Rectangle getBounds() {
+        return this.bounds;
+    }
+
 
     public void dispose() {
         /*if (spriteSheet != null) {

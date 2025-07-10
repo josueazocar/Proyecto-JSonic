@@ -229,7 +229,7 @@ public class PantallaDeJuego extends PantallaBase {
         // CONFIGURACIÓN UI Animales ---
         // Puedes reutilizar la misma fuente si quieres.
         Label.LabelStyle animalCountLabelStyle = new Label.LabelStyle(font, Color.WHITE); // Cambia el color si lo deseas
-        animalCountLabel = new Label("Animals: 0/0", animalCountLabelStyle); // Texto inicial
+        animalCountLabel = new Label("Animales: 0/0", animalCountLabelStyle); // Texto inicial
 
         // Crea una NUEVA tabla para la esquina inferior izquierda
         Table tablaInferiorIzquierda = new Table();
@@ -448,6 +448,49 @@ public class PantallaDeJuego extends PantallaBase {
         if (eggman != null) {
             eggman.update(deltat);
         }
+
+        // --- INICIO: LÓGICA DE COLISIÓN CON ANIMALES ---
+// Usamos un iterador para poder eliminar elementos de forma segura si es necesario.
+        Iterator<AnimalVisual> iteradorAnimales = animalesEnPantalla.values().iterator();
+        while (iteradorAnimales.hasNext()) {
+            AnimalVisual animal = iteradorAnimales.next();
+
+            // Solo procesamos colisiones para animales que están vivos.
+            if (animal.estaVivo()) {
+                // 1. Colisión: Jugador vs Animal
+                if (Intersector.overlaps(personajeJugable.getBounds(), animal.getBounds())) {
+                    // El jugador toca al animal. Lo "liberamos".
+                    System.out.println("[CLIENT] Colisión con animal vivo ID: " + animal.getId() + ". Solicitando liberación.");
+
+                    // Creamos un paquete para notificar al servidor.
+                    Network.PaqueteSolicitudLiberarAnimal paquete = new Network.PaqueteSolicitudLiberarAnimal();
+                    paquete.idAnimal = animal.getId();
+                    gameClient.send(paquete);
+
+                    // Marcamos al animal como no-vivo visualmente para evitar enviar paquetes repetidos.
+                    // El servidor enviará la confirmación final, pero esto mejora la respuesta visual.
+                    animal.setVivo(false);
+                    continue; // Pasamos al siguiente animal.
+                }
+
+                // 2. Colisión: Enemigos vs Animal
+                for (RobotVisual enemigo : enemigosEnPantalla.values()) {
+                    if (Intersector.overlaps(enemigo.getBounds(), animal.getBounds())) {
+                        // Un robot toca a un animal. Lo "mata".
+                        System.out.println("[CLIENT] Colisión de enemigo con animal vivo ID: " + animal.getId() + ". Solicitando muerte.");
+
+                        // Creamos un paquete para notificar al servidor.
+                        Network.PaqueteSolicitudMatarAnimal paquete = new Network.PaqueteSolicitudMatarAnimal();
+                        paquete.idAnimal = animal.getId();
+                        gameClient.send(paquete);
+
+                        animal.setVivo(false);
+                        break; // El animal ya fue tocado por un enemigo, no necesita chequear más.
+                    }
+                }
+            }
+        }
+// --- FIN: LÓGICA DE COLISIÓN CON ANIMALES ---
 
         camaraJuego.position.x = personajeJugable.estado.x;
         camaraJuego.position.y = personajeJugable.estado.y;

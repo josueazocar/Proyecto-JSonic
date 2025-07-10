@@ -325,7 +325,39 @@ public class LocalServer implements IGameServer {
                     enemigo.estadoAnimacion = EnemigoState.EstadoEnemigo.POST_ATAQUE;
                     enemigo.tiempoEnEstado = 0;
                 }
+
+                // --- INICIO: CÓDIGO A AÑADIR ---
+                // El cliente solicita "liberar" un animal (colisión Jugador vs Animal)
+            }else if (objeto instanceof Network.PaqueteSolicitudLiberarAnimal paquete) {
+                AnimalState animal = animalesActivos.get(paquete.idAnimal);
+                // Solo procesamos si el animal existe y sigue vivo (evita dobles peticiones)
+                if (animal != null && animal.estaVivo) {
+                    animal.estaVivo = false; // Marcamos el animal como "liberado" (no vivo)
+                    System.out.println("[LOCAL SERVER] Jugador liberó al animal ID: " + animal.id);
+
+                    // Notificamos al cliente que el estado del animal ha cambiado.
+                    // Esto hará que desaparezca o cambie su animación.
+                    Network.PaqueteActualizacionAnimales paqueteUpdate = new Network.PaqueteActualizacionAnimales();
+                    paqueteUpdate.estadosAnimales = new HashMap<>();
+                    paqueteUpdate.estadosAnimales.put(animal.id, animal);
+                    clienteLocal.recibirPaqueteDelServidor(paqueteUpdate);
+                }
+
+                // El cliente solicita "matar" un animal (colisión Enemigo vs Animal)
+            } else if (objeto instanceof Network.PaqueteSolicitudMatarAnimal paquete) {
+                AnimalState animal = animalesActivos.get(paquete.idAnimal);
+                if (animal != null && animal.estaVivo) {
+                    animal.estaVivo = false; // Marcamos el animal como muerto
+                    System.out.println("[LOCAL SERVER] Enemigo mató al animal ID: " + animal.id);
+
+                    // Notificamos al cliente del cambio de estado.
+                    Network.PaqueteActualizacionAnimales paqueteUpdate = new Network.PaqueteActualizacionAnimales();
+                    paqueteUpdate.estadosAnimales = new HashMap<>();
+                    paqueteUpdate.estadosAnimales.put(animal.id, animal);
+                    clienteLocal.recibirPaqueteDelServidor(paqueteUpdate);
+                }
             }
+            // --- FIN: CÓDIGO A AÑADIR ---
 
         }
         // --- LÓGICA DE AUMENTO DE CONTAMINACIÓN ---
@@ -365,12 +397,12 @@ public class LocalServer implements IGameServer {
         actualizarEnemigosAI(deltaTime, manejadorNivel);
         generarNuevosItems(deltaTime, manejadorNivel);
         generarNuevosEnemigos(deltaTime, manejadorNivel);
-
-        /*if (!animalesActivos.isEmpty()) {
+//para que los animales se puedan generar varias veces en el mapa
+        if (!animalesActivos.isEmpty()) {
             Network.PaqueteActualizacionAnimales paqueteUpdateAnimales = new Network.PaqueteActualizacionAnimales();
             paqueteUpdateAnimales.estadosAnimales = this.animalesActivos; // Envía todo el HashMap
             clienteLocal.recibirPaqueteDelServidor(paqueteUpdateAnimales);
-        }*/
+        }
 
         if (!enemigosActivos.isEmpty()) {
             Network.PaqueteActualizacionEnemigos paqueteUpdate = new Network.PaqueteActualizacionEnemigos();
