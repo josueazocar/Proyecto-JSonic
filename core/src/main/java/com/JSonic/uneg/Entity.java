@@ -30,6 +30,15 @@ public abstract class Entity {
     protected TextureRegion[] frameKickLeft; //Arreglo para almacenar los sprites de patear a la izquierda
     protected TextureRegion frameActual; // El frame actual a dibujar
     protected float tiempoXFrame; // Tiempo transcurrido para el frame de animación actual
+    protected int vida;
+
+    public void setVida(int vida) {
+        this.vida = vida;
+    }
+
+    public int getVida(){
+        return vida;
+    }
 
     public enum EstadoPlayer {
         IDLE_RIGHT,

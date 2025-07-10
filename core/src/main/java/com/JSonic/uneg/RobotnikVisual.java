@@ -11,19 +11,7 @@ import network.interfaces.IGameClient;
 
 import java.util.EnumMap; // Se eliminó 'java.awt.*' ya que no se usaba.
 
-public class RobotnikVisual {
-    public EnemigoState estado;
-    protected Texture spriteSheet;
-    protected TextureRegion frameActual;
-    protected float tiempoXFrame;
-
-    protected EnumMap<EnemigoState.EstadoEnemigo, Animation<TextureRegion>> animations;
-    protected TextureRegion[] frameIdleRight;
-    protected TextureRegion[] frameIdleLeft;
-    protected TextureRegion[] frameRunRight;
-    protected TextureRegion[] frameRunLeft;
-    protected TextureRegion[] frameHitRight; // Declarado, pero no usado aún.
-    protected TextureRegion[] frameHitLeft;  // Declarado, pero no usado aún.
+public class RobotnikVisual extends Enemy {
 
     private LevelManager levelManager;
     private IGameClient gameClient;

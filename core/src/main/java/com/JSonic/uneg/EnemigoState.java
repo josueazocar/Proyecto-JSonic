@@ -12,14 +12,18 @@ public class EnemigoState {
     public float tiempoDeEnfriamientoAtaque = 0f;
 
     public enum EnemigoType {
+        BOMBA,
         ROBOT,
         // Puedes añadir más tipos de enemigos aquí
         ROBOTNIK,
+
     }
 
     public enum EstadoEnemigo {
         IDLE_RIGHT,
         IDLE_LEFT,
+        UP,
+        DOWN,
         RUN_RIGHT,
         RUN_LEFT,
         HIT_RIGHT,

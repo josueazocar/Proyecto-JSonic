@@ -268,6 +268,12 @@ public class LocalServer implements IGameServer {
         PlayerState jugador = jugadores.get(1);
         if (jugador == null) return;
 
+        if( contaminationState.getPercentage() == 100){
+            for (EnemigoState enemigo : enemigosActivos.values()) {
+                enemigo.estadoAnimacion = EnemigoState.EstadoEnemigo.IDLE_RIGHT;
+            }
+        }
+
         for (EnemigoState enemigo : enemigosActivos.values()) {
 
             if (enemigo.tipo == EnemigoState.EnemigoType.ROBOTNIK) {
