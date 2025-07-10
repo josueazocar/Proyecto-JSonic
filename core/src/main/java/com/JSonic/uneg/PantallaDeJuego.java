@@ -57,6 +57,12 @@ public class PantallaDeJuego extends PantallaBase {
     private int basuraTotal = 0;
     private float porcentajeContaminacionActual = 0f;
 
+    //para el label de los aniamles
+    private Label animalCountLabel; // El label para mostrar el conteo
+    private int animalesVivos = 0;
+    private int animalesMuertos = 0;
+    private int totalAnimalesMapa = 0;
+
     private final HashMap<Integer, AnimalVisual> animalesEnPantalla = new HashMap<>(); // <-- AÑADIR ESTA LÍNEA
     private OrthographicCamera uiCamera;
 
@@ -220,6 +226,21 @@ public class PantallaDeJuego extends PantallaBase {
         // 7. Finalmente, añade la nueva tabla al Stage principal.
         mainStage.addActor(tablaInferior);
 
+        // CONFIGURACIÓN UI Animales ---
+        // Puedes reutilizar la misma fuente si quieres.
+        Label.LabelStyle animalCountLabelStyle = new Label.LabelStyle(font, Color.WHITE); // Cambia el color si lo deseas
+        animalCountLabel = new Label("Animals: 0/0", animalCountLabelStyle); // Texto inicial
+
+        // Crea una NUEVA tabla para la esquina inferior izquierda
+        Table tablaInferiorIzquierda = new Table();
+        tablaInferiorIzquierda.setFillParent(true);
+        tablaInferiorIzquierda.bottom().left(); // Alineada abajo a la izquierda
+        tablaInferiorIzquierda.pad(15); // Un poco de padding
+
+        tablaInferiorIzquierda.add(animalCountLabel);
+
+        mainStage.addActor(tablaInferiorIzquierda);
+        //---------------------------------------------
 
     }
 
@@ -286,20 +307,14 @@ public class PantallaDeJuego extends PantallaBase {
                         itemEliminado.dispose();
                     }
                 } else if (paquete instanceof Network.PaqueteActualizacionEnemigos p) {
-                    // Recorremos todos los estados de enemigos que nos envió el servidor
                     for (EnemigoState estadoServidor : p.estadosEnemigos.values()) {
-
-                        // CASO ESPECIAL: ¿Es la actualización para Robotnik?
                         if (estadoServidor.tipo == EnemigoState.EnemigoType.ROBOTNIK) {
-                            if (eggman != null) { // Si ya hemos creado el objeto visual de eggman...
-                                // ...le aplicamos el estado que nos manda el servidor.
+                            if (eggman != null) {
                                 eggman.estado.x = estadoServidor.x;
                                 eggman.estado.y = estadoServidor.y;
                                 eggman.setEstadoActual(estadoServidor.estadoAnimacion);
                             }
-                        }
-                        // CASO GENERAL: Es un robot normal
-                        else {
+                        } else {
                             RobotVisual enemigoVisual = enemigosEnPantalla.get(estadoServidor.id);
                             if (enemigoVisual != null) {
                                 enemigoVisual.estado.x = estadoServidor.x;
@@ -310,21 +325,11 @@ public class PantallaDeJuego extends PantallaBase {
                     }
                 } else if (paquete instanceof Network.PaqueteOrdenCambiarMapa p) {
                     System.out.println("[CLIENT] ¡Recibida orden del servidor para cambiar al mapa: " + p.nuevoMapa + "!");
-
-                    // Ejecutamos la lógica de cambio de mapa que eliminamos antes, pero ahora usando los datos del servidor.
                     manejadorNivel.cargarNivel(p.nuevoMapa);
-
-                    // Limpiamos las entidades visuales del mapa anterior
                     limpiarEnemigosEItems();
-
-                    // Reseteamos el temporizador para que el portal pueda volver a generarse en el futuro
                     reiniciarTeletransporte();
-
-                    // Reposicionamos a nuestro jugador en las coordenadas que nos dictó el servidor
                     personajeJugable.estado.x = p.nuevaPosX;
                     personajeJugable.estado.y = p.nuevaPosY;
-
-                    // Ahora que el nuevo mapa está cargado, enviamos su plano al servidor.
                     System.out.println("[CLIENT] Enviando nuevo plano del mapa al servidor...");
                     java.util.ArrayList<com.badlogic.gdx.math.Rectangle> paredes = new java.util.ArrayList<>();
                     MapObjects objetosColision = manejadorNivel.getCollisionObjects();
@@ -339,24 +344,53 @@ public class PantallaDeJuego extends PantallaBase {
                     paqueteMapa.paredes = paredes;
                     gameClient.send(paqueteMapa);
                     System.out.println("[CLIENT] Nuevo plano del mapa con " + paredes.size() + " paredes enviado.");
-
                 } else if (paquete instanceof Network.PaqueteActualizacionPuntuacion p) {
                     System.out.println("[CLIENT] ¡Recibida actualización de puntuación! Anillos: " + p.nuevosAnillos + ", Basura: " + p.nuevaBasura);
-
-                    // Actualizamos nuestras variables locales y la UI con los datos del servidor.
                     this.anillosTotal = p.nuevosAnillos;
                     this.basuraTotal = p.nuevaBasura;
                     contadorAnillos.setValor(this.anillosTotal);
                     contadorBasura.setValor(this.basuraTotal);
-
                 } else if (paquete instanceof Network.PaqueteActualizacionContaminacion p) {
-                    // Guardamos el porcentaje recibido del servidor
                     this.porcentajeContaminacionActual = p.contaminationPercentage;
                     contaminationLabel.setText("TOXIC: " + Math.round(this.porcentajeContaminacionActual) + "%");
-
+                    if (this.porcentajeContaminacionActual >= 50 && totalAnimalesMapa > 0) {
+                        actualizarAnimalCountLabel();
+                    } else {
+                        animalCountLabel.setText("");
+                    }
+                } else if (paquete instanceof Network.PaqueteActualizacionAnimales p) {
+                    for (AnimalState estadoServidor : p.estadosAnimales.values()) {
+                        AnimalVisual animalVisual = animalesEnPantalla.get(estadoServidor.id);
+                        if (animalVisual == null) {
+                            animalVisual = new AnimalVisual(estadoServidor.id, estadoServidor.x, estadoServidor.y, manejadorNivel.getAnimalTexture());
+                            animalesEnPantalla.put(estadoServidor.id, animalVisual);
+                        }
+                        animalVisual.update(estadoServidor);
+                    }
+                    Iterator<Map.Entry<Integer, AnimalVisual>> iter = animalesEnPantalla.entrySet().iterator();
+                    while (iter.hasNext()) {
+                        Map.Entry<Integer, AnimalVisual> entry = iter.next();
+                        if (!p.estadosAnimales.containsKey(entry.getKey())) {
+                            entry.getValue().dispose();
+                            iter.remove();
+                        }
+                    }
+                    animalesVivos = 0;
+                    animalesMuertos = 0;
+                    for (AnimalVisual animal : animalesEnPantalla.values()) {
+                        if (animal.estaVivo()) {
+                            animalesVivos++;
+                        } else {
+                            animalesMuertos++;
+                        }
+                    }
+                    totalAnimalesMapa = animalesEnPantalla.size();
+                    actualizarAnimalCountLabel();
                 }
             }
         }
+
+        // --- Toda la lógica de juego local va aquí, fuera del if (gameClient != null) ---
 
         for (ItemVisual item : itemsEnPantalla.values()) {
             item.update(deltat);
@@ -369,7 +403,6 @@ public class PantallaDeJuego extends PantallaBase {
             ItemVisual item = entry.getValue();
 
             if (personajeJugable.getBounds() != null && item.getBounds() != null && Intersector.overlaps(personajeJugable.getBounds(), item.getBounds())) {
-
                 Network.PaqueteSolicitudRecogerItem paquete = new Network.PaqueteSolicitudRecogerItem();
                 paquete.idItem = item.estado.id;
                 gameClient.send(paquete);
@@ -380,15 +413,11 @@ public class PantallaDeJuego extends PantallaBase {
                     itemRecogido = true;
                 } else if (item.estado.tipo == ItemState.ItemType.BASURA || item.estado.tipo == ItemState.ItemType.PIEZA_PLASTICO) {
                     itemRecogido = true;
-                }
-                // Teletransporte: solo guardamos el ID y salimos del ciclo
-                else if (item.estado.tipo == ItemState.ItemType.TELETRANSPORTE) {
-                    // YA NO cambiamos de mapa. Solo informamos al servidor que hemos tocado el portal.
+                } else if (item.estado.tipo == ItemState.ItemType.TELETRANSPORTE) {
                     System.out.println("[CLIENT] Tocado el teletransportador. Solicitando viaje al servidor...");
                     paquete = new Network.PaqueteSolicitudRecogerItem();
                     paquete.idItem = item.estado.id;
                     gameClient.send(paquete);
-                    // Para evitar enviar múltiples solicitudes, salimos del bucle una vez que tocamos el portal.
                     break;
                 }
 
@@ -401,7 +430,6 @@ public class PantallaDeJuego extends PantallaBase {
             }
         }
 
-        // Fuera del ciclo: limpiar enemigos/ítems y eliminar el teletransporte
         if (idTeletransporteAEliminar != null) {
             limpiarEnemigosEItems();
             ItemVisual item = itemsEnPantalla.remove(idTeletransporteAEliminar);
@@ -417,17 +445,17 @@ public class PantallaDeJuego extends PantallaBase {
 
         for (RobotVisual enemigo : enemigosEnPantalla.values()) enemigo.update(deltat);
 
-        // Lógica de actualización de RobotnikVisual (eggman)
         if (eggman != null) {
-            eggman.update(deltat); // Primero actualizamos su animación
+            eggman.update(deltat);
         }
-        
+
         camaraJuego.position.x = personajeJugable.estado.x;
         camaraJuego.position.y = personajeJugable.estado.y;
         manejadorNivel.limitarCamaraAMapa(camaraJuego);
         camaraJuego.update();
         mainStage.act(Math.min(deltat, 1 / 30f));
     }
+
 
     @Override
     public void render(float delta) {
@@ -550,6 +578,10 @@ public class PantallaDeJuego extends PantallaBase {
             enemigosEnPantalla.put(estadoEnemigo.id, nuevoRobot);
         }
     }
+    //para actualizar el label de los animales
+    private void actualizarAnimalCountLabel() {
+        animalCountLabel.setText("Animals: " + animalesVivos + "/" + totalAnimalesMapa + " (" + animalesMuertos + " dead)");
+    }
 
     //para limpiar los enemigos en los otros mapasaaaaaaaa
     private void limpiarEnemigosEItems() {
@@ -562,6 +594,17 @@ public class PantallaDeJuego extends PantallaBase {
             item.dispose();
         }
         itemsEnPantalla.clear();
+        //para animales
+        if (animalesEnPantalla != null) {
+            for (AnimalVisual animal : animalesEnPantalla.values()) {
+                animal.dispose(); // Si AnimalVisual tiene recursos que liberar
+            }
+            animalesEnPantalla.clear();
+            animalesVivos = 0; // Reiniciar contadores al limpiar el mapa
+            animalesMuertos = 0;
+            totalAnimalesMapa = 0;
+            actualizarAnimalCountLabel(); // Refrescar el label
+        }
     }
 
     //para delimitar los robots y crearlos por mapa
@@ -679,12 +722,14 @@ public class PantallaDeJuego extends PantallaBase {
         }
 
         // ---[AÑADIR EN dispose()]---
-        // AÑADE ESTO
         if (animalesEnPantalla != null) {
             for (AnimalVisual animal : animalesEnPantalla.values()) {
-                //animal.dispose();
+                animal.dispose(); // Asegúrate de que AnimalVisual tenga un método dispose()
             }
             animalesEnPantalla.clear();
+        }
+        if (animalCountLabel != null) {
+            animalCountLabel.remove(); // Elimina el actor del Stage
         }
 
 

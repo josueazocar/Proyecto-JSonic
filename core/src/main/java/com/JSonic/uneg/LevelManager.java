@@ -138,6 +138,11 @@ public class LevelManager {
         }
     }
 
+    //para la texture de los animales
+    public Texture getAnimalTexture() {
+        return this.animalTexture;
+    }
+
     // Dentro de LevelManager.java
 
     private void procesarPortales() {

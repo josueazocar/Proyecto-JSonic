@@ -28,6 +28,12 @@ public class AnimalVisual {
         cargarAnimacion();
     }
 
+    // Añade este método a la clase AnimalVisual.java
+
+    public int getId() {
+        return this.id;
+    }
+
     // Carga las animaciones desde la hoja de sprites
     private void cargarAnimacion() {
         // Asumimos que la textura tiene 2 filas: una para vivo, una para muerto
@@ -45,23 +51,41 @@ public class AnimalVisual {
     }
 
     // Actualiza el estado del animal (llamado desde la lógica del juego)
+    // En la clase AnimalVisual.java
+
+    // Reemplaza tu método update actual por este
     public void update(AnimalState state) {
         this.x = state.x;
         this.y = state.y;
-        if (this.estaVivo && !state.estaVivo) {
-            morir(); // Llama a morir si el estado cambió a no vivo
+
+        // Si el estado del servidor es diferente al estado actual
+        if (this.estaVivo != state.estaVivo) {
+            this.estaVivo = state.estaVivo;
+            if (this.estaVivo) {
+                // Si el animal revive (en caso de que implementes esa lógica)
+                this.animacion = animacionVivo;
+            } else {
+                // Si el animal muere
+                this.animacion = animacionMuerto;
+            }
+            this.tiempoAnimacion = 0; // Reinicia la animación al cambiar de estado
         }
-        this.estaVivo = state.estaVivo;
+    }
+
+    // Método para cambiar el estado del animal a "muerto"
+
+    public void setEstaVivo(boolean vivo) {
+        this.estaVivo = vivo;
     }
 
     // Cambia el estado y la animación a "muerto"
-    public void morir() {
+    /*public void morir() {
         if (estaVivo) {
             this.estaVivo = false;
             this.animacion = animacionMuerto; // Cambiamos a la animación de muerto
             this.tiempoAnimacion = 0; // Reiniciamos el tiempo para la nueva animación
         }
-    }
+    }*/
 
     // Dibuja el animal en la pantalla
     public void draw(SpriteBatch batch, float delta) {
@@ -74,5 +98,12 @@ public class AnimalVisual {
 
     public boolean estaVivo() {
         return estaVivo;
+    }
+
+    public void dispose() {
+        /*if (spriteSheet != null) {
+            spriteSheet.dispose();
+            spriteSheet = null;
+        }*/
     }
 }

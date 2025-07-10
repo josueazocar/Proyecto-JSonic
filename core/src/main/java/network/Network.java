@@ -46,7 +46,12 @@ public class Network {
         kryo.register(PaqueteActualizacionPuntuacion.class);
         kryo.register(PlayerState.CharacterType.class);
         kryo.register(PaqueteActualizacionContaminacion.class);
-        kryo.register(PaqueteEstadoAnimalActualizado.class);
+        //animales
+        // --- Nuevas adiciones para los animales ---
+        kryo.register(AnimalState.class); // Clase del estado del animal
+        kryo.register(PaqueteEstadoAnimalActualizado.class); // Paquete para un solo animal actualizado
+        kryo.register(PaqueteAnimalNuevo.class); // Paquete para un animal nuevo
+        kryo.register(PaqueteActualizacionAnimales.class);
     }
 
     // --- Definición de los Paquetes ---
@@ -125,6 +130,16 @@ public class Network {
     public static class PaqueteEstadoAnimalActualizado {
         public int idAnimal;
         public boolean estaVivo;
+    }
+
+    public static class PaqueteAnimalNuevo {
+        public AnimalState estadoAnimal;
+    }
+
+    // Este paquete es para sincronizar periódicamente todos los animales
+    public static class PaqueteActualizacionAnimales {
+        // Usamos HashMap<Integer, AnimalState> para enviar el estado de todos los animales
+        public HashMap<Integer, AnimalState> estadosAnimales;
     }
 
 }

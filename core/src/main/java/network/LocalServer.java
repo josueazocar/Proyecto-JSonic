@@ -48,10 +48,14 @@ public class LocalServer implements IGameServer {
     private static final float TRASH_CLEANUP_VALUE = 3f; // Cada basura recogida reduce el % en 2 puntos
     private float tiempoDesdeUltimaContaminacion = 0f;
     private static final float INTERVALO_ACTUALIZACION_CONTAMINACION = 1.0f; // 1 segundo
+
     //declaraciones de HashMap
     private final HashMap<Integer, AnimalState> animalesActivos = new HashMap<>();
-    private int proximoIdAnimal = 20000; // Usamos un ID base alto
-    private float tiempoParaProximaMuerteAnimal = 10f; // Temporizador para la muerte secuencial
+    private int proximoIdAnimal = 20000; // Usamos un ID base alto para evitar conflictos con otros IDs
+    // Variables para la lógica de muerte por contaminación
+    private float tiempoParaProximaMuerteAnimal = 20f; // Temporizador para la muerte secuencial (20 segundos)
+    private boolean muertesAnimalesActivas = false;
+
     // Cola para paquetes que vienen "desde el cliente" hacia el servidor
     private final Queue<Object> paquetesEntrantes = new ConcurrentLinkedQueue<>();
 
@@ -116,82 +120,105 @@ public class LocalServer implements IGameServer {
     //-----------fin de la funcion para genrar portales------------
 
     //esta funcion es para los animales
-    // En LocalServer.java
+    // Nuevo método para generar animales en el mapa actual
     private void generarAnimales(LevelManager manejadorNivel) {
         // Limpiamos la lista para que no se acumulen animales entre mapas
         animalesActivos.clear();
         proximoIdAnimal = 20000; // Reiniciamos el contador de ID
+        muertesAnimalesActivas = false; // Reseteamos la bandera al cambiar de mapa
+        tiempoParaProximaMuerteAnimal = 20f; // Reiniciamos el temporizador
 
+        // Queremos 5 animales por mapa, como solicitaste
         int cantidadAnimales = 5;
         for (int i = 0; i < cantidadAnimales; i++) {
             int intentos = 0;
             boolean colocado = false;
-            while (!colocado && intentos < 20) {
-                float x = MathUtils.random(0, manejadorNivel.getAnchoMapaPixels());
-                float y = MathUtils.random(0, manejadorNivel.getAltoMapaPixels());
-                Rectangle bounds = new Rectangle(x, y, 32, 32);
+            while (!colocado && intentos < 50) { // Aumentamos los intentos para encontrar un lugar
+                // Genera una posición aleatoria dentro de los límites del mapa
+                float x = MathUtils.random(0, manejadorNivel.getAnchoMapaPixels() - 32); // Restamos el tamaño del animal para que no se salga
+                float y = MathUtils.random(0, manejadorNivel.getAltoMapaPixels() - 32);
 
-                if (!manejadorNivel.colisionaConMapa(bounds)) {
-                    String texturaPath = "Items/Conejo1.png";
-                    // Creamos el estado del animal. Por defecto, está vivo.
+                // Crea un rectángulo temporal para verificar colisiones.
+                // Asumimos un tamaño de 32x32 para el animal (ajusta si es diferente).
+                Rectangle animalBounds = new Rectangle(x, y, 32, 32);
+
+                // Verifica colisión con objetos del mapa (capa "Colisiones")
+                if (!manejadorNivel.colisionaConMapa(animalBounds)) {
+                    String texturaPath = "Items/Conejo1.png"; // Asegúrate de que esta ruta sea correcta
                     AnimalState nuevoAnimal = new AnimalState(proximoIdAnimal++, x, y, texturaPath);
 
                     // 1. Lo guardamos en la lista del servidor
                     animalesActivos.put(nuevoAnimal.id, nuevoAnimal);
 
                     // 2. Enviamos la notificación de creación al cliente
-                    clienteLocal.recibirPaqueteDelServidor(nuevoAnimal);
+                    // Para que el cliente pueda crear el AnimalVisual correspondiente
+                    Network.PaqueteAnimalNuevo paquete = new Network.PaqueteAnimalNuevo();
+                    paquete.estadoAnimal = nuevoAnimal;
+                    clienteLocal.recibirPaqueteDelServidor(paquete);
+                    System.out.println("[LOCAL SERVER] Generando animal en X: " + x + ", Y: " + y);
                     colocado = true;
                 }
                 intentos++;
             }
+            if (!colocado) {
+                System.err.println("[LOCAL SERVER] No se pudo colocar el animal " + i + " después de " + intentos + " intentos.");
+            }
         }
         System.out.println("[LOCAL SERVER] Generados y guardados " + animalesActivos.size() + " animales.");
     }
+
     //-------------------------------------------------------------------------------
 
-    //Logica para la muerte de los aniamales
-    // En LocalServer.java
-    private void actualizarEstadoAnimalesPorContaminacion(float deltaTime) {
-        // Si no hay animales o la contaminación es baja, no hacemos nada.
-        if (animalesActivos.isEmpty() || contaminationState.getPercentage() < 50) {
-            // Reseteamos el timer si la contaminación baja, para que la próxima muerte tarde 10s
-            tiempoParaProximaMuerteAnimal = 10f;
-            return;
-        }
+    //Para matar al siguiente animal
+    /**
+     * [NUEVO MÉTODO AUXILIAR]
+     * Busca el primer animal vivo en la lista, lo marca como muerto y notifica al cliente.
+     */
+    private void matarSiguienteAnimalVivo() {
+        // Buscamos el primer animal que todavía esté vivo
+        for (AnimalState animal : animalesActivos.values()) {
+            if (animal.estaVivo) {
+                animal.estaVivo = false; // El animal muere
+                System.out.println("[LOCAL SERVER] Contaminación alta. Matando animal ID: " + animal.id);
 
-        // Si la contaminación es alta, descontamos el tiempo.
-        tiempoParaProximaMuerteAnimal -= deltaTime;
-
-        // Si el temporizador llega a cero, es hora de matar un animal.
-        if (tiempoParaProximaMuerteAnimal <= 0) {
-            // Buscamos el primer animal que todavía esté vivo.
-            AnimalState animalParaMorir = null;
-            for (AnimalState animal : animalesActivos.values()) {
-                if (animal.estaVivo) {
-                    animalParaMorir = animal;
-                    break; // Encontramos uno, rompemos el bucle.
-                }
-            }
-
-            // Si encontramos un animal vivo para matar...
-            if (animalParaMorir != null) {
-                animalParaMorir.estaVivo = false; // Cambiamos su estado a muerto
-                System.out.println("[LOCAL SERVER] Contaminación alta. Matando animal ID: " + animalParaMorir.id);
-
-                // Creamos un paquete para notificar al cliente del cambio de estado.
-                // El cliente usará esta información para cambiar la textura del animal.
-                Network.PaqueteEstadoAnimalActualizado paquete = new Network.PaqueteEstadoAnimalActualizado();
-                paquete.idAnimal = animalParaMorir.id;
-                paquete.estaVivo = false;
+                // Notificamos al cliente del cambio de estado.
+                // Usaremos PaqueteActualizacionAnimales para mantener la consistencia.
+                // Esto asegura que el cliente recibe el estado completo y actualizado.
+                Network.PaqueteActualizacionAnimales paquete = new Network.PaqueteActualizacionAnimales();
+                paquete.estadosAnimales = new HashMap<>();
+                paquete.estadosAnimales.put(animal.id, animal); // Enviamos solo el estado del animal que cambió
                 clienteLocal.recibirPaqueteDelServidor(paquete);
 
-                // Aquí también podrías enviar el mensaje de "Quedan X vivos".
-                // (Esto se implementaría en el cliente al recibir el paquete).
+                return; // Salimos del método una vez que hemos matado a un animal.
             }
+        }
+        System.out.println("[LOCAL SERVER] No se encontraron más animales vivos para matar.");
+    }
+    //-------------------------------------
 
-            // Reiniciamos el temporizador para la siguiente muerte.
-            tiempoParaProximaMuerteAnimal = 10f;
+    //Logica para la muerte de los aniamales
+
+    private void actualizarEstadoAnimalesPorContaminacion(float deltaTime) {
+        if (contaminationState.getPercentage() >= 50) {
+            // Si la contaminación es alta pero la bandera de muertes aún no está activa...
+            if (!muertesAnimalesActivas) {
+                muertesAnimalesActivas = true; // 1. Activamos la bandera.
+                matarSiguienteAnimalVivo();    // 2. Matamos un animal INMEDIATAMENTE.
+                tiempoParaProximaMuerteAnimal = 20f; // 3. Reiniciamos el temporizador para la SIGUIENTE muerte.
+            } else {
+                // Si la bandera ya está activa, continuamos con el temporizador normal.
+                tiempoParaProximaMuerteAnimal -= deltaTime;
+                if (tiempoParaProximaMuerteAnimal <= 0) {
+                    matarSiguienteAnimalVivo(); // Matamos otro animal.
+                    tiempoParaProximaMuerteAnimal = 20f; // Reiniciamos el temporizador.
+                }
+            }
+        } else {
+            // Si la contaminación baja del 50%, detenemos el proceso.
+            if (muertesAnimalesActivas) {
+                muertesAnimalesActivas = false;
+                tiempoParaProximaMuerteAnimal = 20f; // Reiniciamos el temporizador para la próxima vez.
+            }
         }
     }
     //-----------------------------------------------------------------------------------------------
@@ -338,6 +365,12 @@ public class LocalServer implements IGameServer {
         actualizarEnemigosAI(deltaTime, manejadorNivel);
         generarNuevosItems(deltaTime, manejadorNivel);
         generarNuevosEnemigos(deltaTime, manejadorNivel);
+
+        /*if (!animalesActivos.isEmpty()) {
+            Network.PaqueteActualizacionAnimales paqueteUpdateAnimales = new Network.PaqueteActualizacionAnimales();
+            paqueteUpdateAnimales.estadosAnimales = this.animalesActivos; // Envía todo el HashMap
+            clienteLocal.recibirPaqueteDelServidor(paqueteUpdateAnimales);
+        }*/
 
         if (!enemigosActivos.isEmpty()) {
             Network.PaqueteActualizacionEnemigos paqueteUpdate = new Network.PaqueteActualizacionEnemigos();
