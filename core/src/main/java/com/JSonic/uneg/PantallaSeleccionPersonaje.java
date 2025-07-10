@@ -49,7 +49,6 @@ public class PantallaSeleccionPersonaje extends PantallaBase {
         tailsButton = crearBotonPersonaje("tails_seleccion", "tails_seleccion_oscuro",  "tails_seleccionado", "tails_disabled");
         knucklesButton = crearBotonPersonaje("knuckles_seleccion", "knuckles_seleccion_oscuro", "knuckles_seleccionado", "knuckles_disabled");
 
-        // ... (código para configurar botones y listeners es el mismo de antes)
         characterGroup = new ButtonGroup<>(sonicButton, tailsButton, knucklesButton);
         characterGroup.setMaxCheckCount(1);
         characterGroup.setMinCheckCount(1);
@@ -58,11 +57,11 @@ public class PantallaSeleccionPersonaje extends PantallaBase {
         tailsButton.addListener(new ClickListener() { @Override public void clicked(InputEvent e, float x, float y) { if (!tailsButton.isDisabled()) personajeSeleccionado = PlayerState.CharacterType.TAILS; }});
         knucklesButton.addListener(new ClickListener() { @Override public void clicked(InputEvent e, float x, float y) { if (!knucklesButton.isDisabled()) personajeSeleccionado = PlayerState.CharacterType.KNUCKLES; }});
 
-        
+
         Button.ButtonStyle playStyle = new Button.ButtonStyle();
-        playStyle.up = new TextureRegionDrawable(characterAtlas.findRegion("boton_jugar"));
-        playStyle.down = new TextureRegionDrawable(characterAtlas.findRegion("boton_jugar_down"));
-        playStyle.over = new TextureRegionDrawable(characterAtlas.findRegion("boton_jugar_hover"));
+        playStyle.up = new TextureRegionDrawable(characterAtlas.findRegion("boton_seguir"));
+        playStyle.down = new TextureRegionDrawable(characterAtlas.findRegion("boton_seguir_down"));
+        playStyle.over = new TextureRegionDrawable(characterAtlas.findRegion("boton_seguir_hover"));
         playButton = new Button(playStyle);
 
         playButton.addListener(new ClickListener() {
@@ -76,7 +75,7 @@ public class PantallaSeleccionPersonaje extends PantallaBase {
                         juegoApp.setPantallaActiva(new PantallaLobby(juegoApp, esAnfitrion));
                     } else {
                         // Flujo de un jugador
-                        juegoApp.iniciarJuegoLocal();
+                        juegoApp.setPantallaActiva(new PantallaSeleccionNivel(juegoApp));
                     }
 
 

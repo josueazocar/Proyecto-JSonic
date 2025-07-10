@@ -73,7 +73,9 @@
   "com.badlogic.gdx.scenes.scene2d.ui.TextTooltip$TextTooltipStyle": {
     "default": {
       "label": { "font": "body-font", "fontColor": "white" },
-      "background": "default-pane", "wrapWidth": 150
+      "background": "default-pane",
+      "wrapWidth": 300
     }
   }
 }
+

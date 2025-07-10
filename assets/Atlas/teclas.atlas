@@ -1,0 +1,21 @@
+teclas.png
+size:2048,512
+repeat:none
+A
+bounds:214,2,210,210
+D
+bounds:2,2,210,210
+ESC
+bounds:1274,154,210,210
+Frame 9
+bounds:2,214,390,150
+J
+bounds:850,154,210,210
+K
+bounds:638,154,210,210
+L
+bounds:1486,154,210,210
+S
+bounds:426,154,210,210
+W
+bounds:1062,154,210,210

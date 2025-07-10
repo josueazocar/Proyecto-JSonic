@@ -91,7 +91,7 @@ public class PantallaDeJuego extends PantallaBase {
         camaraJuego = new OrthographicCamera();
         viewport = new FitViewport(VIRTUAL_WIDTH, VIRTUAL_HEIGHT, camaraJuego);
         manejadorNivel = new LevelManager(camaraJuego, batch);
-        manejadorNivel.cargarNivel("maps/Zona1N1.tmx");
+        manejadorNivel.cargarNivel(ConfiguracionJuego.mapaSeleccionado);
         personajeJugableEstado = new PlayerState();
 
         //para tomar lo metodos de LevelManager
