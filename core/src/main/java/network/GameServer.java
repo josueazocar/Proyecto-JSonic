@@ -631,6 +631,7 @@ public class GameServer implements IGameServer {
                         // 3. Enviamos el mensaje de éxito SOLO al propietario
                         Network.PaqueteMensajeUI paqueteMsg = new Network.PaqueteMensajeUI();
                         paqueteMsg.mensaje = "¡Árbol sembrado!";
+                        contaminationState.decrease(5);
                         servidor.sendToTCP(dron.ownerId, paqueteMsg);
                     }
                 }

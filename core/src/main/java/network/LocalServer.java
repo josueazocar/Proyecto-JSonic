@@ -22,7 +22,7 @@ public class LocalServer implements IGameServer {
     private final HashMap<Integer, ItemState> itemsActivos = new HashMap<>();
     private final HashMap<Integer, Integer> puntajesAnillos = new HashMap<>();
     private final HashMap<Integer, Integer> puntajesBasura = new HashMap<>();
-    private final ContaminationState contaminationState = new ContaminationState();
+    private static final ContaminationState contaminationState = new ContaminationState();
     //Declara un HashMap para asociar el ID del portal con su destino (para los portales
     private final HashMap<Integer, String> destinosPortales = new HashMap<>();
 
@@ -62,6 +62,10 @@ public class LocalServer implements IGameServer {
 
     public LocalServer() {
         // El constructor está vacío, la magia ocurre en start() y update()
+    }
+
+    public static void decreaseContamination(float porcentaje) {
+        contaminationState.decrease(porcentaje);
     }
 
     @Override

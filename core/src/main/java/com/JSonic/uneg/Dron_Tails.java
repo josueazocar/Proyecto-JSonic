@@ -8,6 +8,8 @@ import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.graphics.g2d.TextureRegion;
 import com.badlogic.gdx.math.Rectangle;
 import com.badlogic.gdx.math.Vector2; // ¡Importante! Usaremos vectores para el movimiento
+import network.LocalServer;
+
 import java.util.EnumMap;
 
 public class Dron_Tails {
@@ -117,6 +119,7 @@ public class Dron_Tails {
 
                             levelManager.generarArbol(posicion.x, posicion.y);
                             System.out.println("[DRON LOCAL] Árbol plantado localmente.");
+                            LocalServer.decreaseContamination(5);
 
 
                             if (objetivo != null) {
