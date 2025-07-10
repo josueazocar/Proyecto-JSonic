@@ -17,7 +17,7 @@ public class PantallaSeleccionPersonaje extends PantallaBase {
     private final Boolean esAnfitrion;
 
     private Button sonicButton, tailsButton, knucklesButton;
-    private Button playButton;
+    private Button seguirBoton;
     private ButtonGroup<Button> characterGroup;
     private PlayerState.CharacterType personajeSeleccionado;
 
@@ -53,40 +53,53 @@ public class PantallaSeleccionPersonaje extends PantallaBase {
         characterGroup.setMaxCheckCount(1);
         characterGroup.setMinCheckCount(1);
 
-        sonicButton.addListener(new ClickListener() { @Override public void clicked(InputEvent e, float x, float y) { if (!sonicButton.isDisabled()) personajeSeleccionado = PlayerState.CharacterType.SONIC; }});
+        sonicButton.addListener(new ClickListener() {@Override public void clicked(InputEvent e, float x, float y) {if (!sonicButton.isDisabled()) personajeSeleccionado = PlayerState.CharacterType.SONIC;}});
         tailsButton.addListener(new ClickListener() { @Override public void clicked(InputEvent e, float x, float y) { if (!tailsButton.isDisabled()) personajeSeleccionado = PlayerState.CharacterType.TAILS; }});
         knucklesButton.addListener(new ClickListener() { @Override public void clicked(InputEvent e, float x, float y) { if (!knucklesButton.isDisabled()) personajeSeleccionado = PlayerState.CharacterType.KNUCKLES; }});
 
 
-        Button.ButtonStyle playStyle = new Button.ButtonStyle();
-        playStyle.up = new TextureRegionDrawable(characterAtlas.findRegion("boton_seguir"));
-        playStyle.down = new TextureRegionDrawable(characterAtlas.findRegion("boton_seguir_down"));
-        playStyle.over = new TextureRegionDrawable(characterAtlas.findRegion("boton_seguir_hover"));
-        playButton = new Button(playStyle);
+        Button.ButtonStyle seguirBtonEstilo = new Button.ButtonStyle();
+        seguirBtonEstilo.up = new TextureRegionDrawable(characterAtlas.findRegion("boton_seguir"));
+        seguirBtonEstilo.down = new TextureRegionDrawable(characterAtlas.findRegion("boton_seguir_down"));
+        seguirBtonEstilo.over = new TextureRegionDrawable(characterAtlas.findRegion("boton_seguir_hover"));
+        seguirBoton = new Button(seguirBtonEstilo);
 
-        playButton.addListener(new ClickListener() {
+        seguirBoton.addListener(new ClickListener() {
             @Override
             public void clicked(InputEvent event, float x, float y) {
-                if (personajeSeleccionado != null && !playButton.isDisabled()) {
+                if (personajeSeleccionado != null && !seguirBoton.isDisabled()) {
                     PantallaDeJuego.miPersonaje = personajeSeleccionado; // Guardamos la elección
 
-                    if (esAnfitrion != null) { // Si esAnfitrion no es nulo, es el flujo multijugador
-                        // Pasamos el valor 'esAnfitrion' que guardamos.
-                        juegoApp.setPantallaActiva(new PantallaLobby(juegoApp, esAnfitrion));
-                    } else {
-                        // Flujo de un jugador
+                    if (esAnfitrion == null) {
+                        // --- FLUJO UN JUGADOR ---
+                        // No es multijugador, va a la selección de nivel normal.
+                        System.out.println("Flujo Un Jugador: -> PantallaSeleccionNivel");
                         juegoApp.setPantallaActiva(new PantallaSeleccionNivel(juegoApp));
+
+                    } else {
+                        // --- FLUJO MULTIJUGADOR ---
+                        if (esAnfitrion) {
+                            // Si es el ANFITRIÓN, el siguiente paso es ELEGIR EL NIVEL.
+                            System.out.println("Flujo Anfitrión: -> PantallaSeleccionNivel");
+                            juegoApp.setPantallaActiva(new PantallaSeleccionNivel(juegoApp, true)); // true para modo multijugador
+
+                        } else {
+                            // Si es un CLIENTE, el siguiente paso es ir al LOBBY a esperar.
+                            System.out.println("Flujo Cliente: -> PantallaLobby");
+                            juegoApp.setPantallaActiva(new PantallaLobby(juegoApp, false)); // false porque no es anfitrión
+                        }
                     }
 
 
                 }
+
             }
         });
 
         tabla.add(sonicButton).size(200, 355).pad(20);
         tabla.add(tailsButton).size(200, 355).pad(20);
         tabla.add(knucklesButton).size(200, 355).pad(20).row();
-        tabla.add(playButton).colspan(3).padTop(40).width(250).height(80);
+        tabla.add(seguirBoton).colspan(3).padTop(40).width(250).height(80);
 
         // La lógica de habilitar/deshabilitar botones aplica a ambos modos,
         // pero la lista de `personajesYaSeleccionados` solo se llenará en online.
@@ -114,7 +127,7 @@ public class PantallaSeleccionPersonaje extends PantallaBase {
             personajeSeleccionado = PlayerState.CharacterType.KNUCKLES;
         }
 
-        playButton.setDisabled(personajeSeleccionado == null);
+        seguirBoton.setDisabled(personajeSeleccionado == null);
     }
 
     @Override

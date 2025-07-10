@@ -18,9 +18,17 @@ public class PantallaSeleccionNivel extends PantallaBase {
     private Button botonNivel1, botonNivel2, botonNivel3;
     private ButtonGroup<Button> grupoBotonesNivel;
 
+
     public PantallaSeleccionNivel(JSonicJuego juegoApp) {
         super();
         this.juegoApp = juegoApp;
+        esMultijugador = false;
+    }
+
+    public PantallaSeleccionNivel(JSonicJuego juegoApp, boolean esMultijugador) {
+        super();
+        this.juegoApp = juegoApp;
+        this.esMultijugador = esMultijugador;
     }
 
     @Override
@@ -54,6 +62,9 @@ public class PantallaSeleccionNivel extends PantallaBase {
         botonNivel1.addListener(new ClickListener() {
             @Override
             public void clicked(InputEvent event, float x, float y) {
+                if (botonNivel1.isDisabled()) {
+                    return;
+                }
                 System.out.println("Botón Nivel 1 clickeado");
                 ConfiguracionJuego.mapaSeleccionado = "maps/Zona1N1.tmx";
             }
@@ -61,6 +72,9 @@ public class PantallaSeleccionNivel extends PantallaBase {
         botonNivel2.addListener(new ClickListener() {
             @Override
             public void clicked(InputEvent event, float x, float y) {
+                if (botonNivel2.isDisabled()) {
+                    return;
+                }
                 System.out.println("Botón Nivel 2 clickeado");
                 ConfiguracionJuego.mapaSeleccionado = "maps/Zona1N2.tmx";
             }
@@ -68,6 +82,9 @@ public class PantallaSeleccionNivel extends PantallaBase {
         botonNivel3.addListener(new ClickListener() {
             @Override
             public void clicked(InputEvent event, float x, float y) {
+                if (botonNivel3.isDisabled()) {
+                    return;
+                }
                 System.out.println("Botón Nivel 3 clickeado");
                 ConfiguracionJuego.mapaSeleccionado = "maps/Zona1N3.tmx";
             }
@@ -85,7 +102,20 @@ public class PantallaSeleccionNivel extends PantallaBase {
             @Override
             public void clicked(InputEvent event, float x, float y) {
                 if (ConfiguracionJuego.mapaSeleccionado != null) {
-                    juegoApp.iniciarJuegoLocal();
+                    if (esMultijugador) {
+                        // --- FLUJO MULTIJUGADOR (ANFITRIÓN) ---
+                        // Después de seleccionar el nivel, el anfitrión va al LOBBY.
+                        System.out.println("Anfitrión seleccionó el nivel. -> PantallaLobby");
+                        // Le pasamos 'true' porque es el anfitrión.
+                        juegoApp.setPantallaActiva(new PantallaLobby(juegoApp, true));
+
+                    } else {
+                        // --- FLUJO UN JUGADOR ---
+                        // El jugador local inicia el juego directamente.
+                        System.out.println("Un Jugador seleccionó el nivel. -> Iniciando Juego Local");
+                        juegoApp.iniciarJuegoLocal();
+                    }
+
                 }
             }
         });
@@ -140,6 +170,7 @@ public class PantallaSeleccionNivel extends PantallaBase {
         tablaPrincipal.add(botonNivel3).size(300, 225).pad(20).row();
 
         tablaPrincipal.add(playButton).colspan(3).padTop(40).size(250, 80);
+
     }
 
     private Button crearBotonNivel(String up, String checked, String disabled) {
@@ -149,6 +180,8 @@ public class PantallaSeleccionNivel extends PantallaBase {
         estilo.disabled = new TextureRegionDrawable(atlasNiveles.findRegion(disabled));
         return new Button(estilo);
     }
+
+
 
     @Override
     public void actualizar(float delta) {
