@@ -2,6 +2,7 @@ package com.JSonic.uneg;
 
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.graphics.OrthographicCamera;
+import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.maps.tiled.TiledMap;
 import com.badlogic.gdx.maps.tiled.TmxMapLoader;
 import com.badlogic.gdx.maps.MapObjects;
@@ -9,8 +10,12 @@ import com.badlogic.gdx.maps.tiled.renderers.OrthogonalTiledMapRenderer;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch; // Necesario para el constructor, aunque no se usa directamente en dibujar()
 import com.badlogic.gdx.math.MathUtils; // Importar para MathUtils.clamp
 import com.badlogic.gdx.math.Rectangle;
+import com.badlogic.gdx.math.Vector2;
+import com.badlogic.gdx.math.Intersector;
+import com.badlogic.gdx.maps.objects.RectangleMapObject;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.ConcurrentHashMap;
 
 public class LevelManager {
 
@@ -26,11 +31,18 @@ public class LevelManager {
     private Player player;
 
 
+    // --- AÑADIDO PARA GESTIÓN DE ANIMALES ---
+    private Texture animalTexture; // Textura para todos los animales
+    private ConcurrentHashMap<Integer, AnimalVisual> animalesVisuales; // Mapa para guardar los animales
+
+
     // Constructor que recibe la cámara y el SpriteBatch (aunque el batch no se use directamente aquí para dibujar el mapa)
     public LevelManager(OrthographicCamera camara, SpriteBatch batch) {
         this.camaraJuego = camara;
         this.renderizadorMapa = null;
         this.mapaActual = null;
+        //Inicilizamos el mapa de animales visuales para evitar errores
+        this.animalesVisuales = new ConcurrentHashMap<>();
     }
 
     // --- NUEVO MÉTODO PARA ESTABLECER EL JUGADOR ---
@@ -50,6 +62,7 @@ public class LevelManager {
 
     //para el teletransporte
     private List<TeletransporteVisual> portalesVisuales = new ArrayList<>();
+
     // Método para cargar un nivel (mapa Tiled)
     public void cargarNivel(String rutaMapa) {
         nombreMapaActual = rutaMapa;
@@ -60,6 +73,15 @@ public class LevelManager {
         if (renderizadorMapa != null) {
             renderizadorMapa.dispose();
         }
+
+        // --- AÑADIDO: Carga de recursos para el nivel ---
+        // Si la textura ya existe, la liberamos antes de cargar una nueva
+        if (animalTexture != null) {
+            animalTexture.dispose();
+        }
+        // Cargamos la textura que usarán todos los animales de este nivel
+        animalTexture = new Texture(Gdx.files.internal("Items/Conejo1.png"));
+        animalesVisuales.clear(); // Limpiamos los animales del nivel anterior
 
         mapaActual = new TmxMapLoader().load(rutaMapa);
 
@@ -83,6 +105,37 @@ public class LevelManager {
 
     public String getNombreMapaActual() {
         return nombreMapaActual;
+    }
+
+
+    // --- AÑADIDO: Métodos para gestionar los animales ---
+
+    /**
+     * Añade un nuevo animal visual al juego.
+     * Se llama cuando el servidor informa de un nuevo animal.
+     */
+    public void agregarOActualizarAnimal(AnimalState estadoAnimal) {
+        AnimalVisual visual = animalesVisuales.get(estadoAnimal.id);
+        if (visual != null) {
+            // Si el animal ya existe, solo actualizamos su estado
+            visual.update(estadoAnimal);
+        } else {
+            // Si es un animal nuevo, lo creamos y lo añadimos al mapa
+            Gdx.app.log("LevelManager", "Creando nuevo animal visual con ID: " + estadoAnimal.id);
+            AnimalVisual nuevoAnimal = new AnimalVisual(estadoAnimal.id, estadoAnimal.x, estadoAnimal.y, animalTexture);
+            animalesVisuales.put(estadoAnimal.id, nuevoAnimal);
+        }
+    }
+
+    /**
+     * Dibuja todos los animales en la pantalla.
+     * Este método debe ser llamado desde la pantalla de juego principal.
+     */
+    public void dibujarAnimales(SpriteBatch batch, float delta) {
+        if (animalesVisuales == null) return;
+        for (AnimalVisual animal : animalesVisuales.values()) {
+            animal.draw(batch, delta);
+        }
     }
 
     // Dentro de LevelManager.java
@@ -158,18 +211,6 @@ public class LevelManager {
 
     }
 
-
-    // Método para liberar los recursos del nivel
-    public void dispose() {
-        if (mapaActual != null) {
-            mapaActual.dispose();
-            mapaActual = null;
-        }
-        if (renderizadorMapa != null) {
-            renderizadorMapa.dispose();
-            renderizadorMapa = null;
-        }
-    }
 
     public TiledMap getMapaActual() {
         return mapaActual;
@@ -264,6 +305,63 @@ public MapObjects getCollisionObjects() {
             }
         }
         return false; // no hay colisión
+    }
+
+    public Vector2 encontrarPosicionValida() {
+        MapObjects objetosColision = getCollisionObjects();
+        float mapWidth = getAnchoMapaPixels();
+        float mapHeight = getAltoMapaPixels();
+
+        boolean posicionValida = false;
+        float x = 0, y = 0;
+        int intentos = 0; // Para evitar un bucle infinito si el mapa está muy lleno
+
+        while (!posicionValida && intentos < 100) {
+            intentos++;
+            // Genera una posición aleatoria dentro del mapa
+            x = (float) (Math.random() * mapWidth);
+            y = (float) (Math.random() * mapHeight);
+
+            // Crea un rectángulo para la posición del animal (asumimos 32x32)
+            Rectangle animalBounds = new Rectangle(x, y, 32, 32);
+
+            // Revisa si choca con alguna pared
+            boolean chocaConPared = false;
+            if (objetosColision != null) {
+                for (com.badlogic.gdx.maps.MapObject obj : objetosColision) {
+                    if (obj instanceof RectangleMapObject) {
+                        if (Intersector.overlaps(((RectangleMapObject) obj).getRectangle(), animalBounds)) {
+                            chocaConPared = true;
+                            break;
+                        }
+                    }
+                }
+            }
+
+            if (!chocaConPared) {
+                posicionValida = true; // ¡Lugar encontrado!
+            }
+        }
+
+        // Si después de 100 intentos no encuentra lugar, al menos devuelve la última posición intentada.
+        return new Vector2(x, y);
+    }
+
+    // Método para liberar los recursos del nivel
+    public void dispose() {
+        if (mapaActual != null) {
+            mapaActual.dispose();
+            mapaActual = null;
+        }
+        if (renderizadorMapa != null) {
+            renderizadorMapa.dispose();
+            renderizadorMapa = null;
+        }
+        // --- AÑADIDO: Liberar la textura del animal ---
+        if (animalTexture != null) {
+            animalTexture.dispose();
+            animalTexture = null;
+        }
     }
 
 }

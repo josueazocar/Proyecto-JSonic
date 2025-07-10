@@ -46,6 +46,7 @@ public class Network {
         kryo.register(PaqueteActualizacionPuntuacion.class);
         kryo.register(PlayerState.CharacterType.class);
         kryo.register(PaqueteActualizacionContaminacion.class);
+        kryo.register(PaqueteEstadoAnimalActualizado.class);
     }
 
     // --- Definición de los Paquetes ---
@@ -118,6 +119,12 @@ public class Network {
 
     public static class PaqueteActualizacionContaminacion {
         public float contaminationPercentage;
+    }
+
+    // Para actualizar el estado de un animal en el juego.
+    public static class PaqueteEstadoAnimalActualizado {
+        public int idAnimal;
+        public boolean estaVivo;
     }
 
 }
