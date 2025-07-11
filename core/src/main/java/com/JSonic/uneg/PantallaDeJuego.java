@@ -406,33 +406,6 @@ public class PantallaDeJuego extends PantallaBase {
             }
         }
 
-        if (eggman != null) {
-            if(manejadorNivel.getNombreMapaActual().equals("maps/ZonaJefeN1.tmx") || manejadorNivel.getNombreMapaActual().equals("maps/ZonaJefeN2.tmx") || manejadorNivel.getNombreMapaActual().equals("maps/ZonaJefeN3.tmx")) {
-                tiempoParaProximaBomba -= deltat;
-                if (tiempoParaProximaBomba <= 0) {
-                    lanzarBombaDesdeEggman();
-                    tiempoParaProximaBomba = CADENCIA_BOMBA;
-                }
-            }
-        }
-
-        Iterator<Bomba> iterBombas = listaDeBombas.iterator();
-        while (iterBombas.hasNext()) {
-            Bomba bomba = iterBombas.next();
-            bomba.update(deltat,personajeJugable);
-
-            if (bomba.isExplotando() && !bomba.yaHaHechoDanio()) {
-                if (bomba.getBounds().overlaps(personajeJugable.getBounds())) {
-                    personajeJugable.setVida(personajeJugable.getVida() - 20);
-                    bomba.marcarComoDanioHecho();
-                }
-            }
-            if (bomba.isParaEliminar()) {
-                bomba.dispose();
-                iterBombas.remove();
-            }
-        }
-
         for (ItemVisual item : itemsEnPantalla.values()) {
             item.update(deltat);
         }
