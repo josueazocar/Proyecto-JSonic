@@ -17,7 +17,8 @@ public class PantallaSeleccionNivel extends PantallaBase {
     private Button playButton;
     private Button botonNivel1, botonNivel2, botonNivel3;
     private ButtonGroup<Button> grupoBotonesNivel;
-    private boolean esMultijugador;
+    private final boolean esMultijugador;
+    private boolean logicaInicializada = false;
 
     public PantallaSeleccionNivel(JSonicJuego juegoApp) {
         super();
@@ -33,21 +34,8 @@ public class PantallaSeleccionNivel extends PantallaBase {
 
     @Override
     public void inicializar() {
-        mainStage.addActor(new Image(new Texture("Fondos/Portada_desenfoque.png")));
         atlasNiveles = new TextureAtlas(Gdx.files.internal("Atlas/seleccionNiveles.atlas"));
         atlasTextures = new TextureAtlas(Gdx.files.internal("Atlas/textures.atlas"));
-        TextureRegionDrawable fondoDrawable = new TextureRegionDrawable(atlasTextures.findRegion("shade"));
-
-        // Usaremos una única tabla para todo el layout, como en la pantalla de personajes.
-        Table tablaPrincipal = new Table();
-        tablaPrincipal.setFillParent(true);
-        mainStage.addActor(tablaPrincipal);
-
-        // Título usando una región del atlas
-        TextureRegionDrawable tituloDrawable = null;
-        tituloDrawable = new TextureRegionDrawable(atlasNiveles.findRegion("seleccionatunivel"));
-        tablaPrincipal.add(new Image(tituloDrawable)).colspan(3).padBottom(20).row();
-
 
         // --- Creación de Botones de Nivel ---
         botonNivel1 = crearBotonNivel("nivel1_seleccion", "nivel1_seleccionado", "nivel1_disabled");
@@ -56,9 +44,17 @@ public class PantallaSeleccionNivel extends PantallaBase {
 
         grupoBotonesNivel = new ButtonGroup<>(botonNivel1, botonNivel2, botonNivel3);
         grupoBotonesNivel.setMaxCheckCount(1);
-        grupoBotonesNivel.setMinCheckCount(0);
+        grupoBotonesNivel.setMinCheckCount(1);
 
-        botonNivel1.setChecked(true);
+        // --- Creación del Botón Jugar ---
+        Button.ButtonStyle playStyle = new Button.ButtonStyle();
+        playStyle.up = new TextureRegionDrawable(atlasNiveles.findRegion("boton_jugar"));
+
+        playStyle.down = new TextureRegionDrawable(atlasNiveles.findRegion("boton_jugar_down"));
+        playStyle.over = new TextureRegionDrawable(atlasNiveles.findRegion("boton_jugar_hover"));
+        playButton = new Button(playStyle);
+
+        //botonNivel1.setChecked(true);
         botonNivel1.addListener(new ClickListener() {
             @Override
             public void clicked(InputEvent event, float x, float y) {
@@ -90,13 +86,7 @@ public class PantallaSeleccionNivel extends PantallaBase {
             }
         });
 
-        // --- Creación del Botón Jugar ---
-        Button.ButtonStyle playStyle = new Button.ButtonStyle();
-        playStyle.up = new TextureRegionDrawable(atlasNiveles.findRegion("boton_jugar"));
 
-        playStyle.down = new TextureRegionDrawable(atlasNiveles.findRegion("boton_jugar_down"));
-        playStyle.over = new TextureRegionDrawable(atlasNiveles.findRegion("boton_jugar_hover"));
-        playButton = new Button(playStyle);
 
         playButton.addListener(new ClickListener() {
             @Override
@@ -120,9 +110,23 @@ public class PantallaSeleccionNivel extends PantallaBase {
             }
         });
 
+    }
+
+    private void configurarInterfazCompleta(){
+        mainStage.addActor(new Image(new Texture("Fondos/Portada_desenfoque.png")));
+
+        TextureRegionDrawable fondoDrawable = new TextureRegionDrawable(atlasTextures.findRegion("shade"));
+
+        // Usaremos una única tabla para todo el layout, como en la pantalla de personajes.
+        uiTable.setFillParent(true);
+        mainStage.addActor(uiTable);
+
+        // Título usando una región del atlas
+        TextureRegionDrawable tituloDrawable = null;
+        tituloDrawable = new TextureRegionDrawable(atlasNiveles.findRegion("seleccionatunivel"));
+        uiTable.add(new Image(tituloDrawable)).colspan(3).padBottom(20).row();
 
 
-        // --- LAYOUT CORREGIDO ---
         // Agregar textos descriptivos ARRIBA de cada botón
         Label.LabelStyle smallLabelStyle = new Label.LabelStyle(getSkin().get(Label.LabelStyle.class));
         smallLabelStyle.font.getData().setScale(0.8f);
@@ -136,8 +140,8 @@ public class PantallaSeleccionNivel extends PantallaBase {
         Table tooltipTable1 = new Table(getSkin());
         tooltipTable1.setBackground(fondoDrawable);
         tooltipTable1.add(tooltipLabel1)
-                .width(300)
-                .pad(20);
+            .width(300)
+            .pad(20);
         Tooltip<Table> tooltip1 = new Tooltip<>(tooltipTable1);
         tooltip1.setInstant(true);
         botonNivel1.addListener(tooltip1);
@@ -161,16 +165,17 @@ public class PantallaSeleccionNivel extends PantallaBase {
         tooltip3.setInstant(true);
         botonNivel3.addListener(tooltip3);
 
-        tablaPrincipal.add(labelNivel1).padBottom(10);
-        tablaPrincipal.add(labelNivel2).padBottom(10);
-        tablaPrincipal.add(labelNivel3).padBottom(10).row();
+        uiTable.add(labelNivel1).padBottom(10);
+        uiTable.add(labelNivel2).padBottom(10);
+        uiTable.add(labelNivel3).padBottom(10).row();
 
-        tablaPrincipal.add(botonNivel1).size(300, 225).pad(20);
-        tablaPrincipal.add(botonNivel2).size(300, 225).pad(20);
-        tablaPrincipal.add(botonNivel3).size(300, 225).pad(20).row();
+        uiTable.add(botonNivel1).size(300, 225).pad(20);
+        uiTable.add(botonNivel2).size(300, 225).pad(20);
+        uiTable.add(botonNivel3).size(300, 225).pad(20).row();
 
-        tablaPrincipal.add(playButton).colspan(3).padTop(40).size(250, 80);
+        uiTable.add(playButton).colspan(3).padTop(40).size(250, 80);
 
+        actualizarEstadoNiveles();
     }
 
     private Button crearBotonNivel(String up, String checked, String disabled) {
@@ -179,6 +184,34 @@ public class PantallaSeleccionNivel extends PantallaBase {
         estilo.checked = new TextureRegionDrawable(atlasNiveles.findRegion(checked));
         estilo.disabled = new TextureRegionDrawable(atlasNiveles.findRegion(disabled));
         return new Button(estilo);
+    }
+
+    private void actualizarEstadoNiveles() {
+        // Lógica para habilitar/deshabilitar según el modo de juego
+        if (esMultijugador) {
+            botonNivel1.setDisabled(false);
+            botonNivel2.setDisabled(false);
+            botonNivel3.setDisabled(false);
+        } else {
+            botonNivel1.setDisabled(false);
+            botonNivel2.setDisabled(true);
+            botonNivel3.setDisabled(true);
+        }
+
+        // Lógica para la selección inicial (como en la pantalla de personajes)
+        grupoBotonesNivel.uncheckAll(); // Limpia cualquier selección previa
+        ConfiguracionJuego.mapaSeleccionado = null; // Reinicia el mapa seleccionado
+
+        if (!botonNivel1.isDisabled()) {
+            botonNivel1.setChecked(true);
+            ConfiguracionJuego.mapaSeleccionado = "maps/Zona1N1.tmx";
+        } else if (!botonNivel2.isDisabled()) {
+            botonNivel2.setChecked(true);
+            ConfiguracionJuego.mapaSeleccionado = "maps/Zona1N2.tmx";
+        } else if (!botonNivel3.isDisabled()) {
+            botonNivel3.setChecked(true);
+            ConfiguracionJuego.mapaSeleccionado = "maps/Zona1N3.tmx";
+        }
     }
 
 
@@ -198,6 +231,10 @@ public class PantallaSeleccionNivel extends PantallaBase {
 
     @Override
     public void show() {
+        if (!logicaInicializada) {
+            configurarInterfazCompleta();
+            logicaInicializada = true;
+        }
         Gdx.input.setInputProcessor(mainStage);
     }
 
