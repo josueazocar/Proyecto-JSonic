@@ -13,10 +13,16 @@ public class Knuckles extends Player {
 
     protected TextureRegion[] frameSpinRight;
     protected TextureRegion[] frameSpinLeft;
+    protected TextureRegion[] framePunchRight;
+    protected TextureRegion[] framePunchLeft;
+    //
+    private float tiempoDesdeUltimoGolpe = 0f; // Tiempo para detectar doble toque
+    private final float cooldownGolpe = 0.4f; // Tiempo máximo entre toques para considerar un doble toque
 
 
     public Knuckles(PlayerState estadoInicial) {
         super(estadoInicial);
+        this.characterName="Knuckles";
         CargarSprites();
         inicializarHitbox();
         // Asegúrate de que animacion no sea nula al inicio
@@ -24,12 +30,13 @@ public class Knuckles extends Player {
         EstadoPlayer estadoInicialAnimacion = (getEstadoActual() != null && animations.containsKey(getEstadoActual())) ? getEstadoActual() : EstadoPlayer.IDLE_RIGHT;
         animacion = animations.get(estadoInicialAnimacion);
         if (animacion == null) {
-            Gdx.app.error("Sonic", "ERROR: Animación inicial nula para el estado: " + estadoInicialAnimacion + ". Verifique CargarSprites.");
+            Gdx.app.error("Knuckles", "ERROR: Animación inicial nula para el estado: " + estadoInicialAnimacion + ". Verifique CargarSprites.");
         }
     }
 
     public Knuckles(PlayerState estadoInicial, LevelManager levelManager) {
         super(estadoInicial, levelManager);
+        this.characterName="Knuckles";
         CargarSprites();
         inicializarHitbox();
         // Asegúrate de que animacion no sea nula al inicio
@@ -37,7 +44,7 @@ public class Knuckles extends Player {
         EstadoPlayer estadoInicialAnimacion = (getEstadoActual() != null && animations.containsKey(getEstadoActual())) ? getEstadoActual() : EstadoPlayer.IDLE_RIGHT;
         animacion = animations.get(estadoInicialAnimacion);
         if (animacion == null) {
-            Gdx.app.error("Sonic", "ERROR: Animación inicial nula para el estado: " + estadoInicialAnimacion + ". Verifique CargarSprites.");
+            Gdx.app.error("Knuckles", "ERROR: Animación inicial nula para el estado: " + estadoInicialAnimacion + ". Verifique CargarSprites.");
         }
     }
 
@@ -83,6 +90,20 @@ public class Knuckles extends Player {
             estado.y = currentY;
         }
 
+        //para ataque especial (ROMPER BASURA IRROMPIBLE PARA OTROS PERSONAJES)
+        else if (Gdx.input.isKeyJustPressed(Input.Keys.SPACE)) { // Usamos la tecla Space para el puñetazo
+            if (lastDirection == EstadoPlayer.LEFT || lastDirection == EstadoPlayer.IDLE_LEFT) {
+                setEstadoActual(EstadoPlayer.PUNCH_LEFT);
+            } else {
+                setEstadoActual(EstadoPlayer.PUNCH_RIGHT);
+            }
+            tiempoXFrame = 0; // Reinicia la animación
+            actionStateSet = true;
+            // Anula el movimiento mientras golpea
+            estado.x = currentX;
+            estado.y = currentY;
+        }
+        //-------------FIN ATAQUE ESPECIAL -------------------
 
         // 3. Maneja el ROMPE BLOQUES - Esta es una acción continua que SÍ permite movimiento en el eje X.
         // Se usa 'else if' para que SPIN solo se active si J o K no fueron presionadas.
@@ -107,6 +128,8 @@ public class Knuckles extends Player {
             }
             actionStateSet = true; // Indica que se ha manejado una acción.
         }
+
+
 
         // 4. Si ninguna acción especial (J, K, L) fue activada en este frame,
         // determina el estado basándose en el movimiento WASD o IDLE.
@@ -152,6 +175,9 @@ public class Knuckles extends Player {
         frameKickLeft = new TextureRegion[8];
         frameSpinRight = new TextureRegion[12];
         frameSpinLeft = new TextureRegion[12];
+        //para destruir bloques
+        framePunchRight = new TextureRegion[12];
+        framePunchLeft = new TextureRegion[12];
 
         for (int i = 0; i < 4; i++) {
             frameIdleLeft[i] = matrizDeSprites[0][i];
@@ -213,6 +239,23 @@ public class Knuckles extends Player {
             frameSpinRight[i] = new TextureRegion(frameSpinLeft[i]);
             frameSpinRight[i].flip(true, false); // Voltear horizontalmente
         }
+
+        //para el movimiento de de romper bloques
+        // Cargar PUNCH_LEFT (asumiendo que está en la fila 9)
+        for (int i = 0; i < 6; i++) {
+            framePunchLeft[i] = matrizDeSprites[9][i];
+        }
+        for (int i = 0; i < 6; i++) {
+            framePunchLeft[i + 6] = matrizDeSprites[9][5 - i];
+        }
+
+// Crear PUNCH_RIGHT invirtiendo PUNCH_LEFT
+        for (int i = 0; i < 12; i++) {
+            framePunchRight[i] = new TextureRegion(framePunchLeft[i]);
+            framePunchRight[i].flip(true, false);
+        }
+        //-------------Fin romper bloque--------------------
+
         animations.put(EstadoPlayer.IDLE_RIGHT, new Animation<TextureRegion>(0.12f, frameIdleRight));
         animations.put(EstadoPlayer.IDLE_LEFT, new Animation<TextureRegion>(0.12f, frameIdleLeft));
         animations.put(EstadoPlayer.UP_LEFT, new Animation<TextureRegion>(0.1f, frameUpLeft));
@@ -225,6 +268,9 @@ public class Knuckles extends Player {
         animations.put(EstadoPlayer.HIT_LEFT, new Animation<TextureRegion>(0.08f, frameHitLeft));
         animations.put(EstadoPlayer.SPECIAL_RIGHT, new Animation<TextureRegion>(0.07f, frameSpinRight));
         animations.put(EstadoPlayer.SPECIAL_LEFT, new Animation<TextureRegion>(0.07f, frameSpinLeft));
+        //para animacion destruir bloques
+        animations.put(EstadoPlayer.PUNCH_RIGHT, new Animation<TextureRegion>(0.08f, framePunchRight));
+        animations.put(EstadoPlayer.PUNCH_LEFT, new Animation<TextureRegion>(0.08f, framePunchLeft));
 
         animations.get(EstadoPlayer.IDLE_RIGHT).setPlayMode(Animation.PlayMode.LOOP);
         animations.get(EstadoPlayer.IDLE_LEFT).setPlayMode(Animation.PlayMode.LOOP);
@@ -238,6 +284,9 @@ public class Knuckles extends Player {
         animations.get(EstadoPlayer.HIT_LEFT).setPlayMode(Animation.PlayMode.NORMAL);
         animations.get(EstadoPlayer.SPECIAL_RIGHT).setPlayMode(Animation.PlayMode.LOOP);
         animations.get(EstadoPlayer.SPECIAL_LEFT).setPlayMode(Animation.PlayMode.LOOP);
+        //para destruir bloques
+        animations.get(EstadoPlayer.PUNCH_RIGHT).setPlayMode(Animation.PlayMode.NORMAL);
+        animations.get(EstadoPlayer.PUNCH_LEFT).setPlayMode(Animation.PlayMode.NORMAL);
 
         Animation<TextureRegion> initialAnimation = animations.get(getEstadoActual());
         if (initialAnimation != null) {
@@ -263,7 +312,26 @@ public class Knuckles extends Player {
 
     @Override
     public void update(float deltaTime) {
+        //Para actualizar el temporizador de cooldown
+        tiempoDesdeUltimoGolpe += deltaTime;
+        //actualizar la posicion del hitbox
         bounds.setPosition(estado.x + collisionOffsetX, estado.y + collisionOffsetY);
+
+        // --- Lógica para romper bloques ---
+        // Comprueba si Knuckles está en estado de giro y si el cooldown ha pasado
+        if (getEstadoActual() == EstadoPlayer.PUNCH_LEFT || getEstadoActual() == EstadoPlayer.PUNCH_RIGHT) {
+            // Itera sobre la lista de objetos rompibles que proporciona el LevelManager
+            for (ObjetoRomperVisual objeto : levelManager.getBloquesRompibles()) {
+                // Si el hitbox de Knuckles se solapa con el del objeto
+                if (bounds.overlaps(objeto.getBounds())) {
+                    objeto.recibirGolpe(); // Llama al método para dañar el objeto
+                    // No es necesario un cooldown aquí porque la animación PUNCH solo se ejecuta una vez por pulsación.
+                    break; // Sale del bucle para golpear solo un objeto a la vez
+                }
+            }
+        }
+        //----------------------------------------------------
+
 
         // Si el estado actual no tiene una animación cargada, por defecto a IDLE_RIGHT
         if (!animations.containsKey(getEstadoActual())) {
@@ -290,7 +358,10 @@ public class Knuckles extends Player {
         // Lógica de transición de estado después de que una animación de acción termina
         // Solo para animaciones de PlayMode.NORMAL como HIT o KICK.
         if ((estado.estadoAnimacion == EstadoPlayer.HIT_RIGHT || estado.estadoAnimacion == EstadoPlayer.HIT_LEFT ||
-            estado.estadoAnimacion == EstadoPlayer.KICK_RIGHT || estado.estadoAnimacion == EstadoPlayer.KICK_LEFT) && animacion != null) {
+            estado.estadoAnimacion == EstadoPlayer.KICK_RIGHT || estado.estadoAnimacion == EstadoPlayer.KICK_LEFT ||
+            estado.estadoAnimacion == EstadoPlayer.PUNCH_RIGHT || estado.estadoAnimacion == EstadoPlayer.PUNCH_LEFT) && animacion != null) {
+
+
 
             if (animacion.getPlayMode() == Animation.PlayMode.NORMAL && animacion.isAnimationFinished(tiempoXFrame)) {
                 if (lastDirection == EstadoPlayer.LEFT || lastDirection == EstadoPlayer.IDLE_LEFT) {

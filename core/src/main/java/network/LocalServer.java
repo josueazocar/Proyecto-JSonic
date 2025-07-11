@@ -78,13 +78,13 @@ public class LocalServer implements IGameServer {
         // 1. Creamos la única instancia del cliente local y la guardamos.
         this.clienteLocal = new LocalClient(this);
 
-        EnemigoState estadoRobotnik = new EnemigoState(999, 300, 100, 100, EnemigoState.EnemigoType.ROBOTNIK);
+        /*EnemigoState estadoRobotnik = new EnemigoState(999, 300, 100, 100, EnemigoState.EnemigoType.ROBOTNIK);
         this.enemigosActivos.put(estadoRobotnik.id, estadoRobotnik);
         System.out.println("[LOCAL SERVER] Robotnik ha sido creado en el servidor local.");
 
         Network.PaqueteEnemigoNuevo paqueteRobotnik = new Network.PaqueteEnemigoNuevo();
         paqueteRobotnik.estadoEnemigo = estadoRobotnik;
-        this.clienteLocal.recibirPaqueteDelServidor(paqueteRobotnik); // "Enviamos" el paquete
+        this.clienteLocal.recibirPaqueteDelServidor(paqueteRobotnik);*/ // "Enviamos" el paquete
 
         // 2. Simulamos la conexión del jugador inmediatamente.
         // Esto replica la lógica del listener "connected" de tu GameServer.
@@ -129,7 +129,7 @@ public class LocalServer implements IGameServer {
         tiempoParaProximaMuerteAnimal = 20f; // Reiniciamos el temporizador
 
         // Queremos 5 animales por mapa, como solicitaste
-        int cantidadAnimales = 5;
+        int cantidadAnimales = 10;
         for (int i = 0; i < cantidadAnimales; i++) {
             int intentos = 0;
             boolean colocado = false;
@@ -224,6 +224,7 @@ public class LocalServer implements IGameServer {
     //-----------------------------------------------------------------------------------------------
 
 
+
     /**
      * Este es el "game loop" del servidor. Se llamará desde PantallaDeJuego.
      * @param deltaTime El tiempo transcurrido desde el último fotograma.
@@ -240,7 +241,6 @@ public class LocalServer implements IGameServer {
                     estadoJugador.x = paquete.x;
                     estadoJugador.y = paquete.y;
                     estadoJugador.estadoAnimacion = paquete.estadoAnimacion;
-                    // No necesitamos retransmitir porque solo hay un jugador.
                 }
             } else if (objeto instanceof Network.PaqueteSolicitudRecogerItem paquete) {
                 // Primero, verificamos si el ítem existe con .get()
@@ -270,11 +270,8 @@ public class LocalServer implements IGameServer {
                         // Creamos la ORDEN de cambio de mapa
                         Network.PaqueteOrdenCambiarMapa orden = new Network.PaqueteOrdenCambiarMapa();
                         orden.nuevoMapa = destinoMapa;
-                            /*!= null ? destinoMapa : "maps/ZonaJefeN1.tmx";*/
                         orden.nuevaPosX = llegadaX;
                         orden.nuevaPosY = llegadaY;
-                        //orden.nuevaPosX = 70f;
-                        //orden.nuevaPosY = 250f;
 
                         // "Enviamos" la orden al cliente local
                         clienteLocal.recibirPaqueteDelServidor(orden);
@@ -325,26 +322,7 @@ public class LocalServer implements IGameServer {
                     enemigo.estadoAnimacion = EnemigoState.EstadoEnemigo.POST_ATAQUE;
                     enemigo.tiempoEnEstado = 0;
                 }
-
-                // --- INICIO: CÓDIGO A AÑADIR ---
-                // El cliente solicita "liberar" un animal (colisión Jugador vs Animal)
-            }else if (objeto instanceof Network.PaqueteSolicitudLiberarAnimal paquete) {
-                AnimalState animal = animalesActivos.get(paquete.idAnimal);
-                // Solo procesamos si el animal existe y sigue vivo (evita dobles peticiones)
-                if (animal != null && animal.estaVivo) {
-                    animal.estaVivo = false; // Marcamos el animal como "liberado" (no vivo)
-                    System.out.println("[LOCAL SERVER] Jugador liberó al animal ID: " + animal.id);
-
-                    // Notificamos al cliente que el estado del animal ha cambiado.
-                    // Esto hará que desaparezca o cambie su animación.
-                    Network.PaqueteActualizacionAnimales paqueteUpdate = new Network.PaqueteActualizacionAnimales();
-                    paqueteUpdate.estadosAnimales = new HashMap<>();
-                    paqueteUpdate.estadosAnimales.put(animal.id, animal);
-                    clienteLocal.recibirPaqueteDelServidor(paqueteUpdate);
-                }
-
-                // El cliente solicita "matar" un animal (colisión Enemigo vs Animal)
-            } else if (objeto instanceof Network.PaqueteSolicitudMatarAnimal paquete) {
+            }else if (objeto instanceof Network.PaqueteSolicitudMatarAnimal paquete) {
                 AnimalState animal = animalesActivos.get(paquete.idAnimal);
                 if (animal != null && animal.estaVivo) {
                     animal.estaVivo = false; // Marcamos el animal como muerto
@@ -373,14 +351,40 @@ public class LocalServer implements IGameServer {
         }
 
         //para que se genere mas de un portal y en diferentes mapas
+        // --- LÓGICA DE CAMBIO DE MAPA ---
         String mapaActual = manejadorNivel.getNombreMapaActual();
         if (!mapaActual.equals(ultimoMapaProcesado)) {
+            System.out.println("[LOCAL SERVER] Detectado cambio de mapa a: " + mapaActual);
+            ultimoMapaProcesado = mapaActual;
+
+            // 1. Limpiar entidades del mapa anterior
+            enemigosActivos.clear();
+            itemsActivos.clear();
+            destinosPortales.clear(); // Importante para los portales
+
+            // 2. Reiniciar temporizadores de generación
             teleportGenerado = false;
             tiempoGeneracionTeleport = 0f;
-            ultimoMapaProcesado = mapaActual;
-            //Para los animales
-            generarAnimales(manejadorNivel);
+            tiempoGeneracionEnemigo = 0f;
+            tiempoSpawnAnillo = 0f;
+            tiempoSpawnBasura = 0f;
+            tiempoSpawnPlastico = 0f;
+
+            // 3. Regenerar entidades para el nuevo mapa
+            generarAnimales(manejadorNivel); // Esto ya lo tenías, y está bien
+
+            // 4. Volver a crear a Robotnik en el nuevo mapa (si es necesario)
+            // Nota: Esto es opcional si quieres que Robotnik aparezca en todos los mapas.
+            // Si no, puedes eliminar estas líneas.
+            EnemigoState estadoRobotnik = new EnemigoState(999, 300, 100, 100, EnemigoState.EnemigoType.ROBOTNIK);
+            this.enemigosActivos.put(estadoRobotnik.id, estadoRobotnik);
+            Network.PaqueteEnemigoNuevo paqueteRobotnik = new Network.PaqueteEnemigoNuevo();
+            paqueteRobotnik.estadoEnemigo = estadoRobotnik;
+            this.clienteLocal.recibirPaqueteDelServidor(paqueteRobotnik);
+
+
         }
+       // --- FIN DE LÓGICA DE CAMBIO DE MAPA ---
         //----------------------------------------------------
         //aqui se cambio para que la logica donde se llamaba al servidor, fuera una funcion
         this.tiempoGeneracionTeleport += deltaTime;

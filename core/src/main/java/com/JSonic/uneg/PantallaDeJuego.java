@@ -403,30 +403,27 @@ public class PantallaDeJuego extends PantallaBase {
             ItemVisual item = entry.getValue();
 
             if (personajeJugable.getBounds() != null && item.getBounds() != null && Intersector.overlaps(personajeJugable.getBounds(), item.getBounds())) {
-                Network.PaqueteSolicitudRecogerItem paquete = new Network.PaqueteSolicitudRecogerItem();
-                paquete.idItem = item.estado.id;
-                gameClient.send(paquete);
                 System.out.println("[CLIENT_DEBUG] Colisión detectada con item tipo: " + item.estado.tipo);
 
-                boolean itemRecogido = false;
-                if (item.estado.tipo == ItemState.ItemType.ANILLO) {
-                    itemRecogido = true;
-                } else if (item.estado.tipo == ItemState.ItemType.BASURA || item.estado.tipo == ItemState.ItemType.PIEZA_PLASTICO) {
-                    itemRecogido = true;
-                } else if (item.estado.tipo == ItemState.ItemType.TELETRANSPORTE) {
-                    System.out.println("[CLIENT] Tocado el teletransportador. Solicitando viaje al servidor...");
-                    paquete = new Network.PaqueteSolicitudRecogerItem();
-                    paquete.idItem = item.estado.id;
-                    gameClient.send(paquete);
+                Network.PaqueteSolicitudRecogerItem paquete = new Network.PaqueteSolicitudRecogerItem();
+                paquete.idItem = item.estado.id;
+
+                // --- CAMBIO CLAVE AQUÍ ---
+                // Si estamos en modo local, pasamos el paquete directamente al servidor local.
+                if (localServer != null) {
+                    localServer.recibirPaqueteDelCliente(paquete, 0); // El ID 0 es para el jugador local
+                }
+
+                // Si es un teletransporte, salimos del bucle para que el servidor procese el cambio de mapa.
+                if (item.estado.tipo == ItemState.ItemType.TELETRANSPORTE) {
                     break;
                 }
 
-                if (itemRecogido) {
-                    iter.remove();
-                    item.dispose();
-                    System.out.println("[CLIENT_DEBUG] Ítem " + item.estado.id + " eliminado visualmente para la prueba.");
-                    break;
-                }
+                // Eliminamos el ítem visualmente para una respuesta más rápida.
+                // El servidor se encargará de la lógica real.
+                iter.remove();
+                item.dispose();
+                break; // Salimos para procesar solo un ítem por fotograma.
             }
         }
 
@@ -451,41 +448,41 @@ public class PantallaDeJuego extends PantallaBase {
 
         // --- INICIO: LÓGICA DE COLISIÓN CON ANIMALES ---
 // Usamos un iterador para poder eliminar elementos de forma segura si es necesario.
+        // Reemplaza el bucle de colisión de animales con este:
         Iterator<AnimalVisual> iteradorAnimales = animalesEnPantalla.values().iterator();
         while (iteradorAnimales.hasNext()) {
             AnimalVisual animal = iteradorAnimales.next();
 
-            // Solo procesamos colisiones para animales que están vivos.
             if (animal.estaVivo()) {
                 // 1. Colisión: Jugador vs Animal
                 if (Intersector.overlaps(personajeJugable.getBounds(), animal.getBounds())) {
-                    // El jugador toca al animal. Lo "liberamos".
                     System.out.println("[CLIENT] Colisión con animal vivo ID: " + animal.getId() + ". Solicitando liberación.");
-
-                    // Creamos un paquete para notificar al servidor.
                     Network.PaqueteSolicitudLiberarAnimal paquete = new Network.PaqueteSolicitudLiberarAnimal();
                     paquete.idAnimal = animal.getId();
-                    gameClient.send(paquete);
 
-                    // Marcamos al animal como no-vivo visualmente para evitar enviar paquetes repetidos.
-                    // El servidor enviará la confirmación final, pero esto mejora la respuesta visual.
-                    animal.setVivo(false);
-                    continue; // Pasamos al siguiente animal.
+                    // --- CAMBIO CLAVE AQUÍ ---
+                    if (localServer != null) {
+                        localServer.recibirPaqueteDelCliente(paquete, 0);
+                    }
+
+                    animal.setVivo(false); // Respuesta visual inmediata
+                    continue;
                 }
 
                 // 2. Colisión: Enemigos vs Animal
                 for (RobotVisual enemigo : enemigosEnPantalla.values()) {
                     if (Intersector.overlaps(enemigo.getBounds(), animal.getBounds())) {
-                        // Un robot toca a un animal. Lo "mata".
                         System.out.println("[CLIENT] Colisión de enemigo con animal vivo ID: " + animal.getId() + ". Solicitando muerte.");
-
-                        // Creamos un paquete para notificar al servidor.
                         Network.PaqueteSolicitudMatarAnimal paquete = new Network.PaqueteSolicitudMatarAnimal();
                         paquete.idAnimal = animal.getId();
-                        gameClient.send(paquete);
 
-                        animal.setVivo(false);
-                        break; // El animal ya fue tocado por un enemigo, no necesita chequear más.
+                        // --- CAMBIO CLAVE AQUÍ ---
+                        if (localServer != null) {
+                            localServer.recibirPaqueteDelCliente(paquete, 0);
+                        }
+
+                        animal.setVivo(false); // Respuesta visual inmediata
+                        break;
                     }
                 }
             }

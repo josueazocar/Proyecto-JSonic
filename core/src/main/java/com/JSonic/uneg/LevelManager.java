@@ -4,6 +4,7 @@ import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.graphics.OrthographicCamera;
 import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.maps.tiled.TiledMap;
+import com.badlogic.gdx.maps.tiled.TiledMapTileLayer;
 import com.badlogic.gdx.maps.tiled.TmxMapLoader;
 import com.badlogic.gdx.maps.MapObjects;
 import com.badlogic.gdx.maps.tiled.renderers.OrthogonalTiledMapRenderer;
@@ -13,9 +14,12 @@ import com.badlogic.gdx.math.Rectangle;
 import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.math.Intersector;
 import com.badlogic.gdx.maps.objects.RectangleMapObject;
+import com.badlogic.gdx.utils.Array;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Random;
 import java.util.concurrent.ConcurrentHashMap;
+
 
 public class LevelManager {
 
@@ -34,7 +38,9 @@ public class LevelManager {
     // --- AÑADIDO PARA GESTIÓN DE ANIMALES ---
     private Texture animalTexture; // Textura para todos los animales
     private ConcurrentHashMap<Integer, AnimalVisual> animalesVisuales; // Mapa para guardar los animales
-
+    private Array<AnimalVisual> animales;
+    //para los bloques u objetos irrompibles para otros jugadores menos para knuckles
+    private Array<ObjetoRomperVisual> bloquesRompibles;
 
     // Constructor que recibe la cámara y el SpriteBatch (aunque el batch no se use directamente aquí para dibujar el mapa)
     public LevelManager(OrthographicCamera camara, SpriteBatch batch) {
@@ -43,6 +49,7 @@ public class LevelManager {
         this.mapaActual = null;
         //Inicilizamos el mapa de animales visuales para evitar errores
         this.animalesVisuales = new ConcurrentHashMap<>();
+        this.bloquesRompibles = new Array<>();
     }
 
     // --- NUEVO MÉTODO PARA ESTABLECER EL JUGADOR ---
@@ -101,12 +108,60 @@ public class LevelManager {
         renderizadorMapa = new OrthogonalTiledMapRenderer(mapaActual, 1);
         procesarPortales();
 
+        // --- AÑADIDO: Inicializar la lista de bloques rompibles ---
+        bloquesRompibles.clear();
+        generarBloquesRompibles(5);
     }
 
     public String getNombreMapaActual() {
         return nombreMapaActual;
     }
 
+    // --- AÑADIDO: Método para generar bloques rompibles ---
+    // Nuevo método para generar bloques en lugares válidos
+    private void generarBloquesRompibles(int cantidad) {
+        // Asegúrate que el nombre de la capa "Colisiones" sea correcto
+        TiledMapTileLayer capaDeColision = (TiledMapTileLayer) mapaActual.getLayers().get("Colisiones");
+        if (capaDeColision == null) {
+            Gdx.app.error("LevelManager", "La capa de colisiones no se encontró en el mapa.");
+            return;
+        }
+        int mapWidth = capaDeColision.getWidth();
+        int mapHeight = capaDeColision.getHeight();
+        float tileSize = capaDeColision.getTileWidth(); // Asumimos tiles cuadrados
+        Random random = new Random();
+
+        for (int i = 0; i < cantidad; i++) {
+            int tileX, tileY;
+            int intentos = 0;
+            do {
+                tileX = random.nextInt(mapWidth);
+                tileY = random.nextInt(mapHeight);
+                intentos++;
+            } while (capaDeColision.getCell(tileX, tileY) != null && intentos < 100); // Repite si la celda tiene colisión
+
+            if (intentos < 100) {
+                float worldX = tileX * tileSize;
+                float worldY = tileY * tileSize;
+                // --- MODIFICADO: Usa ObjetoRomperVisual ---
+                bloquesRompibles.add(new ObjetoRomperVisual(worldX, worldY, tileSize));
+                Gdx.app.log("LevelManager", "Bloque rompible creado en: " + worldX + ", " + worldY);
+            }
+        }
+    }
+
+    // --- NUEVO: Método para que Knuckles acceda a los bloques ---
+    public Array<ObjetoRomperVisual> getBloquesRompibles() {
+        return bloquesRompibles;
+    }
+
+    // --- NUEVO: Método para dibujar los bloques rompibles ---
+    public void dibujarBloques(SpriteBatch batch) {
+        for (ObjetoRomperVisual bloque : bloquesRompibles) {
+            bloque.draw(batch);
+        }
+    }
+    //----------------------------------------------------------
 
     // --- AÑADIDO: Métodos para gestionar los animales ---
 
@@ -178,6 +233,15 @@ public class LevelManager {
     public void actualizar(float deltaTime) {
         // En este caso, la cámara se actualiza y se limita en PantallaDeJuego,
         // no es necesario actualizar la cámara aquí.
+        //Para actualizar y eliminar los bloques rompibles
+        for (int i = bloquesRompibles.size - 1; i >= 0; i--) {
+            ObjetoRomperVisual bloque = bloquesRompibles.get(i);
+            bloque.update(deltaTime);
+            if (bloque.debeSerEliminado()) {
+                bloquesRompibles.removeIndex(i);
+                Gdx.app.log("LevelManager", "Bloque rompible eliminado permanentemente.");
+            }
+        }
     }
 
     // Método para dibujar el nivel en pantalla
@@ -312,6 +376,8 @@ public MapObjects getCollisionObjects() {
         return false; // no hay colisión
     }
 
+
+
     public Vector2 encontrarPosicionValida() {
         MapObjects objetosColision = getCollisionObjects();
         float mapWidth = getAnchoMapaPixels();
@@ -366,6 +432,11 @@ public MapObjects getCollisionObjects() {
         if (animalTexture != null) {
             animalTexture.dispose();
             animalTexture = null;
+        }
+        if (bloquesRompibles != null) {
+            // Si los bloques tienen recursos propios (como Texturas), hay que liberarlos aquí.
+            // Por ahora, solo limpiamos la lista.
+            bloquesRompibles.clear();
         }
     }
 

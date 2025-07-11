@@ -25,6 +25,8 @@ public abstract class Player extends Entity implements Disposable {
     // Stores the proposed movement state (UP, DOWN, LEFT, RIGHT) before applying actions.
     protected EstadoPlayer proposedMovementState = null;
     protected boolean actionStateSet = false; // Flag to know if an action state has been set.
+    //para identificar quien esta tocando el bloque
+    protected String characterName;
 //hasta aqui
 
     public Player(){
@@ -44,6 +46,7 @@ public abstract class Player extends Entity implements Disposable {
     public void setLevelManager(LevelManager levelManager) {
         this.levelManager = levelManager;
     }
+
 
     @Override
     protected void setDefaultValues() {
@@ -102,6 +105,25 @@ public abstract class Player extends Entity implements Disposable {
                 }
             }
         }
+        // 2. NUEVA COMPROBACIÓN: Colisión con bloques rompibles
+        if (levelManager.getBloquesRompibles() != null) {
+            for (ObjetoRomperVisual bloque : levelManager.getBloquesRompibles()) {
+                if (futureBounds.overlaps(bloque.getBounds())) {
+                    return true; // Hay colisión con un bloque rompible
+                }
+            }
+        }
+
+        // 3. NUEVA COMPROBACIÓN: Colisión con animales
+        // (Asumiendo que LevelManager tiene un método getAnimales() y Animal tiene getBounds())
+       /* if (levelManager.getAnimales() != null) {
+            for (AnimalVisual animal : levelManager.getAnimales()) {
+                if (futureBounds.overlaps(animal.getBounds())) {
+                    return true; // Colisión con un animal
+                }
+            }
+        }*/
+
         return false;
     }
 //colisiones fin
@@ -217,6 +239,32 @@ public abstract class Player extends Entity implements Disposable {
             if (playerBounds.overlaps(item.getBounds())) {
                 item.onCollect(this); // Método a definir en ItemVisual
                 items.removeIndex(i);
+            }
+        }
+    }
+        //esto es para romper bloques
+    public void intentarRomperBloque() {
+        // Solo Knuckles puede romper bloques
+        if (!"Knuckles".equals(this.characterName)) {
+            return;
+        }
+
+        if (levelManager == null || levelManager.getBloquesRompibles() == null) {
+            return;
+        }
+
+        // Usamos los bounds del jugador para ver si se superpone con un bloque
+        Rectangle playerBounds = getBounds(); // Asumiendo que Player tiene un getBounds()
+
+        // Usamos un iterador para poder eliminar elementos de forma segura
+        java.util.Iterator<ObjetoRomperVisual> iter = levelManager.getBloquesRompibles().iterator();
+        while (iter.hasNext()) {
+            ObjetoRomperVisual bloque = iter.next();
+            if (playerBounds.overlaps(bloque.getBounds())) {
+                iter.remove(); // Elimina el bloque de la lista en LevelManager
+                Gdx.app.log("Player", "Knuckles rompió un bloque.");
+                // Opcional: puedes añadir un sonido o efecto visual aquí
+                break; // Rompe solo un bloque a la vez
             }
         }
     }
