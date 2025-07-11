@@ -33,6 +33,7 @@ public class RobotVisual extends Enemy{
         tiempoXFrame = 0.0f;
         CargarSprites();
         setEstadoActual(estado.estadoAnimacion);
+        setVida(100);
     }
     public RobotVisual(EnemigoState estadoInicial) {
         this.estado = estadoInicial;

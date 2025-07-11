@@ -22,10 +22,9 @@ import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 import com.badlogic.gdx.math.Rectangle;
 import network.interfaces.IGameClient;
 import network.interfaces.IGameServer;
-import java.util.ArrayList; // Importación agregada
-import java.util.Iterator;
-import java.util.Map;
-import java.util.HashMap;
+
+import java.util.*;
+
 import com.badlogic.gdx.scenes.scene2d.ui.Table;
 import com.badlogic.gdx.scenes.scene2d.ui.Image;
 import com.badlogic.gdx.math.Vector2;
@@ -220,7 +219,7 @@ public class PantallaDeJuego extends PantallaBase {
         }
 
         if (localServer != null) {
-            localServer.update(deltat, this.manejadorNivel);
+            localServer.update(deltat, this.manejadorNivel, personajeJugable);
         }
 
         if (gameClient != null) {
@@ -360,8 +359,8 @@ public class PantallaDeJuego extends PantallaBase {
 
             if (bomba.isExplotando() && !bomba.yaHaHechoDanio()) {
                 if (bomba.getBounds().overlaps(personajeJugable.getBounds())) {
-                    System.out.println("[JUGADOR] ¡ALCANZADO POR UNA EXPLOSION!-VIDA: " + (personajeJugable.getVida() - 20));
                     personajeJugable.setVida(personajeJugable.getVida() - 20);
+                    System.out.println("[JUGADOR] ¡ALCANZADO POR UNA EXPLOSION!-VIDA: " + personajeJugable.getVida());
                     bomba.marcarComoDanioHecho();
                 }
             }
@@ -394,9 +393,86 @@ public class PantallaDeJuego extends PantallaBase {
 
         personajeJugable.KeyHandler();
         personajeJugable.update(deltat);
-        for (Player otro : otrosJugadores.values()) otro.update(deltat);
-        for (RobotVisual enemigo : enemigosEnPantalla.values()) enemigo.update(deltat);
-        if (eggman != null) eggman.update(deltat);
+        for (Player otro : otrosJugadores.values()){
+            otro.update(deltat);
+        }
+
+        for (RobotVisual enemigo : enemigosEnPantalla.values()){
+            if (personajeJugable.getBounds().overlaps(enemigo.getBounds())) {
+                boolean jugadorEstaAtacando = personajeJugable.estado.estadoAnimacion == EstadoPlayer.HIT_RIGHT ||
+                    personajeJugable.estado.estadoAnimacion == EstadoPlayer.HIT_LEFT ||
+                    personajeJugable.estado.estadoAnimacion == EstadoPlayer.KICK_RIGHT ||
+                    personajeJugable.estado.estadoAnimacion == EstadoPlayer.KICK_LEFT ||
+                    personajeJugable.estado.estadoAnimacion == EstadoPlayer.SPECIAL_LEFT ||
+                    personajeJugable.estado.estadoAnimacion == EstadoPlayer.SPECIAL_RIGHT;
+
+                if (jugadorEstaAtacando && enemigo.estado.estadoAnimacion != EnemigoState.EstadoEnemigo.HIT_LEFT ||
+                    jugadorEstaAtacando && enemigo.estado.estadoAnimacion != EnemigoState.EstadoEnemigo.HIT_RIGHT) {
+                    enemigo.setVida(enemigo.getVida() - 1);
+                    System.out.println("[ROBOT] HA SIDO GOLPEADO-VIDA:" + enemigo.getVida());
+                }
+
+                if (!jugadorEstaAtacando && enemigo.estado.estadoAnimacion == EnemigoState.EstadoEnemigo.HIT_LEFT ||
+                    jugadorEstaAtacando && enemigo.estado.estadoAnimacion == EnemigoState.EstadoEnemigo.HIT_RIGHT) {
+                    personajeJugable.setVida(personajeJugable.getVida() - 1);
+                    System.out.println("[JUGADOR] HA SIDO GOLPEADO-VIDA:" + personajeJugable.getVida());
+                }
+
+                if (jugadorEstaAtacando && enemigo.estado.estadoAnimacion == EnemigoState.EstadoEnemigo.HIT_LEFT ||
+                    jugadorEstaAtacando && enemigo.estado.estadoAnimacion == EnemigoState.EstadoEnemigo.HIT_RIGHT) {
+
+                    Random random = new Random();
+                    switch (random.nextInt(3) + 1){
+                        case 1:
+                            personajeJugable.setVida(personajeJugable.getVida() - 1);
+                            System.out.println("[JUGADOR] HA SIDO GOLPEADO-VIDA:" + personajeJugable.getVida());
+                        break;
+                        case 2:
+                            enemigo.setVida(enemigo.getVida() - 1);
+                            System.out.println("[ROBOT] HA SIDO GOLPEADO-VIDA:" + enemigo.getVida());
+                        break;
+                        case 3:
+                            personajeJugable.setVida(personajeJugable.getVida() - 1);
+                            enemigo.setVida(enemigo.getVida() - 1);
+                            System.out.println("[JUGADOR] HA SIDO GOLPEADO-VIDA:" + personajeJugable.getVida());
+                            System.out.println("[ROBOT] HA SIDO GOLPEADO-VIDA:" + enemigo.getVida());
+                        break;
+                    }
+
+                }
+            }
+            enemigo.update(deltat);
+        }
+        //Comprobador de la vida del enemigo
+        Iterator<RobotVisual> iterator = enemigosEnPantalla.values().iterator();
+        while (iterator.hasNext()) {
+            RobotVisual enemigo = iterator.next();
+
+            if(enemigo.getVida() <= 0){
+                enemigo.dispose();
+                iterator.remove();
+            }
+        }
+
+        //Condicion para que el personaje muera
+       // if(personajeJugable.getVida() <= 0){}
+
+        if (eggman != null){
+            if (personajeJugable.getBounds().overlaps(eggman.getBounds())) {
+                boolean jugadorEstaAtacando = personajeJugable.estado.estadoAnimacion == EstadoPlayer.HIT_RIGHT ||
+                    personajeJugable.estado.estadoAnimacion == EstadoPlayer.HIT_LEFT ||
+                    personajeJugable.estado.estadoAnimacion == EstadoPlayer.KICK_RIGHT ||
+                    personajeJugable.estado.estadoAnimacion == EstadoPlayer.KICK_LEFT ||
+                    personajeJugable.estado.estadoAnimacion == EstadoPlayer.SPECIAL_LEFT ||
+                    personajeJugable.estado.estadoAnimacion == EstadoPlayer.SPECIAL_RIGHT;
+
+                if (jugadorEstaAtacando) {
+                    eggman.setVida(eggman.getVida() - 3);
+                    System.out.println("[ROBOTNIK] HA SIDO GOLPEADO-VIDA:" + eggman.getVida());
+                }
+            }
+            eggman.update(deltat);
+        }
 
         camaraJuego.position.x = personajeJugable.estado.x;
         camaraJuego.position.y = personajeJugable.estado.y;

@@ -39,6 +39,7 @@ public class RobotnikVisual extends Enemy {
         tiempoXFrame = 0.0f;
         CargarSprites();
         setEstadoActual(estado.estadoAnimacion);
+        setVida(100);
     }
 
     public void setLevelManager(LevelManager levelManager) {
