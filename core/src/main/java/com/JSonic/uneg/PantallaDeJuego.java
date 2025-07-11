@@ -17,6 +17,7 @@ import com.badlogic.gdx.math.Vector3;
 import com.badlogic.gdx.scenes.scene2d.ui.Label;
 import com.badlogic.gdx.utils.viewport.FitViewport;
 import com.badlogic.gdx.utils.viewport.Viewport;
+import network.LocalServer;
 import network.Network;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 import com.badlogic.gdx.math.Rectangle;
@@ -222,6 +223,7 @@ public class PantallaDeJuego extends PantallaBase {
             PantallaMenu pantallaMenu = new PantallaMenu(juegoPrincipal, true);
             pantallaMenu.setEstadoMenu(PantallaMenu.EstadoMenu.JUGAR);
             juegoPrincipal.setPantallaActiva(pantallaMenu);
+            LocalServer.decreaseContamination(100);
             return;
         }
 
@@ -531,7 +533,7 @@ public class PantallaDeJuego extends PantallaBase {
                     }
                 }
 
-                
+
                 porcentajeContaminacionActual = 0;
 
                 if (!idsItemsLimpiezaARecoger.isEmpty()) {
@@ -575,7 +577,7 @@ public class PantallaDeJuego extends PantallaBase {
         for (Bomba bomba : listaDeBombas) {
             bomba.draw(batch);
         }
-        
+
         for (ItemVisual item : itemsEnPantalla.values()) item.draw(batch);
         batch.end();
 
