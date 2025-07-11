@@ -102,6 +102,10 @@ public class Knuckles extends Player {
             // Anula el movimiento mientras golpea
             estado.x = currentX;
             estado.y = currentY;
+
+            intentarRomperBloque();
+
+            System.out.println("[Knuckles] ¡Teclas ESPACIO presionada, iniciando PUNCH y revisando bloques!");
         }
         //-------------FIN ATAQUE ESPECIAL -------------------
 
@@ -310,74 +314,76 @@ public class Knuckles extends Player {
         Gdx.app.log("Sonic", "Offsets del hitbox: x=" + collisionOffsetX + ", y=" + collisionOffsetY);
     }
 
+
     @Override
     public void update(float deltaTime) {
-        //Para actualizar el temporizador de cooldown
+        // Actualizar el temporizador de cooldown y la posición del hitbox
         tiempoDesdeUltimoGolpe += deltaTime;
-        //actualizar la posicion del hitbox
         bounds.setPosition(estado.x + collisionOffsetX, estado.y + collisionOffsetY);
-
-        // --- Lógica para romper bloques ---
-        // Comprueba si Knuckles está en estado de giro y si el cooldown ha pasado
-        if (getEstadoActual() == EstadoPlayer.PUNCH_LEFT || getEstadoActual() == EstadoPlayer.PUNCH_RIGHT) {
-            // Itera sobre la lista de objetos rompibles que proporciona el LevelManager
-            for (ObjetoRomperVisual objeto : levelManager.getBloquesRompibles()) {
-                // Si el hitbox de Knuckles se solapa con el del objeto
-                if (bounds.overlaps(objeto.getBounds())) {
-                    objeto.recibirGolpe(); // Llama al método para dañar el objeto
-                    // No es necesario un cooldown aquí porque la animación PUNCH solo se ejecuta una vez por pulsación.
-                    break; // Sale del bucle para golpear solo un objeto a la vez
-                }
-            }
-        }
-        //----------------------------------------------------
-
 
         // Si el estado actual no tiene una animación cargada, por defecto a IDLE_RIGHT
         if (!animations.containsKey(getEstadoActual())) {
-            Gdx.app.log("Sonic", "Advertencia: Estado " + getEstadoActual() + " no tiene animación. Cambiando a IDLE_RIGHT.");
+            Gdx.app.log("Knuckles", "Advertencia: Estado " + getEstadoActual() + " no tiene animación. Cambiando a IDLE_RIGHT.");
             setEstadoActual(EstadoPlayer.IDLE_RIGHT);
         }
 
         Animation<TextureRegion> targetAnimation = animations.get(getEstadoActual());
 
+        // Cambia la animación si el estado ha cambiado
         if (this.animacion != targetAnimation) {
             this.tiempoXFrame = 0;
             this.animacion = targetAnimation;
-            Gdx.app.log("Sonic", "Cambio de animación a: " + getEstadoActual());
+            Gdx.app.log("Knuckles", "Cambio de animación a: " + getEstadoActual());
         }
 
+        // Comprobación de seguridad por si la animación no se carga
         if (this.animacion == null) {
-            Gdx.app.error("Sonic", "CRÍTICO: 'animacion' es nula en update() después de la reasignación. Estado: " + getEstadoActual());
+            Gdx.app.error("Knuckles", "CRÍTICO: 'animacion' es nula en update(). Estado: " + getEstadoActual());
             frameActual = null;
             return;
         }
 
+        // Avanza el tiempo de la animación
         tiempoXFrame += deltaTime;
 
-        // Lógica de transición de estado después de que una animación de acción termina
-        // Solo para animaciones de PlayMode.NORMAL como HIT o KICK.
-        if ((estado.estadoAnimacion == EstadoPlayer.HIT_RIGHT || estado.estadoAnimacion == EstadoPlayer.HIT_LEFT ||
-            estado.estadoAnimacion == EstadoPlayer.KICK_RIGHT || estado.estadoAnimacion == EstadoPlayer.KICK_LEFT ||
-            estado.estadoAnimacion == EstadoPlayer.PUNCH_RIGHT || estado.estadoAnimacion == EstadoPlayer.PUNCH_LEFT) && animacion != null) {
+        // --- Lógica para acciones de un solo uso (PUNCH, HIT, KICK) ---
+        boolean esAccionDeGolpe = (estado.estadoAnimacion == EstadoPlayer.PUNCH_RIGHT || estado.estadoAnimacion == EstadoPlayer.PUNCH_LEFT);
+        boolean esOtraAccionNormal = (estado.estadoAnimacion == EstadoPlayer.HIT_RIGHT || estado.estadoAnimacion == EstadoPlayer.HIT_LEFT ||
+            estado.estadoAnimacion == EstadoPlayer.KICK_RIGHT || estado.estadoAnimacion == EstadoPlayer.KICK_LEFT);
 
+        // Este bloque solo se ejecuta para animaciones que se reproducen una vez (PlayMode.NORMAL)
+        if ((esAccionDeGolpe || esOtraAccionNormal) && animacion.getPlayMode() == Animation.PlayMode.NORMAL) {
 
+            // --- Lógica para romper bloques (SOLO durante el PUNCH) ---
+            if (esAccionDeGolpe) {
+                // Itera sobre la lista de objetos rompibles
+                for (ObjetoRomperVisual objeto : levelManager.getBloquesRompibles()) {
+                    // Si el hitbox de Knuckles se solapa con el del objeto
+                    if (bounds.overlaps(objeto.getBounds())) {
+                        objeto.recibirGolpe(); // Daña el objeto
+                        Gdx.app.log("Knuckles", "¡Golpe a bloque rompible!");
+                        break; // Golpea solo un objeto a la vez
+                    }
+                }
+            }
 
-            if (animacion.getPlayMode() == Animation.PlayMode.NORMAL && animacion.isAnimationFinished(tiempoXFrame)) {
+            // --- Transición a IDLE después de que la animación termina ---
+            // Esto se comprueba DESPUÉS de la lógica de colisión
+            if (animacion.isAnimationFinished(tiempoXFrame)) {
                 if (lastDirection == EstadoPlayer.LEFT || lastDirection == EstadoPlayer.IDLE_LEFT) {
                     setEstadoActual(EstadoPlayer.IDLE_LEFT);
                 } else {
                     setEstadoActual(EstadoPlayer.IDLE_RIGHT);
                 }
-                tiempoXFrame = 0;
-                Gdx.app.log("Sonic", "Transición de acción a IDLE: " + getEstadoActual());
+                tiempoXFrame = 0; // Reinicia el tiempo para la nueva animación IDLE
+                Gdx.app.log("Knuckles", "Transición de acción a IDLE: " + getEstadoActual());
             }
         }
 
+        // Finalmente, actualiza el frame visual del personaje
         if (animacion != null) {
             frameActual = animacion.getKeyFrame(tiempoXFrame);
         } else {
-            Gdx.app.log("Sonic", "Advertencia: 'animacion' es nula en update(). No se puede obtener el frame clave para estado: " + getEstadoActual());
             frameActual = null;
         }
     }

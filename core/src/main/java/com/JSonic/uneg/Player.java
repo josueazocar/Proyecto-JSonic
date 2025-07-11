@@ -125,13 +125,13 @@ public abstract class Player extends Entity implements Disposable {
 
         // 3. NUEVA COMPROBACIÓN: Colisión con animales
         // (Asumiendo que LevelManager tiene un método getAnimales() y Animal tiene getBounds())
-       /* if (levelManager.getAnimales() != null) {
-            for (AnimalVisual animal : levelManager.getAnimales()) {
+       if (levelManager.getAnimalesVisuales() != null) {
+            for (AnimalVisual animal : levelManager.getAnimalesVisuales()) {
                 if (futureBounds.overlaps(animal.getBounds())) {
                     return true; // Colisión con un animal
                 }
             }
-        }*/
+        }
 
         //return false;
 

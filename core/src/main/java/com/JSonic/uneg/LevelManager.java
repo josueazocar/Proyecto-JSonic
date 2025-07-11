@@ -68,7 +68,15 @@ public class LevelManager {
     public Player getPlayer() {
         return player;
     }
-
+    //para obtener los animales visuales
+    public java.util.Collection<AnimalVisual> getAnimalesVisuales() {
+        if (animalesVisuales == null) {
+            // Devuelve una colección vacía para evitar NullPointerException
+            return java.util.Collections.emptyList();
+        }
+        return animalesVisuales.values();
+    }
+//-----------------------------------
     public void generarArbol(float x, float y) {
         // 1. Creamos el nuevo objeto Árbol
         Arbol_Tails nuevoArbol = new Arbol_Tails(x, y);
@@ -147,32 +155,54 @@ public class LevelManager {
     // --- AÑADIDO: Método para generar bloques rompibles ---
     // Nuevo método para generar bloques en lugares válidos
     private void generarBloquesRompibles(int cantidad) {
-        // Asegúrate que el nombre de la capa "Colisiones" sea correcto
-        TiledMapTileLayer capaDeColision = (TiledMapTileLayer) mapaActual.getLayers().get("Colisiones");
+        // Obtenemos la capa de colisiones como una capa genérica, sin forzar el tipo.
+        com.badlogic.gdx.maps.MapLayer capaDeColision = mapaActual.getLayers().get("Colisiones");
         if (capaDeColision == null) {
-            Gdx.app.error("LevelManager", "La capa de colisiones no se encontró en el mapa.");
+            Gdx.app.error("LevelManager", "La capa de colisiones 'Colisiones' no se encontró en el mapa.");
             return;
         }
-        int mapWidth = capaDeColision.getWidth();
-        int mapHeight = capaDeColision.getHeight();
-        float tileSize = capaDeColision.getTileWidth(); // Asumimos tiles cuadrados
+
+        // Obtenemos los objetos de colisión de esa capa.
+        MapObjects objetosColision = capaDeColision.getObjects();
         Random random = new Random();
+        float anchoBloque = getTileWidth(); // Usamos el tamaño del tile como tamaño del bloque.
+        float altoBloque = getTileHeight();
 
         for (int i = 0; i < cantidad; i++) {
-            int tileX, tileY;
             int intentos = 0;
-            do {
-                tileX = random.nextInt(mapWidth);
-                tileY = random.nextInt(mapHeight);
-                intentos++;
-            } while (capaDeColision.getCell(tileX, tileY) != null && intentos < 100); // Repite si la celda tiene colisión
+            boolean posicionValida = false;
+            float x = 0, y = 0;
 
-            if (intentos < 100) {
-                float worldX = tileX * tileSize;
-                float worldY = tileY * tileSize;
-                // --- MODIFICADO: Usa ObjetoRomperVisual ---
-                bloquesRompibles.add(new ObjetoRomperVisual(worldX, worldY, tileSize));
-                Gdx.app.log("LevelManager", "Bloque rompible creado en: " + worldX + ", " + worldY);
+            // Busca una posición que no colisione.
+            do {
+                // Genera una posición aleatoria en píxeles dentro del mapa.
+                x = random.nextFloat() * (anchoMapaPixels - anchoBloque);
+                y = random.nextFloat() * (altoMapaPixels - altoBloque);
+
+                Rectangle boundsBloque = new Rectangle(x, y, anchoBloque, altoBloque);
+                boolean chocaConAlgo = false;
+
+                // Revisa si el nuevo bloque choca con algún objeto de colisión existente.
+                for (com.badlogic.gdx.maps.MapObject obj : objetosColision) {
+                    if (obj instanceof RectangleMapObject) {
+                        Rectangle rectColision = ((RectangleMapObject) obj).getRectangle();
+                        if (rectColision.overlaps(boundsBloque)) {
+                            chocaConAlgo = true;
+                            break; // Si choca con uno, no hace falta seguir revisando.
+                        }
+                    }
+                }
+
+                if (!chocaConAlgo) {
+                    posicionValida = true; // ¡Encontramos una posición válida!
+                }
+                intentos++;
+            } while (!posicionValida && intentos < 100); // Limita los intentos para evitar bucles infinitos.
+
+            if (posicionValida) {
+                // Crea el bloque en la posición encontrada.
+                bloquesRompibles.add(new ObjetoRomperVisual(x, y, anchoBloque));
+                Gdx.app.log("LevelManager", "Bloque rompible creado en: " + x + ", " + y);
             }
         }
     }
@@ -191,6 +221,21 @@ public class LevelManager {
     //----------------------------------------------------------
 
     // --- AÑADIDO: Métodos para gestionar los animales ---
+    /**
+     * Procesa un mapa completo de estados de animales, creando nuevos animales visuales
+     * o actualizando los existentes.
+     * Este método es llamado cuando el cliente recibe un PaqueteActualizacionAnimales.
+     * @param estadosAnimales El HashMap que viene del paquete del servidor.
+     */
+    public void actualizarAnimalesDesdePaquete(java.util.HashMap<Integer, AnimalState> estadosAnimales) {
+        if (estadosAnimales == null) return;
+
+        // Itera sobre cada estado de animal recibido en el paquete.
+        for (AnimalState estado : estadosAnimales.values()) {
+            // Llama al método que ya tenías para crear o actualizar cada animal individualmente.
+            agregarOActualizarAnimal(estado);
+        }
+    }
 
     /**
      * Añade un nuevo animal visual al juego.
@@ -306,26 +351,6 @@ public class LevelManager {
         camara.position.y = MathUtils.clamp(camara.position.y, minCamY, maxCamY);
 
     }
-
-    // Método para liberar los recursos del nivel
-   /* public void dispose() {
-        if (mapaActual != null) {
-            mapaActual.dispose();
-            mapaActual = null;
-        }
-        if (renderizadorMapa != null) {
-            renderizadorMapa.dispose();
-            renderizadorMapa = null;
-        }
-
-         for (Arbol_Tails arbol : arbolesGenerados) {
-            arbol.dispose();
-        }
-    }
-
-    public TiledMap getMapaActual() {
-        return mapaActual;
-    }*/
 
     // Devuelve la posición del objeto Llegada en la capa "destinox"
     public com.badlogic.gdx.math.Vector2 obtenerPosicionLlegada() {

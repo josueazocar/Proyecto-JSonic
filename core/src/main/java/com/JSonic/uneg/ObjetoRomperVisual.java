@@ -20,6 +20,7 @@ public class ObjetoRomperVisual {
     private final float tiempoPorFrameDestruccion = 0.1f;
     private int frameActualDestruccion = 2; // La animación de destrucción empieza en el frame 2
 
+
     public ObjetoRomperVisual(float x, float y, float tileSize) {
         this.x = x;
         this.y = y;

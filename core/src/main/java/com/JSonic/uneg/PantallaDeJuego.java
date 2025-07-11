@@ -494,6 +494,9 @@ public class PantallaDeJuego extends PantallaBase {
                 }
             }
         }
+        //para actualiza los bloques
+        manejadorNivel.actualizar(deltat);
+        //--------------------------------
         personajeJugable.KeyHandler();
         personajeJugable.update(deltat);
 
@@ -569,6 +572,7 @@ public class PantallaDeJuego extends PantallaBase {
 
         //for (ItemVisual item : itemsEnPantalla.values()) item.draw(batch);
         manejadorNivel.dibujarArboles(batch);
+        manejadorNivel.dibujarBloques(batch);
 
         personajeJugable.draw(batch);
         for (Player otro : otrosJugadores.values()) otro.draw(batch);
@@ -614,7 +618,7 @@ public class PantallaDeJuego extends PantallaBase {
         mainStage.getViewport().update(width, height, true);
         if (uiCamera != null) {
             uiCamera.setToOrtho(false, width, height);
-
+            uiCamera.update();
         }
     }
 
