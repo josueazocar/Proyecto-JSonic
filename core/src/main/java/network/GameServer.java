@@ -696,7 +696,7 @@ public class GameServer implements IGameServer {
     }
 
     @Override
-    public void update(float deltaTime, com.JSonic.uneg.LevelManager manejadorNivel) {
+    public void update(float deltaTime, LevelManager manejadorNivel, Player personajeJugable) {
 
     }
 

@@ -2,11 +2,14 @@ package com.JSonic.uneg;
 
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Input;
+import com.badlogic.gdx.graphics.Color;
+import com.badlogic.gdx.graphics.Pixmap;
 import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.Animation;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.graphics.g2d.TextureRegion;
 import com.badlogic.gdx.math.Rectangle;
+import com.badlogic.gdx.math.Matrix4; // <-- NUEVA IMPORTACIÓN NECESARIA
 
 
 public class Sonic extends Player {
@@ -14,13 +17,28 @@ public class Sonic extends Player {
     protected TextureRegion[] frameSpinRight;
     protected TextureRegion[] frameSpinLeft;
 
+    // --- VARIABLES PARA HABILIDAD Y DESTELLO ---
+    private static final float CLEAN_COOLDOWN_SECONDS = 40.0f;
+    private float cleanCooldownTimer = 0.0f;
+    private float flashDurationTimer = 0.0f;
+    private Texture texturaBlanca;
+
+    // --- VARIABLES PARA EL INDICADOR DE COOLDOWN (TORNADO) ---
+    private Texture tornadoSheet;
+    private Animation<TextureRegion> tornadoAnimation;
+    private TextureRegion cooldownIndicatorFrame;
+    private float cooldownIndicatorTime = 0f; // Tiempo para la animación del indicador
+    private static final float INDICATOR_SIZE = 32f; // Tamaño del icono del tornado
+
+    // --- NUEVA VARIABLE PARA LA MATRIZ DE PROYECCIÓN ---
+    private Matrix4 screenProjectionMatrix;
+
 
     public Sonic(PlayerState estadoInicial) {
         super(estadoInicial);
         CargarSprites();
         inicializarHitbox();
-        // Asegúrate de que animacion no sea nula al inicio
-        // Si getEstadoActual() es nulo o no tiene una animación, usa un estado por defecto.
+        inicializarRecursosAdicionales();
         EstadoPlayer estadoInicialAnimacion = (getEstadoActual() != null && animations.containsKey(getEstadoActual())) ? getEstadoActual() : EstadoPlayer.IDLE_RIGHT;
         animacion = animations.get(estadoInicialAnimacion);
         if (animacion == null) {
@@ -32,8 +50,7 @@ public class Sonic extends Player {
         super(estadoInicial, levelManager);
         CargarSprites();
         inicializarHitbox();
-        // Asegúrate de que animacion no sea nula al inicio
-        // Si getEstadoActual() es nulo o no tiene una animación, usa un estado por defecto.
+        inicializarRecursosAdicionales();
         EstadoPlayer estadoInicialAnimacion = (getEstadoActual() != null && animations.containsKey(getEstadoActual())) ? getEstadoActual() : EstadoPlayer.IDLE_RIGHT;
         animacion = animations.get(estadoInicialAnimacion);
         if (animacion == null) {
@@ -41,44 +58,58 @@ public class Sonic extends Player {
         }
     }
 
+    /**
+     * Inicializa recursos adicionales como la textura del destello y el indicador de habilidad.
+     */
+    private void inicializarRecursosAdicionales() {
+        // Inicializar textura del destello
+        Pixmap pixmap = new Pixmap(1, 1, Pixmap.Format.RGBA8888);
+        pixmap.setColor(Color.WHITE);
+        pixmap.fill();
+        texturaBlanca = new Texture(pixmap);
+        pixmap.dispose();
+
+        // --- INICIALIZAR ANIMACIÓN DEL INDICADOR ---
+        tornadoSheet = new Texture(Gdx.files.internal("Entidades/Player/Sonic/Tornado/tornado_icon_16.png"));
+        TextureRegion[][] tmpFrames = TextureRegion.split(tornadoSheet, 16, 16);
+        tornadoAnimation = new Animation<TextureRegion>(0.08f, tmpFrames[0]);
+        tornadoAnimation.setPlayMode(Animation.PlayMode.LOOP);
+
+        // --- INICIALIZAR LA MATRIZ DE PROYECCIÓN ---
+        screenProjectionMatrix = new Matrix4();
+    }
+
+
     @Override
     public void KeyHandler() {
-        // Guarda la posición actual antes de que el KeyHandler del padre la modifique
         float currentX = estado.x;
         float currentY = estado.y;
 
-        // Llama primero al KeyHandler del padre para manejar el movimiento básico (WASD).
-        // Esto calcula proposedMovementState y actualiza estado.x/y si no hay colisión,
-        // pero aún NO QUEREMOS que esto se aplique si hay una acción bloqueante.
         super.KeyHandler();
 
-        // Reinicia actionStateSet para el frame actual
-        actionStateSet = false;
+        if (Gdx.input.isKeyJustPressed(Input.Keys.SPACE) && cleanCooldownTimer <= 0) {
+            this.flashDurationTimer = 0.25f;
+            this.cleanCooldownTimer = CLEAN_COOLDOWN_SECONDS;
+            Gdx.app.log("Sonic", "Habilidad activada. Cooldown de " + CLEAN_COOLDOWN_SECONDS + "s iniciado.");
 
-        // --- Lógica para MANEJAR TECLAS DE ACCIÓN ---
-        // (Golpe, Patada, Spin)
-
-        // 1. Prioriza las acciones bloqueantes (HIT, KICK)
-        // Si Sonic ya está en una acción bloqueante (que impide el movimiento), no procesa más entrada para movimiento u otras acciones.
-        if (isActionBlockingMovement()) {
-            // Si está en una acción bloqueante, RESTAURA la posición a la que estaba antes del super.KeyHandler()
-            // para evitar cualquier desplazamiento no deseado.
-            estado.x = currentX;
-            estado.y = currentY;
-            return; // Termina la ejecución del KeyHandler para este frame
         }
 
-        // 2. Maneja las teclas de acción inmediata (J, K) que deben anular el movimiento continuo por un corto período.
-        // Estas son acciones que impiden el movimiento mientras duran.
+        actionStateSet = false;
+
+        if (isActionBlockingMovement()) {
+            estado.x = currentX;
+            estado.y = currentY;
+            return;
+        }
+
         if (Gdx.input.isKeyJustPressed(Input.Keys.J)) {
             if (lastDirection == EstadoPlayer.LEFT || lastDirection == EstadoPlayer.IDLE_LEFT) {
                 setEstadoActual(EstadoPlayer.HIT_LEFT);
             } else {
                 setEstadoActual(EstadoPlayer.HIT_RIGHT);
             }
-            tiempoXFrame = 0; // Reinicia el tiempo para que la animación de golpe comience desde el principio
+            tiempoXFrame = 0;
             actionStateSet = true;
-            // Al activarse HIT, anula cualquier movimiento que el super.KeyHandler() haya intentado aplicar.
             estado.x = currentX;
             estado.y = currentY;
         } else if (Gdx.input.isKeyJustPressed(Input.Keys.K)) {
@@ -87,45 +118,34 @@ public class Sonic extends Player {
             } else {
                 setEstadoActual(EstadoPlayer.KICK_RIGHT);
             }
-            tiempoXFrame = 0; // Reinicia el tiempo para la animación de patada
+            tiempoXFrame = 0;
             actionStateSet = true;
-            // Al activarse KICK, anula cualquier movimiento que el super.KeyHandler() haya intentado aplicar.
             estado.x = currentX;
             estado.y = currentY;
         }
-        // 3. Maneja el SPIN (L) - Esta es una acción continua que SÍ permite movimiento en el eje X.
-        // Se usa 'else if' para que SPIN solo se active si J o K no fueron presionadas.
         else if (Gdx.input.isKeyPressed(Input.Keys.L)) {
-            // Determina la dirección del SPIN basándose en WASD si se presiona.
             if (Gdx.input.isKeyPressed(Input.Keys.A)) {
                 setEstadoActual(EstadoPlayer.SPECIAL_LEFT);
-                lastDirection = EstadoPlayer.LEFT; // Actualiza lastDirection para consistencia
+                lastDirection = EstadoPlayer.LEFT;
                 estado.x -= speed;
             } else if (Gdx.input.isKeyPressed(Input.Keys.D)) {
                 setEstadoActual(EstadoPlayer.SPECIAL_RIGHT);
-                lastDirection = EstadoPlayer.RIGHT; // Actualiza lastDirection para consistencia
+                lastDirection = EstadoPlayer.RIGHT;
                 estado.x += speed;
             } else {
-                // Si L se presiona sin A o D, mantiene el giro en la última dirección horizontal conocida.
-                // Aquí también se permite el movimiento si WASD fue presionado, el super.KeyHandler() ya lo aplicó.
                 if (lastDirection == EstadoPlayer.LEFT || lastDirection == EstadoPlayer.IDLE_LEFT) {
                     setEstadoActual(EstadoPlayer.SPECIAL_LEFT);
                 } else {
                     setEstadoActual(EstadoPlayer.SPECIAL_RIGHT);
                 }
             }
-            actionStateSet = true; // Indica que se ha manejado una acción.
+            actionStateSet = true;
         }
 
-        // 4. Si ninguna acción especial (J, K, L) fue activada en este frame,
-        // determina el estado basándose en el movimiento WASD o IDLE.
         if (!actionStateSet) {
-            // 'isMoving' y 'proposedMovementState' se establecen en el KeyHandler del Player.
             if (isMoving) {
-                // Si hay movimiento WASD, establece el estado actual al estado de movimiento propuesto.
                 setEstadoActual(proposedMovementState);
             } else {
-                // Si no hay movimiento y no se presionó ninguna tecla de acción, vuelve al estado IDLE.
                 if (lastDirection == EstadoPlayer.LEFT) {
                     setEstadoActual(EstadoPlayer.IDLE_LEFT);
                 } else {
@@ -256,15 +276,11 @@ public class Sonic extends Player {
 
     private void inicializarHitbox() {
         float baseTileSize = getTileSize();
-
         this.collisionWidth = baseTileSize * 0.6f;
         this.collisionHeight = baseTileSize * 0.75f;
-
         this.collisionOffsetX = (baseTileSize - collisionWidth) / 2f;
         this.collisionOffsetY = 0;
-
         this.bounds = new Rectangle(estado.x + collisionOffsetX, estado.y + collisionOffsetY, collisionWidth, collisionHeight);
-
         Gdx.app.log("Sonic", "Hitbox inicializado (basado en Entity.tileSize): " + this.bounds.toString());
         Gdx.app.log("Sonic", "Entity.tileSize usado para hitbox: " + baseTileSize);
         Gdx.app.log("Sonic", "Offsets del hitbox: x=" + collisionOffsetX + ", y=" + collisionOffsetY);
@@ -272,9 +288,21 @@ public class Sonic extends Player {
 
     @Override
     public void update(float deltaTime) {
+        // --- LÓGICA DE TEMPORIZADORES ---
+        if (cleanCooldownTimer > 0) {
+            cleanCooldownTimer -= deltaTime;
+        }
+        if (flashDurationTimer > 0) {
+            flashDurationTimer -= deltaTime;
+        }
+
+        // --- ACTUALIZAR ANIMACIÓN DEL INDICADOR ---
+        cooldownIndicatorTime += deltaTime;
+        cooldownIndicatorFrame = tornadoAnimation.getKeyFrame(cooldownIndicatorTime);
+        // --- FIN DE LÓGICA DE INDICADOR ---
+
         bounds.setPosition(estado.x + collisionOffsetX, estado.y + collisionOffsetY);
 
-        // Si el estado actual no tiene una animación cargada, por defecto a IDLE_RIGHT
         if (!animations.containsKey(getEstadoActual())) {
             Gdx.app.log("Sonic", "Advertencia: Estado " + getEstadoActual() + " no tiene animación. Cambiando a IDLE_RIGHT.");
             setEstadoActual(EstadoPlayer.IDLE_RIGHT);
@@ -296,8 +324,6 @@ public class Sonic extends Player {
 
         tiempoXFrame += deltaTime;
 
-        // Lógica de transición de estado después de que una animación de acción termina
-        // Solo para animaciones de PlayMode.NORMAL como HIT o KICK.
         if ((estado.estadoAnimacion == EstadoPlayer.HIT_RIGHT || estado.estadoAnimacion == EstadoPlayer.HIT_LEFT ||
             estado.estadoAnimacion == EstadoPlayer.KICK_RIGHT || estado.estadoAnimacion == EstadoPlayer.KICK_LEFT) && animacion != null) {
 
@@ -322,10 +348,62 @@ public class Sonic extends Player {
 
     @Override
     public void draw(SpriteBatch batch) {
+        // Dibuja a Sonic y el indicador con la cámara del juego.
         if (frameActual != null) {
             batch.draw(frameActual, estado.x, estado.y, getTileSize(), getTileSize());
         } else {
             Gdx.app.log("Sonic", "Advertencia: 'frameActual' es nulo en el método draw(). No se puede dibujar a Sonic.");
+        }
+
+        if (cleanCooldownTimer <= 0 && cooldownIndicatorFrame != null) {
+            float indicatorX = estado.x + (getTileSize() / 2) - (INDICATOR_SIZE / 2);
+            float indicatorY = estado.y + getTileSize();
+            batch.draw(cooldownIndicatorFrame, indicatorX, indicatorY, INDICATOR_SIZE, INDICATOR_SIZE);
+        }
+
+        // --- LÓGICA DE DESTELLO CORREGIDA ---
+        if (flashDurationTimer > 0) {
+            // 1. Dibuja todo lo que estaba pendiente (Sonic y el indicador) con la cámara del juego.
+            batch.flush();
+
+            // 2. Guarda la matriz de la cámara del juego actual.
+            Matrix4 oldProjection = batch.getProjectionMatrix().cpy();
+
+            // 3. Configura y aplica una nueva matriz que dibuja en coordenadas de pantalla.
+            //    Se actualiza cada vez por si la ventana cambia de tamaño.
+            screenProjectionMatrix.setToOrtho2D(0, 0, Gdx.graphics.getWidth(), Gdx.graphics.getHeight());
+            batch.setProjectionMatrix(screenProjectionMatrix);
+
+            // 4. Dibuja el destello. Ahora sí ocupará toda la pantalla.
+            Color colorOriginal = batch.getColor().cpy();
+            batch.setColor(1, 1, 1, 0.8f);
+            batch.draw(texturaBlanca, 0, 0, Gdx.graphics.getWidth(), Gdx.graphics.getHeight());
+            batch.setColor(colorOriginal);
+
+            // 5. Dibuja el destello inmediatamente.
+            batch.flush();
+
+            // 6. ¡MUY IMPORTANTE! Restaura la matriz de la cámara del juego original.
+            batch.setProjectionMatrix(oldProjection);
+        }
+    }
+
+    // ---[AÑADE ESTE MÉTODO]---
+    public float getFlashDurationTimer() {
+        return this.flashDurationTimer;
+    }
+
+    @Override
+    public void dispose() {
+        super.dispose(); // Llama al dispose del padre (Player)
+        if (texturaBlanca != null) {
+            texturaBlanca.dispose();
+            Gdx.app.log("Sonic", "Textura del destello liberada.");
+        }
+        // --- LIBERAR TEXTURA DEL INDICADOR ---
+        if (tornadoSheet != null) {
+            tornadoSheet.dispose();
+            Gdx.app.log("Sonic", "Textura del indicador de cooldown liberada.");
         }
     }
 }

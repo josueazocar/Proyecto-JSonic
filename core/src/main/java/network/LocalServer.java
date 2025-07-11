@@ -1,7 +1,6 @@
 package network;
 
 import com.JSonic.uneg.*;
-import com.badlogic.gdx.maps.MapObjects;
 import com.badlogic.gdx.math.MathUtils;
 import com.badlogic.gdx.math.Rectangle;
 import network.interfaces.IGameClient;
@@ -59,7 +58,6 @@ public class LocalServer implements IGameServer {
     private static final float ROBOT_DETECTION_RANGE = 300f;
     private static final float ROBOT_ATTACK_RANGE = 10f; // Usando el valor del código original
     private int basuraReciclada = 0;
-
 
     public LocalServer() {
         // El constructor está vacío, la magia ocurre en start() y update()
@@ -119,10 +117,12 @@ public class LocalServer implements IGameServer {
 
     /**
      * Este es el "game loop" del servidor. Se llamará desde PantallaDeJuego.
-     * @param deltaTime El tiempo transcurrido desde el último fotograma.
+     *
+     * @param deltaTime        El tiempo transcurrido desde el último fotograma.
+     * @param personajeJugable
      */
     @Override
-    public void update(float deltaTime, LevelManager manejadorNivel) {
+    public void update(float deltaTime, LevelManager manejadorNivel, Player personajeJugable) {
         // --- 1. PROCESAR PAQUETES DEL CLIENTE ---
         while (!paquetesEntrantes.isEmpty()) {
             Object objeto = paquetesEntrantes.poll();
@@ -273,7 +273,7 @@ public class LocalServer implements IGameServer {
             this.teleportGenerado = true;
         }
 
-        actualizarEnemigosAI(deltaTime, manejadorNivel);
+        actualizarEnemigosAI(deltaTime, manejadorNivel,personajeJugable);
         generarNuevosItems(deltaTime, manejadorNivel);
         generarNuevosEnemigos(deltaTime, manejadorNivel);
 
@@ -284,9 +284,17 @@ public class LocalServer implements IGameServer {
         }
     }
 
-    private void actualizarEnemigosAI(float deltaTime, LevelManager manejadorNivel) {
+    private void actualizarEnemigosAI(float deltaTime, LevelManager manejadorNivel, Player personajeJugable) {
         PlayerState jugador = jugadores.get(1);
-        if (jugador == null) return;
+        if (jugador == null)
+            return;
+
+        if( personajeJugable.getVida() == 100){
+            for (EnemigoState enemigo : enemigosActivos.values()) {
+                enemigo.estadoAnimacion = EnemigoState.EstadoEnemigo.IDLE_RIGHT;
+            }
+            return;
+        }
 
         for (EnemigoState enemigo : enemigosActivos.values()) {
 
