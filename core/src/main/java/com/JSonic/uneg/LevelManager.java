@@ -43,7 +43,7 @@ public class LevelManager {
     private Array<AnimalVisual> animales;
     //para los bloques u objetos irrompibles para otros jugadores menos para knuckles
     private Array<ObjetoRomperVisual> bloquesRompibles;
-
+    private int proximoIdBloque = 30000;
     // Constructor que recibe la cámara y el SpriteBatch (aunque el batch no se use directamente aquí para dibujar el mapa)
     public LevelManager(OrthographicCamera camara, SpriteBatch batch) {
         this.camaraJuego = camara;
@@ -200,9 +200,8 @@ public class LevelManager {
             } while (!posicionValida && intentos < 100); // Limita los intentos para evitar bucles infinitos.
 
             if (posicionValida) {
-                // Crea el bloque en la posición encontrada.
-                bloquesRompibles.add(new ObjetoRomperVisual(x, y, anchoBloque));
-                Gdx.app.log("LevelManager", "Bloque rompible creado en: " + x + ", " + y);
+                // Asigna el ID al crear el bloque
+                bloquesRompibles.add(new ObjetoRomperVisual(proximoIdBloque++, x, y, anchoBloque));
             }
         }
     }
@@ -211,6 +210,17 @@ public class LevelManager {
     public Array<ObjetoRomperVisual> getBloquesRompibles() {
         return bloquesRompibles;
     }
+
+    // ================== INICIO DEL CÓDIGO A AÑADIR ==================
+    public ObjetoRomperVisual getBloquePorId(int id) {
+        for (ObjetoRomperVisual bloque : bloquesRompibles) {
+            if (bloque.id == id) {
+                return bloque;
+            }
+        }
+        return null;
+    }
+    // =================== FIN DEL CÓDIGO A AÑADIR ===================
 
     // --- NUEVO: Método para dibujar los bloques rompibles ---
     public void dibujarBloques(SpriteBatch batch) {
@@ -251,6 +261,8 @@ public class LevelManager {
             Gdx.app.log("LevelManager", "Creando nuevo animal visual con ID: " + estadoAnimal.id);
             AnimalVisual nuevoAnimal = new AnimalVisual(estadoAnimal.id, estadoAnimal.x, estadoAnimal.y, animalTexture);
             animalesVisuales.put(estadoAnimal.id, nuevoAnimal);
+            // Añadimos su hitbox a nuestra lista de colisiones dinámicas
+            colisionesDinamicas.add(nuevoAnimal.getBounds());
         }
     }
 

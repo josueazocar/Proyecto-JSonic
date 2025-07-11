@@ -129,7 +129,7 @@ public class LocalServer implements IGameServer {
     // Nuevo método para generar animales en el mapa actual
     private void generarAnimales(LevelManager manejadorNivel) {
         // Limpiamos la lista para que no se acumulen animales entre mapas
-        animalesActivos.clear();
+       // animalesActivos.clear();
         proximoIdAnimal = 20000; // Reiniciamos el contador de ID
         muertesAnimalesActivas = false; // Reseteamos la bandera al cambiar de mapa
         tiempoParaProximaMuerteAnimal = 20f; // Reiniciamos el temporizador
@@ -214,6 +214,21 @@ public class LocalServer implements IGameServer {
     //-------------------------------------
 
     //Logica para la muerte de los aniamales
+    //Logiga para las colisiones de animales
+    private boolean colisionaConAnimal(Rectangle bounds) {
+        for (AnimalState animal : animalesActivos.values()) {
+            // Solo colisionamos con animales que están vivos
+            //if (animal.estaVivo) {
+                // Asumimos un tamaño de 32x32 para el animal, puedes ajustarlo si es necesario.
+                Rectangle animalBounds = new Rectangle(animal.x, animal.y, 32, 32);
+                if (bounds.overlaps(animalBounds)) {
+                    return true; // Hay colisión
+                }
+           // }
+        }
+        return false; // No hay colisión
+    }
+    //----------------------fin de la logica--------------------------------------
 
     private void actualizarEstadoAnimalesPorContaminacion(float deltaTime) {
         if (contaminationState.getPercentage() >= 50) {
@@ -251,12 +266,19 @@ public class LocalServer implements IGameServer {
         // --- 1. PROCESAR PAQUETES DEL CLIENTE ---
         while (!paquetesEntrantes.isEmpty()) {
             Object objeto = paquetesEntrantes.poll();
-
+//ver si funciona bien
             if (objeto instanceof Network.PaquetePosicionJugador paquete) {
                 PlayerState estadoJugador = jugadores.get(paquete.id);
                 if (estadoJugador != null) {
-                    estadoJugador.x = paquete.x;
-                    estadoJugador.y = paquete.y;
+                    // Asumimos un tamaño para el jugador, por ejemplo 32x48. Ajusta estos valores.
+                    Rectangle nuevosLimites = new Rectangle(paquete.x, paquete.y, 32, 48);
+
+                    // Verificamos que la nueva posición no colisione ni con el mapa ni con un animal.
+                    if (!manejadorNivel.colisionaConMapa(nuevosLimites) && !colisionaConAnimal(nuevosLimites)) {
+                        estadoJugador.x = paquete.x;
+                        estadoJugador.y = paquete.y;
+                    }
+                    // Siempre actualizamos la animación, incluso si el movimiento fue bloqueado.
                     estadoJugador.estadoAnimacion = paquete.estadoAnimacion;
                 }
             } else if (objeto instanceof Network.PaqueteSolicitudRecogerItem paquete) {
@@ -398,6 +420,7 @@ public class LocalServer implements IGameServer {
             enemigosActivos.clear();
             itemsActivos.clear();
             destinosPortales.clear(); // Importante para los portales
+            animalesActivos.clear(); //para los animales
 
             // 2. Reiniciar temporizadores de generación
             teleportGenerado = false;
@@ -534,14 +557,14 @@ public class LocalServer implements IGameServer {
 
                     // Comprobar movimiento en X
                     robotBounds.setX(targetX);
-                    if (!manejadorNivel.colisionaConMapa(robotBounds)) {
+                    if (!manejadorNivel.colisionaConMapa(robotBounds) && !colisionaConAnimal(robotBounds)) {
                         enemigo.x = targetX;
                     }
 
                     // Comprobar movimiento en Y
                     robotBounds.setX(enemigo.x);
                     robotBounds.setY(targetY);
-                    if (!manejadorNivel.colisionaConMapa(robotBounds)) {
+                    if (!manejadorNivel.colisionaConMapa(robotBounds) && !colisionaConAnimal(robotBounds)) {
                         enemigo.y = targetY;
                     }
                 }

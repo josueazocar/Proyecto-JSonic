@@ -100,6 +100,10 @@ public abstract class Player extends Entity implements Disposable {
         // Crea el hitbox en la posición futura.
         Rectangle futureBounds = new Rectangle(newX + collisionOffsetX, newY + collisionOffsetY, collisionWidth, collisionHeight);
 
+        // 1. Comprobar colisión con el mapa (bloques, árboles, etc.)
+        if (levelManager.colisionaConMapa(futureBounds)) {
+            return true; // Hay colisión con el mapa
+        }
 
         // CAMBIO: Itera sobre los objetos de la capa de colisiones del mapa.
        /* if (levelManager.getCollisionObjects() != null) {
@@ -123,20 +127,21 @@ public abstract class Player extends Entity implements Disposable {
             }
         }
 
-        // 3. NUEVA COMPROBACIÓN: Colisión con animales
-        // (Asumiendo que LevelManager tiene un método getAnimales() y Animal tiene getBounds())
-       if (levelManager.getAnimalesVisuales() != null) {
-            for (AnimalVisual animal : levelManager.getAnimalesVisuales()) {
+        // 3. Comprobar colisión con los animales (vivos o muertos)
+        java.util.Collection<AnimalVisual> animales = levelManager.getAnimalesVisuales();
+        if (animales != null) {
+            for (AnimalVisual animal : animales) {
                 if (futureBounds.overlaps(animal.getBounds())) {
-                    return true; // Colisión con un animal
+                    return true; // Hay colisión con un animal
                 }
             }
+
         }
 
-        //return false;
-
+        // Si no hubo colisión con NADA de lo anterior, permite el movimiento.
+        return false;
         // Delega la comprobación al LevelManager, que conoce TODOS los obstáculos.
-        return levelManager.colisionaConMapa(futureBounds);
+       // return levelManager.colisionaConMapa(futureBounds);
 
     }
 //colisiones fin

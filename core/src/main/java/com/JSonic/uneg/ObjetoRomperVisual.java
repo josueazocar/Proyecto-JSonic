@@ -11,6 +11,7 @@ public class ObjetoRomperVisual {
     private TextureRegion[] frames;
     private int estadoActual; // 0: intacto, 1: dañado, 2: destruyéndose
     public Rectangle bounds;
+    public final int id;
     public float x, y;
     private float size;
     private boolean debeSerEliminado = false;
@@ -18,15 +19,17 @@ public class ObjetoRomperVisual {
     // Variables para la animación de destrucción
     private float tiempoAnimacionDestruccion = 0f;
     private final float tiempoPorFrameDestruccion = 0.1f;
-    private int frameActualDestruccion = 2; // La animación de destrucción empieza en el frame 2
+    private int frameActualDestruccion = 2;// La animación de destrucción empieza en el frame 2
 
 
-    public ObjetoRomperVisual(float x, float y, float tileSize) {
+    public ObjetoRomperVisual(int id,float x, float y, float tileSize) {
+        this.id = id;
         this.x = x;
         this.y = y;
         this.size = tileSize;
         this.estadoActual = 0;
         this.bounds = new Rectangle(x, y, size, size);
+
 
         Texture spriteSheet = new Texture("Items/BasuraDestruir.png");
         TextureRegion[][] tmp = TextureRegion.split(spriteSheet, spriteSheet.getWidth() / 2, spriteSheet.getHeight() / 2);
@@ -84,6 +87,15 @@ public class ObjetoRomperVisual {
         }
         if (currentFrame != null) {
             batch.draw(currentFrame, x, y, size, size);
+        }
+    }
+
+    //Nuevo metodo para destruir
+    public void destruir() {
+        // Solo inicia la destrucción si no está ya destruyéndose o marcado para eliminar.
+        if (estadoActual < 2 && !debeSerEliminado) {
+            estadoActual = 2; // Pasa directamente al estado de destrucción.
+            Gdx.app.log("ObjetoRomperVisual", "¡Orden de destrucción recibida! Nuevo estado: " + estadoActual);
         }
     }
 

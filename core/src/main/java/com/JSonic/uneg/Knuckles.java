@@ -18,7 +18,8 @@ public class Knuckles extends Player {
     //
     private float tiempoDesdeUltimoGolpe = 0f; // Tiempo para detectar doble toque
     private final float cooldownGolpe = 0.4f; // Tiempo máximo entre toques para considerar un doble toque
-
+    //private int idBloqueGolpeadoEsteFrame = -1;
+    private boolean haIniciadoGolpeEsteFrame = false;
 
     public Knuckles(PlayerState estadoInicial) {
         super(estadoInicial);
@@ -50,6 +51,8 @@ public class Knuckles extends Player {
 
     @Override
     public void KeyHandler() {
+        // Primero, reiniciamos la bandera de acción de este frame.
+        haIniciadoGolpeEsteFrame = false;
         // Guarda la posición actual antes de que el KeyHandler del padre la modifique
         float currentX = estado.x;
         float currentY = estado.y;
@@ -102,9 +105,7 @@ public class Knuckles extends Player {
             // Anula el movimiento mientras golpea
             estado.x = currentX;
             estado.y = currentY;
-
-            intentarRomperBloque();
-
+            this.haIniciadoGolpeEsteFrame = true;
             System.out.println("[Knuckles] ¡Teclas ESPACIO presionada, iniciando PUNCH y revisando bloques!");
         }
         //-------------FIN ATAQUE ESPECIAL -------------------
@@ -309,19 +310,21 @@ public class Knuckles extends Player {
 
         this.bounds = new Rectangle(estado.x + collisionOffsetX, estado.y + collisionOffsetY, collisionWidth, collisionHeight);
 
-        Gdx.app.log("Sonic", "Hitbox inicializado (basado en Entity.tileSize): " + this.bounds.toString());
-        Gdx.app.log("Sonic", "Entity.tileSize usado para hitbox: " + baseTileSize);
-        Gdx.app.log("Sonic", "Offsets del hitbox: x=" + collisionOffsetX + ", y=" + collisionOffsetY);
+        Gdx.app.log("Knuckles", "Hitbox inicializado (basado en Entity.tileSize): " + this.bounds.toString());
+        Gdx.app.log("Knuckles", "Entity.tileSize usado para hitbox: " + baseTileSize);
+        Gdx.app.log("Knuckles", "Offsets del hitbox: x=" + collisionOffsetX + ", y=" + collisionOffsetY);
     }
 
 
     @Override
     public void update(float deltaTime) {
-        // Actualizar el temporizador de cooldown y la posición del hitbox
+
+
+        // Actualizamos temporizadores y la posición del hitbox.
         tiempoDesdeUltimoGolpe += deltaTime;
         bounds.setPosition(estado.x + collisionOffsetX, estado.y + collisionOffsetY);
 
-        // Si el estado actual no tiene una animación cargada, por defecto a IDLE_RIGHT
+        // Si el estado actual no tiene una animación cargada, por defecto a IDLE_RIGHT.
         if (!animations.containsKey(getEstadoActual())) {
             Gdx.app.log("Knuckles", "Advertencia: Estado " + getEstadoActual() + " no tiene animación. Cambiando a IDLE_RIGHT.");
             setEstadoActual(EstadoPlayer.IDLE_RIGHT);
@@ -329,63 +332,52 @@ public class Knuckles extends Player {
 
         Animation<TextureRegion> targetAnimation = animations.get(getEstadoActual());
 
-        // Cambia la animación si el estado ha cambiado
+        // Cambia la animación si el estado ha cambiado.
         if (this.animacion != targetAnimation) {
             this.tiempoXFrame = 0;
             this.animacion = targetAnimation;
             Gdx.app.log("Knuckles", "Cambio de animación a: " + getEstadoActual());
         }
 
-        // Comprobación de seguridad por si la animación no se carga
+        // Comprobación de seguridad por si la animación no se carga.
         if (this.animacion == null) {
             Gdx.app.error("Knuckles", "CRÍTICO: 'animacion' es nula en update(). Estado: " + getEstadoActual());
             frameActual = null;
             return;
         }
 
-        // Avanza el tiempo de la animación
+        // Avanza el tiempo de la animación.
         tiempoXFrame += deltaTime;
 
-        // --- Lógica para acciones de un solo uso (PUNCH, HIT, KICK) ---
-        boolean esAccionDeGolpe = (estado.estadoAnimacion == EstadoPlayer.PUNCH_RIGHT || estado.estadoAnimacion == EstadoPlayer.PUNCH_LEFT);
-        boolean esOtraAccionNormal = (estado.estadoAnimacion == EstadoPlayer.HIT_RIGHT || estado.estadoAnimacion == EstadoPlayer.HIT_LEFT ||
+        // --- LÓGICA DE TRANSICIÓN PARA ACCIONES DE UN SOLO USO ---
+        boolean esAccionDeUnUso = (estado.estadoAnimacion == EstadoPlayer.PUNCH_RIGHT || estado.estadoAnimacion == EstadoPlayer.PUNCH_LEFT ||
+            estado.estadoAnimacion == EstadoPlayer.HIT_RIGHT || estado.estadoAnimacion == EstadoPlayer.HIT_LEFT ||
             estado.estadoAnimacion == EstadoPlayer.KICK_RIGHT || estado.estadoAnimacion == EstadoPlayer.KICK_LEFT);
 
-        // Este bloque solo se ejecuta para animaciones que se reproducen una vez (PlayMode.NORMAL)
-        if ((esAccionDeGolpe || esOtraAccionNormal) && animacion.getPlayMode() == Animation.PlayMode.NORMAL) {
-
-            // --- Lógica para romper bloques (SOLO durante el PUNCH) ---
-            if (esAccionDeGolpe) {
-                // Itera sobre la lista de objetos rompibles
-                for (ObjetoRomperVisual objeto : levelManager.getBloquesRompibles()) {
-                    // Si el hitbox de Knuckles se solapa con el del objeto
-                    if (bounds.overlaps(objeto.getBounds())) {
-                        objeto.recibirGolpe(); // Daña el objeto
-                        Gdx.app.log("Knuckles", "¡Golpe a bloque rompible!");
-                        break; // Golpea solo un objeto a la vez
-                    }
-                }
+        // Si es una acción de un solo uso y su animación ha terminado...
+        if (esAccionDeUnUso && animacion.isAnimationFinished(tiempoXFrame)) {
+            // ...volvemos al estado IDLE correspondiente.
+            if (lastDirection == EstadoPlayer.LEFT || lastDirection == EstadoPlayer.IDLE_LEFT) {
+                setEstadoActual(EstadoPlayer.IDLE_LEFT);
+            } else {
+                setEstadoActual(EstadoPlayer.IDLE_RIGHT);
             }
-
-            // --- Transición a IDLE después de que la animación termina ---
-            // Esto se comprueba DESPUÉS de la lógica de colisión
-            if (animacion.isAnimationFinished(tiempoXFrame)) {
-                if (lastDirection == EstadoPlayer.LEFT || lastDirection == EstadoPlayer.IDLE_LEFT) {
-                    setEstadoActual(EstadoPlayer.IDLE_LEFT);
-                } else {
-                    setEstadoActual(EstadoPlayer.IDLE_RIGHT);
-                }
-                tiempoXFrame = 0; // Reinicia el tiempo para la nueva animación IDLE
-                Gdx.app.log("Knuckles", "Transición de acción a IDLE: " + getEstadoActual());
-            }
+            // Reiniciamos el tiempo para la nueva animación IDLE.
+            tiempoXFrame = 0;
+            Gdx.app.log("Knuckles", "Transición de acción a IDLE: " + getEstadoActual());
         }
 
-        // Finalmente, actualiza el frame visual del personaje
+        // Finalmente, actualiza el frame visual del personaje.
         if (animacion != null) {
             frameActual = animacion.getKeyFrame(tiempoXFrame);
         } else {
             frameActual = null;
         }
+    }
+
+    //para pantalla de juego
+    public boolean haIniciadoGolpe() {
+        return haIniciadoGolpeEsteFrame;
     }
 
     @Override

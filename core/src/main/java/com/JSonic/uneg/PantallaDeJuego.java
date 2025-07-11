@@ -500,6 +500,43 @@ public class PantallaDeJuego extends PantallaBase {
         personajeJugable.KeyHandler();
         personajeJugable.update(deltat);
 
+        // --- INICIO DEL CÓDIGO A AÑADIR ---
+        // Este bloque hace de intermediario entre Knuckles y los bloques rompibles
+        if (personajeJugable instanceof Knuckles) {
+            Knuckles knuckles = (Knuckles) personajeJugable;
+
+            // Preguntamos si Knuckles acaba de iniciar un golpe.
+            if (knuckles.haIniciadoGolpe()) {
+                Gdx.app.log("PantallaDeJuego", "Knuckles ha iniciado un golpe. Buscando bloque cercano...");
+
+                ObjetoRomperVisual bloqueMasCercano = null;
+                float distanciaMinima = Float.MAX_VALUE;
+                float rangoMaximoDeGolpe = 60f; // Rango del puñetazo en píxeles. ¡Puedes ajustar este valor!
+
+                // Buscamos el bloque rompible más cercano a Knuckles.
+                for (ObjetoRomperVisual bloque : manejadorNivel.getBloquesRompibles()) {
+                    // Usamos Vector2 para calcular la distancia entre el centro de Knuckles y el centro del bloque.
+                    Vector2 posKnuckles = new Vector2(knuckles.estado.x + knuckles.getTileSize()/2f, knuckles.estado.y + knuckles.getTileSize()/2f);
+                    Vector2 posBloque = new Vector2(bloque.x + bloque.bounds.width/2f, bloque.y + bloque.bounds.height/2f);
+                    float distancia = posKnuckles.dst(posBloque);
+
+                    if (distancia < distanciaMinima) {
+                        distanciaMinima = distancia;
+                        bloqueMasCercano = bloque;
+                    }
+                }
+
+                // Si encontramos un bloque cercano y está dentro del rango del golpe...
+                if (bloqueMasCercano != null && distanciaMinima <= rangoMaximoDeGolpe) {
+                    Gdx.app.log("PantallaDeJuego", "¡Bloque encontrado en rango! ID: " + bloqueMasCercano.id + ". Dando orden de destruir.");
+                    bloqueMasCercano.destruir();
+                } else {
+                    Gdx.app.log("PantallaDeJuego", "Golpe al aire. Ningún bloque en rango.");
+                }
+            }
+        }
+        // --- FIN DEL CÓDIGO A AÑADIR ---
+
         for (Player otro : otrosJugadores.values()) {
             otro.update(deltat);
         }
@@ -690,7 +727,7 @@ public class PantallaDeJuego extends PantallaBase {
     }
     //para actualizar el label de los animales
     private void actualizarAnimalCountLabel() {
-        animalCountLabel.setText("Animals: " + animalesVivos + "/" + totalAnimalesMapa + " (" + animalesMuertos + " dead)");
+        animalCountLabel.setText("Animals: " + animalesVivos + "/" + totalAnimalesMapa + " (" + animalesMuertos + " Muertes)");
     }
 
     //para limpiar los enemigos en los otros mapasaaaaaaaa
