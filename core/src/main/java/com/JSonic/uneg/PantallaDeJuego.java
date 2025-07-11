@@ -106,13 +106,9 @@ public class PantallaDeJuego extends PantallaBase {
         Vector2 llegada = manejadorNivel.obtenerPosicionLlegada();
         personajeJugableEstado.x = llegada.x;
         personajeJugableEstado.y = llegada.y;
-
-        System.out.println("[JUEGO] Personaje recibido del menú: " + miPersonaje);
-
-
-
         // 1. Asigna el tipo de personaje al estado que se usará para el jugador local.
         personajeJugableEstado.characterType = miPersonaje;
+        System.out.println("[JUEGO] Personaje recibido del menú: " + miPersonaje);
 
         // 2. Crea la instancia del personaje jugable localmente.
         // Este switch se asegura de que TÚ estás controlando al personaje correcto en tu pantalla.
@@ -134,9 +130,9 @@ public class PantallaDeJuego extends PantallaBase {
                 break;
         }
 
+        manejadorNivel.setPlayer(personajeJugable);
         assetManager = new AssetManager();
         soundManager = new SoundManager(assetManager);
-        manejadorNivel.setPlayer(personajeJugable);
         soundManager.loadMusic(BACKGROUND_MUSIC_PATH2);
         soundManager.playBackgroundMusic(BACKGROUND_MUSIC_PATH2, 0.5f, true);
         assetManager.finishLoading();
@@ -409,9 +405,9 @@ public class PantallaDeJuego extends PantallaBase {
                 paquete.idItem = item.estado.id;
 
                 // --- CAMBIO CLAVE AQUÍ ---
-                // Si estamos en modo local, pasamos el paquete directamente al servidor local.
-                if (localServer != null) {
-                    localServer.recibirPaqueteDelCliente(paquete, 0); // El ID 0 es para el jugador local
+                // Se envía el paquete a través del cliente, que gestionará si es local o remoto.
+                if (gameClient != null) {
+                    gameClient.send(paquete);
                 }
 
                 // Si es un teletransporte, salimos del bucle para que el servidor procese el cambio de mapa.
@@ -447,47 +443,46 @@ public class PantallaDeJuego extends PantallaBase {
         }
 
         // --- INICIO: LÓGICA DE COLISIÓN CON ANIMALES ---
-// Usamos un iterador para poder eliminar elementos de forma segura si es necesario.
-        // Reemplaza el bucle de colisión de animales con este:
+// --- INICIO: LÓGICA DE COLISIÓN CON ANIMALES ---
         Iterator<AnimalVisual> iteradorAnimales = animalesEnPantalla.values().iterator();
         while (iteradorAnimales.hasNext()) {
             AnimalVisual animal = iteradorAnimales.next();
 
-            if (animal.estaVivo()) {
+            // CORRECCIÓN: Comprobar que las cajas de colisión no son nulas antes de usarlas.
+            if (animal.estaVivo() && personajeJugable.getBounds() != null && animal.getBounds() != null) {
                 // 1. Colisión: Jugador vs Animal
                 if (Intersector.overlaps(personajeJugable.getBounds(), animal.getBounds())) {
                     System.out.println("[CLIENT] Colisión con animal vivo ID: " + animal.getId() + ". Solicitando liberación.");
                     Network.PaqueteSolicitudLiberarAnimal paquete = new Network.PaqueteSolicitudLiberarAnimal();
                     paquete.idAnimal = animal.getId();
 
-                    // --- CAMBIO CLAVE AQUÍ ---
-                    if (localServer != null) {
-                        localServer.recibirPaqueteDelCliente(paquete, 0);
+                    if (gameClient != null) {
+                        gameClient.send(paquete);
                     }
 
-                    animal.setVivo(false); // Respuesta visual inmediata
+                    animal.setVivo(false);
                     continue;
                 }
 
                 // 2. Colisión: Enemigos vs Animal
                 for (RobotVisual enemigo : enemigosEnPantalla.values()) {
-                    if (Intersector.overlaps(enemigo.getBounds(), animal.getBounds())) {
+                    // También se añade la comprobación para los enemigos.
+                    if (enemigo.getBounds() != null && Intersector.overlaps(enemigo.getBounds(), animal.getBounds())) {
                         System.out.println("[CLIENT] Colisión de enemigo con animal vivo ID: " + animal.getId() + ". Solicitando muerte.");
                         Network.PaqueteSolicitudMatarAnimal paquete = new Network.PaqueteSolicitudMatarAnimal();
                         paquete.idAnimal = animal.getId();
 
-                        // --- CAMBIO CLAVE AQUÍ ---
-                        if (localServer != null) {
-                            localServer.recibirPaqueteDelCliente(paquete, 0);
+                        if (gameClient != null) {
+                            gameClient.send(paquete);
                         }
 
-                        animal.setVivo(false); // Respuesta visual inmediata
+                        animal.setVivo(false);
                         break;
                     }
                 }
             }
         }
-// --- FIN: LÓGICA DE COLISIÓN CON ANIMALES ---
+        // --- FIN: LÓGICA DE COLISIÓN CON ANIMALES ---
 
         camaraJuego.position.x = personajeJugable.estado.x;
         camaraJuego.position.y = personajeJugable.estado.y;
