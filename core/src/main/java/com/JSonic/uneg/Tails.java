@@ -3,41 +3,117 @@ package com.JSonic.uneg;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Input;
 import com.badlogic.gdx.graphics.Texture;
-import com.badlogic.gdx.graphics.g2d.Animation;
-import com.badlogic.gdx.graphics.g2d.SpriteBatch;
-import com.badlogic.gdx.graphics.g2d.TextureRegion;
+import com.badlogic.gdx.graphics.g2d.*;
 import com.badlogic.gdx.math.Rectangle;
+import network.Network;
+import network.interfaces.IGameClient;
 
 
 public class Tails extends Player {
 
     protected TextureRegion[] frameSpinRight;
     protected TextureRegion[] frameSpinLeft;
+    private Dron_Tails miDron;
+    public boolean isOnlineMode = false;
+
+
+    private transient BitmapFont font; // Se usa 'transient' para que no se intente serializar en red
+    private transient GlyphLayout glyphLayout; // Ayuda a medir el texto para centrarlo
+
 
 
     public Tails(PlayerState estadoInicial) {
         super(estadoInicial);
         CargarSprites();
         inicializarHitbox();
-        // Asegúrate de que animacion no sea nula al inicio
-        // Si getEstadoActual() es nulo o no tiene una animación, usa un estado por defecto.
         EstadoPlayer estadoInicialAnimacion = (getEstadoActual() != null && animations.containsKey(getEstadoActual())) ? getEstadoActual() : EstadoPlayer.IDLE_RIGHT;
         animacion = animations.get(estadoInicialAnimacion);
         if (animacion == null) {
             Gdx.app.error("Sonic", "ERROR: Animación inicial nula para el estado: " + estadoInicialAnimacion + ". Verifique CargarSprites.");
         }
+        miDron = new Dron_Tails(estadoInicial.id, null);
+
+        this.font = new BitmapFont();
+        this.font.getData().setScale(1);
+        this.glyphLayout = new GlyphLayout();
+        this.mensajeUI = "";
     }
 
-    public Tails(PlayerState estadoInicial, LevelManager levelManager) {
+    public Tails(PlayerState estadoInicial, LevelManager levelManager,IGameClient gameClient) {
         super(estadoInicial, levelManager);
+        this.gameClient = gameClient;
         CargarSprites();
         inicializarHitbox();
-        // Asegúrate de que animacion no sea nula al inicio
-        // Si getEstadoActual() es nulo o no tiene una animación, usa un estado por defecto.
         EstadoPlayer estadoInicialAnimacion = (getEstadoActual() != null && animations.containsKey(getEstadoActual())) ? getEstadoActual() : EstadoPlayer.IDLE_RIGHT;
         animacion = animations.get(estadoInicialAnimacion);
         if (animacion == null) {
             Gdx.app.error("Sonic", "ERROR: Animación inicial nula para el estado: " + estadoInicialAnimacion + ". Verifique CargarSprites.");
+        }
+        miDron = new Dron_Tails(estadoInicial.id, levelManager);
+
+        this.font = new BitmapFont();
+        this.font.getData().setScale(1);
+        this.glyphLayout = new GlyphLayout();
+        this.mensajeUI = "";
+    }
+
+    public Tails(PlayerState estadoInicial, LevelManager levelManager) {
+        super(estadoInicial, levelManager);
+        this.gameClient = gameClient;
+        CargarSprites();
+        inicializarHitbox();
+        EstadoPlayer estadoInicialAnimacion = (getEstadoActual() != null && animations.containsKey(getEstadoActual())) ? getEstadoActual() : EstadoPlayer.IDLE_RIGHT;
+        animacion = animations.get(estadoInicialAnimacion);
+        if (animacion == null) {
+            Gdx.app.error("Sonic", "ERROR: Animación inicial nula para el estado: " + estadoInicialAnimacion + ". Verifique CargarSprites.");
+        }
+        miDron = new Dron_Tails(estadoInicial.id, levelManager);
+
+        this.font = new BitmapFont();
+        this.font.getData().setScale(1);
+        this.glyphLayout = new GlyphLayout();
+        this.mensajeUI = "";
+    }
+
+    public Dron_Tails getDron() {
+        return miDron;
+    }
+    public void setOnlineMode(boolean online) {
+        this.isOnlineMode = online;
+        if (this.miDron != null) {
+            this.miDron.isOnlineMode = online;
+        }
+    }
+    public void gestionarDronDesdeRed(DronState.EstadoDron nuevoEstado, float startX, float startY) {
+        if (miDron == null) return; // Seguridad por si el dron no existe
+
+        switch (nuevoEstado) {
+            case APARECIENDO:
+                // El servidor nos ordena que el dron aparezca.
+                // Usamos una lógica similar al método 'invocar', pero sin seguir a un objetivo,
+                // ya que este dron podría pertenecer a OTRO jugador.
+                miDron.estado.estadoActual = DronState.EstadoDron.APARECIENDO;
+                miDron.tiempoDeEstado = 0f; // Reiniciamos la animación
+
+                // Colocamos el dron en la posición que nos dijo el servidor.
+                miDron.posicion.set(startX, startY);
+                miDron.estado.x = startX;
+                miDron.estado.y = startY;
+
+                // Si este Tails es el nuestro, le asignamos el objetivo para el seguimiento suave.
+                // Si es de otro jugador, 'objetivo' será null y el dron solo hará la animación
+                // de aparecer y desaparecer en el sitio, lo cual es aceptable y eficiente.
+                if (this.gameClient != null) { // Una forma de saber si somos el jugador local
+                    miDron.objetivo = this;
+                }
+                break;
+
+            case INACTIVO:
+                // El servidor nos ordena que el dron se ha ido.
+                miDron.cambiarEstado(DronState.EstadoDron.INACTIVO);
+                break;
+
+
         }
     }
 
@@ -48,75 +124,78 @@ public class Tails extends Player {
         float currentY = estado.y;
 
         // Llama primero al KeyHandler del padre para manejar el movimiento básico (WASD).
-        // Esto calcula proposedMovementState y actualiza estado.x/y si no hay colisión,
-        // pero aún NO QUEREMOS que esto se aplique si hay una acción bloqueante.
         super.KeyHandler();
 
         // Reinicia actionStateSet para el frame actual
         actionStateSet = false;
 
-        // --- Lógica para MANEJAR TECLAS DE ACCIÓN ---
-        // (Golpe, Patada, Spin)
+        // --- INVOCACIÓN DEL DRON CON DEPURACIÓN ---
+        if (Gdx.input.isKeyJustPressed(Input.Keys.SPACE)) {
+            // Mensaje de diagnóstico para saber qué modo está detectando
 
-        // 1. Prioriza las acciones bloqueantes (HIT, KICK)
-        // Si Sonic ya está en una acción bloqueante (que impide el movimiento), no procesa más entrada para movimiento u otras acciones.
-        if (isActionBlockingMovement()) {
-            // Si está en una acción bloqueante, RESTAURA la posición a la que estaba antes del super.KeyHandler()
-            // para evitar cualquier desplazamiento no deseado.
-            estado.x = currentX;
-            estado.y = currentY;
-            return; // Termina la ejecución del KeyHandler para este frame
+            // Si la bandera isOnlineMode es verdadera, estamos en una partida MULTIJUGADOR real.
+            if (isOnlineMode) {
+                // Doble verificación para seguridad, aunque no debería ser nulo en este modo.
+                if (gameClient != null) {
+                    gameClient.send(new Network.PaqueteInvocarDron());
+                } else {
+                    System.err.println("[CLIENTE ERROR] Se esperaba un gameClient en modo online, pero es nulo.");
+                }
+            }
+            // Si la bandera es falsa, estamos en una partida LOCAL (un jugador).
+            else {
+                // Verificamos que el dron exista para evitar errores.
+                if (miDron != null) {
+                    System.out.println("[CLIENTE] MODO LOCAL: Invocando el dron localmente.");
+                    // Esta es la llamada a tu lógica original de un jugador, que ya funcionaba.
+                    miDron.invocar(this);
+                } else {
+                    System.err.println("[CLIENTE ERROR] Se intentó invocar un dron en modo local, pero miDron es nulo.");
+                }
+            }
         }
 
-        // 2. Maneja las teclas de acción inmediata (J, K) que deben anular el movimiento continuo por un corto período.
-        // Estas son acciones que impiden el movimiento mientras duran.
+        // --- Lógica para MANEJAR TECLAS DE ACCIÓN (Sin cambios) ---
+        if (isActionBlockingMovement()) {
+            estado.x = currentX;
+            estado.y = currentY;
+            return;
+        }
+
         if (Gdx.input.isKeyJustPressed(Input.Keys.J)) {
             if (lastDirection == EstadoPlayer.LEFT || lastDirection == EstadoPlayer.IDLE_LEFT) {
                 setEstadoActual(EstadoPlayer.HIT_LEFT);
             } else {
                 setEstadoActual(EstadoPlayer.HIT_RIGHT);
             }
-            tiempoXFrame = 0; // Reinicia el tiempo para que la animación de golpe comience desde el principio
+            tiempoXFrame = 0;
             actionStateSet = true;
-            // Al activarse HIT, anula cualquier movimiento que el super.KeyHandler() haya intentado aplicar.
             estado.x = currentX;
             estado.y = currentY;
         }
-
-
-        // 3. Maneja el ROMPE BLOQUES - Esta es una acción continua que SÍ permite movimiento en el eje X.
-        // Se usa 'else if' para que SPIN solo se active si J o K no fueron presionadas.
         else if (Gdx.input.isKeyPressed(Input.Keys.L)) {
-            // Determina la dirección del ROMPE BLOQUES basándose en WASD si se presiona.
             if (Gdx.input.isKeyPressed(Input.Keys.A)) {
                 setEstadoActual(EstadoPlayer.SPECIAL_LEFT);
-                lastDirection = EstadoPlayer.LEFT; // Actualiza lastDirection para consistencia
+                lastDirection = EstadoPlayer.LEFT;
                 estado.x -= speed;
             } else if (Gdx.input.isKeyPressed(Input.Keys.D)) {
                 setEstadoActual(EstadoPlayer.SPECIAL_RIGHT);
-                lastDirection = EstadoPlayer.RIGHT; // Actualiza lastDirection para consistencia
+                lastDirection = EstadoPlayer.RIGHT;
                 estado.x += speed;
             } else {
-                // Si L se presiona sin A o D, mantiene el giro en la última dirección horizontal conocida.
-                // Aquí también se permite el movimiento si WASD fue presionado, el super.KeyHandler() ya lo aplicó.
                 if (lastDirection == EstadoPlayer.LEFT || lastDirection == EstadoPlayer.IDLE_LEFT) {
                     setEstadoActual(EstadoPlayer.SPECIAL_LEFT);
                 } else {
                     setEstadoActual(EstadoPlayer.SPECIAL_RIGHT);
                 }
             }
-            actionStateSet = true; // Indica que se ha manejado una acción.
+            actionStateSet = true;
         }
 
-        // 4. Si ninguna acción especial (J, K, L) fue activada en este frame,
-        // determina el estado basándose en el movimiento WASD o IDLE.
         if (!actionStateSet) {
-            // 'isMoving' y 'proposedMovementState' se establecen en el KeyHandler del Player.
             if (isMoving) {
-                // Si hay movimiento WASD, establece el estado actual al estado de movimiento propuesto.
                 setEstadoActual(proposedMovementState);
             } else {
-                // Si no hay movimiento y no se presionó ninguna tecla de acción, vuelve al estado IDLE.
                 if (lastDirection == EstadoPlayer.LEFT) {
                     setEstadoActual(EstadoPlayer.IDLE_LEFT);
                 } else {
@@ -130,7 +209,19 @@ public class Tails extends Player {
     protected String getSpriteSheetPath() {
         return "Entidades/Player/Tails/tails.png";
     }
+    @Override
+    protected boolean checkCollision(float newX, float newY) {
+        EstadoPlayer estadoActual = getEstadoActual();
 
+        // Si Tails está en el estado de "vuelo" (activado con la tecla 'L'),
+        // ignoramos las colisiones con el mapa.
+        if (estadoActual == EstadoPlayer.SPECIAL_LEFT || estadoActual == EstadoPlayer.SPECIAL_RIGHT) {
+            return false; // Retorna 'false' para indicar que NO hay colisión.
+        }
+
+        // Para cualquier otro estado, usamos la lógica de colisión normal de la clase Player.
+        return super.checkCollision(newX, newY);
+    }
     @Override
     protected void CargarSprites() {
         Texture coleccionDeSprites = new Texture(Gdx.files.internal(getSpriteSheetPath()));
@@ -309,6 +400,13 @@ public class Tails extends Player {
             Gdx.app.log("Sonic", "Advertencia: 'animacion' es nula en update(). No se puede obtener el frame clave para estado: " + getEstadoActual());
             frameActual = null;
         }
+        miDron.update(deltaTime);
+
+        if (tiempoMensajeVisible > 0) {
+            tiempoMensajeVisible -= deltaTime;
+        } else {
+            mensajeUI = ""; // Borramos el mensaje cuando el tiempo se acaba
+        }
     }
 
     @Override
@@ -318,5 +416,40 @@ public class Tails extends Player {
         } else {
             Gdx.app.log("Sonic", "Advertencia: 'frameActual' es nulo en el método draw(). No se puede dibujar a Sonic.");
         }
+        miDron.draw(batch);
+
+        if (tiempoMensajeVisible > 0 && !mensajeUI.isEmpty()) {
+            glyphLayout.setText(font, mensajeUI);
+
+            // 1. Calculamos la posición X para centrar el texto sobre Tails
+            //    (posición de Tails + centro del sprite) - (mitad del ancho del texto)
+            float textX = estado.x + (getTileSize() / 2) - (glyphLayout.width / 2);
+
+            // 2. Calculamos la posición Y para que flote justo encima de Tails
+            //    (posición de Tails + altura del sprite) + (un pequeño espacio)
+            float textY = estado.y + getTileSize() + 20; // 20px de espacio por encima
+
+            // 3. Dibujamos el texto en las coordenadas del mundo del juego
+            font.draw(batch, glyphLayout, textX, textY);
+        }
+    }
+
+    @Override
+    public void dispose() {
+        if (getSpriteSheet() != null) {
+            getSpriteSheet().dispose();
+        }
+        if (miDron != null) {
+            miDron.dispose();
+        }
+        if (font != null) {
+            font.dispose();
+        }
+    }
+
+    @Override
+    public void mostrarMensaje(String texto) {
+        this.mensajeUI = texto;
+        this.tiempoMensajeVisible = DURACION_MENSAJE;
     }
 }
