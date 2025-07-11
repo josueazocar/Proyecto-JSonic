@@ -50,6 +50,7 @@ public class PantallaDeJuego extends PantallaBase {
     private ContadorUI contadorAnillos;
     private ContadorUI contadorBasura;
     private AnillosVisual anilloVisual;
+    private int basuraRecicladaTotal = 0;
     private final HashMap<Integer, RobotVisual> enemigosEnPantalla = new HashMap<>();
     private final HashMap<Integer, ItemVisual> itemsEnPantalla = new HashMap<>();
 
@@ -358,8 +359,10 @@ public class PantallaDeJuego extends PantallaBase {
                     // Actualizamos nuestras variables locales y la UI con los datos del servidor.
                     this.anillosTotal = p.nuevosAnillos;
                     this.basuraTotal = p.nuevaBasura;
+                    this.basuraRecicladaTotal = p.totalBasuraReciclada;
                     contadorAnillos.setValor(this.anillosTotal);
                     contadorBasura.setValor(this.basuraTotal);
+
 
                 } else if (paquete instanceof Network.PaqueteActualizacionContaminacion p) {
                     // Guardamos el porcentaje recibido del servidor
@@ -375,7 +378,6 @@ public class PantallaDeJuego extends PantallaBase {
                     }
                 }
 
-                // --- NUEVO: MANEJAR ORDEN DE MOSTRAR MENSAJE ---
                 else if (paquete instanceof Network.PaqueteMensajeUI p) {
                     if (personajeJugable != null) {
                         // El servidor nos ordena mostrar un mensaje.
@@ -457,6 +459,22 @@ public class PantallaDeJuego extends PantallaBase {
             if (item != null) item.dispose();
         }
 
+        // 1. Preguntamos al LevelManager si hay una planta en este mapa.
+        if (manejadorNivel != null) {
+            Rectangle planta = manejadorNivel.obtenerPlantaDeTratamiento();
+
+            if (planta != null && personajeJugable != null && personajeJugable instanceof Tails && personajeJugable.getBounds() != null && Intersector.overlaps(personajeJugable.getBounds(), planta)) {
+                if (this.basuraTotal > 0) {
+                    System.out.println("[CLIENTE] Tocando planta. Solicitando depositar basura al servidor...");
+
+                    if (gameClient != null) {
+                        Network.PaqueteBasuraDepositada paquete = new Network.PaqueteBasuraDepositada();
+                        paquete.cantidad = this.basuraTotal;
+                        gameClient.send(paquete);
+                    }
+                }
+            }
+        }
         personajeJugable.KeyHandler();
         personajeJugable.update(deltat);
 

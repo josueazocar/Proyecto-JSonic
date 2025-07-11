@@ -58,6 +58,7 @@ public class GameServer implements IGameServer {
     private static final float ROBOT_ATTACK_RANGE = 10f;
     private float tiempoGeneracionTeleport = 0f;
     private boolean teleportGenerado = false;
+    private int basuraReciclada = 0;
 
 
     public GameServer() {
@@ -245,8 +246,39 @@ public class GameServer implements IGameServer {
                         conexion.sendTCP(msg);
 
                         System.out.println("[SERVER] Jugador " + jugadorId + " ha invocado un dron.");
-                        // Nota: No necesitamos notificar a otros clientes sobre el dron visual,
-                        // ya que este es un efecto solo del jugador que lo invoca.
+                    }
+                } if (objeto instanceof Network.PaqueteBasuraDepositada) {
+                    System.out.println("[SERVER] ¡Recibido PaqueteBasuraDepositada!");
+
+                    int idJugadorQueActivo = conexion.getID();
+                    PlayerState estadoJugador = jugadores.get(idJugadorQueActivo);
+
+                    // 1. VALIDACIÓN: Nos aseguramos de que fue Tails quien tocó la planta.
+                    if (estadoJugador != null ) {
+                        System.out.println("[SERVER] Tails (ID: " + idJugadorQueActivo + ") ha activado la planta de tratamiento.");
+
+                        // 2. CÁLCULO: Sumamos toda la basura que tienen todos los jugadores.
+                        int basuraDepositadaEstaVez = 0;
+                        for (int basuraDeJugador : puntajesBasuraIndividuales.values()) {
+                            basuraDepositadaEstaVez += basuraDeJugador;
+                        }
+
+                        // 3. ACTUALIZACIÓN DE TOTALES:
+                        basuraReciclada += basuraDepositadaEstaVez;
+
+                        // 4. REINICIO DE CONTADORES:
+                        puntajesBasuraIndividuales.replaceAll((id, valorActual) -> 0);
+                        System.out.println("[SERVER DEBUG] Mapa de basuras después del reinicio: " + puntajesBasuraIndividuales.toString());
+
+                        // 5. NOTIFICACIÓN A TODOS:
+                        for (Integer idJugadorConectado : jugadores.keySet()) {
+                            Network.PaqueteActualizacionPuntuacion paquetePuntaje = new Network.PaqueteActualizacionPuntuacion();
+                            paquetePuntaje.nuevosAnillos = puntajesAnillosIndividuales.getOrDefault(idJugadorConectado, 0);
+                            paquetePuntaje.nuevaBasura = puntajesBasuraIndividuales.getOrDefault(idJugadorConectado, 0);
+                            paquetePuntaje.totalBasuraReciclada = basuraReciclada;
+                            servidor.sendToTCP(idJugadorConectado, paquetePuntaje);
+                        }
+                        System.out.println("[SERVER] Paquetes de actualización de puntuación enviados a todos los jugadores.");
                     }
                 }
             }

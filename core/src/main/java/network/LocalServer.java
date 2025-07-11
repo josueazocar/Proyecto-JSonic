@@ -58,6 +58,7 @@ public class LocalServer implements IGameServer {
     private static final int ROBOT_SPEED = 1;
     private static final float ROBOT_DETECTION_RANGE = 300f;
     private static final float ROBOT_ATTACK_RANGE = 10f; // Usando el valor del código original
+    private int basuraReciclada = 0;
 
 
     public LocalServer() {
@@ -114,7 +115,7 @@ public class LocalServer implements IGameServer {
             clienteLocal.recibirPaqueteDelServidor(paquete);
         }
     }
-    //-----------fin de la funcion para genrar portales------------
+   
 
     /**
      * Este es el "game loop" del servidor. Se llamará desde PantallaDeJuego.
@@ -224,6 +225,23 @@ public class LocalServer implements IGameServer {
                     enemigo.tiempoEnEstado = 0;
                 }
             }
+            else if (objeto instanceof Network.PaqueteBasuraDepositada paquete) {
+                System.out.println("[LOCAL SERVER] Solicitud para depositar " + paquete.cantidad + " de basura recibida.");
+                int idJugador = 1;
+
+                // 1. Añadimos la cantidad depositada al total reciclado.
+                this.basuraReciclada += paquete.cantidad;
+
+                // 2. Reiniciamos el contador de basura del jugador a 0.
+                puntajesBasura.put(idJugador, 0);
+
+                // 3. Enviamos la actualización completa al cliente.
+                Network.PaqueteActualizacionPuntuacion paquetePuntaje = new Network.PaqueteActualizacionPuntuacion();
+                paquetePuntaje.nuevosAnillos = puntajesAnillos.getOrDefault(idJugador, 0);
+                paquetePuntaje.nuevaBasura = puntajesBasura.get(idJugador); // Será 0
+                paquetePuntaje.totalBasuraReciclada = this.basuraReciclada; // Enviamos el nuevo total
+                clienteLocal.recibirPaqueteDelServidor(paquetePuntaje);
+            }
 
         }
         // --- LÓGICA DE AUMENTO DE CONTAMINACIÓN ---
@@ -245,8 +263,6 @@ public class LocalServer implements IGameServer {
             tiempoGeneracionTeleport = 0f;
             ultimoMapaProcesado = mapaActual;
         }
-        //----------------------------------------------------
-        //aqui se cambio para que la logica donde se llamaba al servidor, fuera una funcion
         this.tiempoGeneracionTeleport += deltaTime;
         if (!this.teleportGenerado && this.tiempoGeneracionTeleport >= 20f) {
 

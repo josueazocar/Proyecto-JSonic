@@ -302,4 +302,37 @@ public MapObjects getCollisionObjects() {
         }
     }
 
+    /**
+     * Busca en el mapa actual una capa de objeto que corresponda a una planta de tratamiento
+     * y devuelve el rectángulo de su primer objeto.
+     * @return El Rectangle de la planta de tratamiento, o null si no se encuentra en el mapa actual.
+     */
+    public com.badlogic.gdx.math.Rectangle obtenerPlantaDeTratamiento() {
+        // Nombres de las capas de objetos que estamos buscando.
+        String[] nombresDeCapas = {"PlantaDeTratamientoN1", "PlantaDeTratamientoN2", "PlantaDeTratamientoN3"};
+
+        if (mapaActual == null) {
+            return null; // Seguridad por si se llama al método antes de cargar un mapa.
+        }
+
+        for (String nombreCapa : nombresDeCapas) {
+            // Obtenemos la capa de objetos directamente por su nombre.
+            com.badlogic.gdx.maps.MapLayer layer = mapaActual.getLayers().get(nombreCapa);
+
+            // Comprobación de seguridad: nos aseguramos de que la capa exista y tenga al menos un objeto.
+            if (layer != null && layer.getObjects().getCount() > 0) {
+                // Asumimos que cada capa de planta tiene un solo objeto grande que la define.
+                com.badlogic.gdx.maps.MapObject mapObject = layer.getObjects().get(0);
+
+                if (mapObject instanceof com.badlogic.gdx.maps.objects.RectangleMapObject) {
+                    // Si encontramos la planta, devolvemos su hitbox y terminamos la búsqueda.
+                    return ((com.badlogic.gdx.maps.objects.RectangleMapObject) mapObject).getRectangle();
+                }
+            }
+        }
+
+        // Si después de buscar en todas las capas no encontramos ninguna, devolvemos null.
+        return null;
+    }
+
 }

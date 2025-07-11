@@ -52,6 +52,8 @@ public class Network {
         kryo.register(PaqueteMensajeUI.class);
         kryo.register(PaqueteDronEstado.class);
         kryo.register(DronState.EstadoDron.class);
+
+        kryo.register(PaqueteBasuraDepositada.class);
     }
 
     // --- Definición de los Paquetes ---
@@ -120,6 +122,7 @@ public class Network {
         // se lo enviará solo al cliente que corresponda.
         public int nuevosAnillos;
         public int nuevaBasura;
+        public int totalBasuraReciclada;
     }
 
     public static class PaqueteActualizacionContaminacion {
@@ -144,6 +147,9 @@ public class Network {
     public static class PaqueteMensajeUI {
         // El servidor envía esto a UN cliente para mostrar un mensaje.
         public String mensaje;
+    }
+    public static class PaqueteBasuraDepositada {
+        public int cantidad;
     }
 }
 
