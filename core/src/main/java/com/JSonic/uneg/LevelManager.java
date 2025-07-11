@@ -143,7 +143,7 @@ public class LevelManager {
         renderizadorMapa = new OrthogonalTiledMapRenderer(mapaActual, 1);
         procesarPortales();
 
-        // --- AÑADIDO: Inicializar la lista de bloques rompibles ---
+        // Inicializar la lista de bloques rompibles ---
         bloquesRompibles.clear();
         generarBloquesRompibles(5);
     }
@@ -152,7 +152,7 @@ public class LevelManager {
         return nombreMapaActual;
     }
 
-    // --- AÑADIDO: Método para generar bloques rompibles ---
+    // Método para generar bloques rompibles ---
     // Nuevo método para generar bloques en lugares válidos
     private void generarBloquesRompibles(int cantidad) {
         // Obtenemos la capa de colisiones como una capa genérica, sin forzar el tipo.
@@ -240,12 +240,23 @@ public class LevelManager {
     public void actualizarAnimalesDesdePaquete(java.util.HashMap<Integer, AnimalState> estadosAnimales) {
         if (estadosAnimales == null) return;
 
-        // Itera sobre cada estado de animal recibido en el paquete.
+        // Itera sobre cada estado de animal recibido en el paquete para añadir/actualizar.
         for (AnimalState estado : estadosAnimales.values()) {
-            // Llama al método que ya tenías para crear o actualizar cada animal individualmente.
             agregarOActualizarAnimal(estado);
         }
+
+        // Ahora, elimina los animales visuales que ya no existen en el servidor.
+        java.util.Iterator<java.util.Map.Entry<Integer, AnimalVisual>> iter = animalesVisuales.entrySet().iterator();
+        while (iter.hasNext()) {
+            java.util.Map.Entry<Integer, AnimalVisual> entry = iter.next();
+            if (!estadosAnimales.containsKey(entry.getKey())) {
+                entry.getValue().dispose(); // Liberar recursos si es necesario
+                iter.remove();
+                Gdx.app.log("LevelManager", "Eliminado animal visual obsoleto con ID: " + entry.getKey());
+            }
+        }
     }
+//fin metodo animales actualizar
 
     /**
      * Añade un nuevo animal visual al juego.
@@ -262,10 +273,22 @@ public class LevelManager {
             AnimalVisual nuevoAnimal = new AnimalVisual(estadoAnimal.id, estadoAnimal.x, estadoAnimal.y, animalTexture);
             animalesVisuales.put(estadoAnimal.id, nuevoAnimal);
             // Añadimos su hitbox a nuestra lista de colisiones dinámicas
-            colisionesDinamicas.add(nuevoAnimal.getBounds());
+           // colisionesDinamicas.add(nuevoAnimal.getBounds());
         }
     }
 
+    /**
+     * ---[CAMBIO]--- Nuevo método para limpiar los animales al cambiar de mapa.
+     */
+    public void limpiarAnimales() {
+        if (animalesVisuales != null) {
+            for (AnimalVisual animal : animalesVisuales.values()) {
+                animal.dispose();
+            }
+            animalesVisuales.clear();
+        }
+    }
+    //-------------------------------
     /**
      * Dibuja todos los animales en la pantalla.
      * Este método debe ser llamado desde la pantalla de juego principal.
@@ -432,7 +455,7 @@ public class LevelManager {
         if (mapaActual == null) {
             return null;
         }
-        // Asumiendo que tu capa de colisiones se llama "Colisiones"
+
         com.badlogic.gdx.maps.MapLayer collisionLayer = mapaActual.getLayers().get("Colisiones");
 
         // Si la capa no existe, devolvemos null y lo manejamos en PantallaDeJuego
@@ -560,6 +583,7 @@ public class LevelManager {
             animalTexture.dispose();
             animalTexture = null;
         }
+        limpiarAnimales();
         if (bloquesRompibles != null) {
             // Si los bloques tienen recursos propios (como Texturas), hay que liberarlos aquí.
             // Por ahora, solo limpiamos la lista.

@@ -105,19 +105,6 @@ public abstract class Player extends Entity implements Disposable {
             return true; // Hay colisión con el mapa
         }
 
-        // CAMBIO: Itera sobre los objetos de la capa de colisiones del mapa.
-       /* if (levelManager.getCollisionObjects() != null) {
-            for (MapObject object : levelManager.getCollisionObjects()) {
-                if (object instanceof RectangleMapObject) {
-                    Rectangle rectObject = ((RectangleMapObject) object).getRectangle();
-
-                    // CAMBIO: Si el hitbox futuro del jugador se superpone con un objeto del mapa, hay colisión.
-                    if (futureBounds.overlaps(rectObject)) {
-                        return true;
-                    }
-                }
-            }
-        }*/
         // 2. NUEVA COMPROBACIÓN: Colisión con bloques rompibles
         if (levelManager.getBloquesRompibles() != null) {
             for (ObjetoRomperVisual bloque : levelManager.getBloquesRompibles()) {
@@ -131,18 +118,15 @@ public abstract class Player extends Entity implements Disposable {
         java.util.Collection<AnimalVisual> animales = levelManager.getAnimalesVisuales();
         if (animales != null) {
             for (AnimalVisual animal : animales) {
+                // Si el hitbox futuro del jugador se superpone con el de un animal, hay colisión.
                 if (futureBounds.overlaps(animal.getBounds())) {
                     return true; // Hay colisión con un animal
                 }
             }
-
         }
 
         // Si no hubo colisión con NADA de lo anterior, permite el movimiento.
         return false;
-        // Delega la comprobación al LevelManager, que conoce TODOS los obstáculos.
-       // return levelManager.colisionaConMapa(futureBounds);
-
     }
 //colisiones fin
 

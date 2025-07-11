@@ -64,7 +64,7 @@ public class PantallaDeJuego extends PantallaBase {
     private int animalesMuertos = 0;
     private int totalAnimalesMapa = 0;
 
-    private final HashMap<Integer, AnimalVisual> animalesEnPantalla = new HashMap<>(); // <-- AÑADIR ESTA LÍNEA
+    //private final HashMap<Integer, AnimalVisual> animalesEnPantalla = new HashMap<>(); // <-- AÑADIR ESTA LÍNEA
     private OrthographicCamera uiCamera;
 
     private ShaderProgram shaderNeblina;
@@ -368,32 +368,18 @@ public class PantallaDeJuego extends PantallaBase {
                         animalCountLabel.setText("");
                     }
                 } else if (paquete instanceof Network.PaqueteActualizacionAnimales p) {
-                    for (AnimalState estadoServidor : p.estadosAnimales.values()) {
-                        AnimalVisual animalVisual = animalesEnPantalla.get(estadoServidor.id);
-                        if (animalVisual == null) {
-                            animalVisual = new AnimalVisual(estadoServidor.id, estadoServidor.x, estadoServidor.y, manejadorNivel.getAnimalTexture());
-                            animalesEnPantalla.put(estadoServidor.id, animalVisual);
-                        }
-                        animalVisual.update(estadoServidor);
-                    }
-                    Iterator<Map.Entry<Integer, AnimalVisual>> iter = animalesEnPantalla.entrySet().iterator();
-                    while (iter.hasNext()) {
-                        Map.Entry<Integer, AnimalVisual> entry = iter.next();
-                        if (!p.estadosAnimales.containsKey(entry.getKey())) {
-                            entry.getValue().dispose();
-                            iter.remove();
-                        }
-                    }
+                    manejadorNivel.actualizarAnimalesDesdePaquete(p.estadosAnimales);
+
                     animalesVivos = 0;
                     animalesMuertos = 0;
-                    for (AnimalVisual animal : animalesEnPantalla.values()) {
+                    for (AnimalVisual animal : manejadorNivel.getAnimalesVisuales()) {
                         if (animal.estaVivo()) {
                             animalesVivos++;
                         } else {
                             animalesMuertos++;
                         }
                     }
-                    totalAnimalesMapa = animalesEnPantalla.size();
+                    totalAnimalesMapa = manejadorNivel.getAnimalesVisuales().size();
                     actualizarAnimalCountLabel();
                 }
                 if (paquete instanceof Network.PaqueteArbolNuevo p) {
@@ -549,7 +535,7 @@ public class PantallaDeJuego extends PantallaBase {
 
 
 // --- INICIO: LÓGICA DE COLISIÓN CON ANIMALES ---
-        Iterator<AnimalVisual> iteradorAnimales = animalesEnPantalla.values().iterator();
+        Iterator<AnimalVisual> iteradorAnimales = manejadorNivel.getAnimalesVisuales().iterator();
         while (iteradorAnimales.hasNext()) {
             AnimalVisual animal = iteradorAnimales.next();
 
@@ -622,10 +608,8 @@ public class PantallaDeJuego extends PantallaBase {
 
 
 
-        // AÑADE ESTO PARA DIBUJAR LOS ANIMALES
-        for (AnimalVisual animal : animalesEnPantalla.values()) {
-            animal.draw(batch, delta);
-        }
+        // ---[CAMBIO]--- Se dibujan los animales obteniéndolos del LevelManager.
+        manejadorNivel.dibujarAnimales(batch, delta);
 
         for (ItemVisual item : itemsEnPantalla.values()) item.draw(batch);
 //develop
@@ -742,16 +726,16 @@ public class PantallaDeJuego extends PantallaBase {
         }
         itemsEnPantalla.clear();
         //para animales
-        if (animalesEnPantalla != null) {
-            for (AnimalVisual animal : animalesEnPantalla.values()) {
-                animal.dispose(); // Si AnimalVisual tiene recursos que liberar
-            }
-            animalesEnPantalla.clear();
+        if (manejadorNivel != null) {
+
+            manejadorNivel.limpiarAnimales(); // Si AnimalVisual tiene recursos que liberar
+        }
+
             animalesVivos = 0; // Reiniciar contadores al limpiar el mapa
             animalesMuertos = 0;
             totalAnimalesMapa = 0;
             actualizarAnimalCountLabel(); // Refrescar el label
-        }
+
     }
 
     //para delimitar los robots y crearlos por mapa
@@ -873,12 +857,7 @@ public class PantallaDeJuego extends PantallaBase {
         }
 
         // ---[AÑADIR EN dispose()]---
-        if (animalesEnPantalla != null) {
-            for (AnimalVisual animal : animalesEnPantalla.values()) {
-                animal.dispose(); // Asegúrate de que AnimalVisual tenga un método dispose()
-            }
-            animalesEnPantalla.clear();
-        }
+
         if (animalCountLabel != null) {
             animalCountLabel.remove(); // Elimina el actor del Stage
         }
