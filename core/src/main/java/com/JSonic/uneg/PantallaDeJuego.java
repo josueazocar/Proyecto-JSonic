@@ -309,20 +309,34 @@ public class PantallaDeJuego extends PantallaBase {
                     this.basuraTotal = p.nuevaBasura;
                     contadorAnillos.setValor(this.anillosTotal);
                     contadorBasura.setValor(this.basuraTotal);
+
+                    if (anillosTotal == 100){//Condición para una vida más.
+                        personajeJugable.setVida(personajeJugable.getVida() + 100);
+                    }
+
                 } else if (paquete instanceof Network.PaqueteActualizacionContaminacion p) {
+
                     this.porcentajeContaminacionActual = p.contaminationPercentage;
                     if (porcentajeContaminacionActual >= 10 && porcentajeContaminacionActual < 30) {
+                        System.out.println("[JUGADOR RECIBIO DAÑO POR NIEBLA TOXICA] - VIDA: "+personajeJugable.getVida());
                         personajeJugable.setVida(personajeJugable.getVida() - 3);
-                    } else if (porcentajeContaminacionActual >= 30 && porcentajeContaminacionActual < 60) {
+                    }
+                    if (porcentajeContaminacionActual >= 30 && porcentajeContaminacionActual < 60) {
                         personajeJugable.setVida(personajeJugable.getVida() - 5);
+                        System.out.println("[JUGADOR RECIBIO DAÑO POR NIEBLA TOXICA] - VIDA: "+personajeJugable.getVida());
                     } else if (porcentajeContaminacionActual >= 60 && porcentajeContaminacionActual < 70) {
                         personajeJugable.setVida(personajeJugable.getVida() - 7);
+                        System.out.println("[JUGADOR RECIBIO DAÑO POR NIEBLA TOXICA] - VIDA: "+personajeJugable.getVida());
                     } else if (porcentajeContaminacionActual >= 70 && porcentajeContaminacionActual <= 99) {
                         personajeJugable.setVida(personajeJugable.getVida() - 10);
+                        System.out.println("[JUGADOR RECIBIO DAÑO POR NIEBLA TOXICA] - VIDA: "+personajeJugable.getVida());
                     } else if (porcentajeContaminacionActual == 100) {
                         personajeJugable.setVida(0);
+                        System.out.println("[JUGADOR HA MUERTO POR NIEBLA TOXICA] - VIDA: "+personajeJugable.getVida());
+                        personajeJugable = null;
                     }
                     contaminationLabel.setText("TOXIC: " + Math.round(this.porcentajeContaminacionActual) + "%");
+
                 }
             }
         }
@@ -346,7 +360,7 @@ public class PantallaDeJuego extends PantallaBase {
 
             if (bomba.isExplotando() && !bomba.yaHaHechoDanio()) {
                 if (bomba.getBounds().overlaps(personajeJugable.getBounds())) {
-                    System.out.println("[JUGADOR] ¡Alcanzado por una explosión! Vida restante: " + (personajeJugable.getVida() - 20));
+                    System.out.println("[JUGADOR] ¡ALCANZADO POR UNA EXPLOSION!-VIDA: " + (personajeJugable.getVida() - 20));
                     personajeJugable.setVida(personajeJugable.getVida() - 20);
                     bomba.marcarComoDanioHecho();
                 }
