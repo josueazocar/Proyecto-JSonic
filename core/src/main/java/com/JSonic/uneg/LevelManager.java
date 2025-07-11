@@ -23,6 +23,9 @@ public class LevelManager {
     private int tileWidth;
     private int tileHeight;
 
+    //para objeto a romper (KNUCKLES)
+    private List<ObjetoRomperVisual> objetosRompibles = new ArrayList<>();
+
     private Player player;
 
 
@@ -47,6 +50,18 @@ public class LevelManager {
     public com.badlogic.gdx.maps.tiled.TiledMap getTiledMap() {
         return mapaActual;
     }
+
+    // --- NUEVO ATRIBUTO Y MÉTODO PARA LOS OBJETOS ROMPIBLES ---
+    public void agregarObjetoRompible(ObjetoRomperVisual objeto) {
+        objetosRompibles.add(objeto);
+    }
+
+    public void dibujarObjetosRompibles(SpriteBatch batch) {
+        for (ObjetoRomperVisual objeto : objetosRompibles) {
+            objeto.dibujar(batch);
+        }
+    }
+    //---------PARA OBJETO ROMPER--------------------
 
     //para el teletransporte
     private List<TeletransporteVisual> portalesVisuales = new ArrayList<>();
@@ -120,6 +135,14 @@ public class LevelManager {
     public void actualizar(float deltaTime) {
         // En este caso, la cámara se actualiza y se limita en PantallaDeJuego,
         // no es necesario actualizar la cámara aquí.
+        // En el método de actualización de LevelManager
+        for (ObjetoRomperVisual objeto : objetosRompibles) {
+            if (!objeto.estaDestruido()) {
+                if (player.getBounds().overlaps(objeto.getBounds()) && espacioPresionado && player instanceof Knuckles) {
+                    objeto.setDanio(objeto.obtenerFrame() + 1);
+                }
+            }
+        }
     }
 
     // Método para dibujar el nivel en pantalla

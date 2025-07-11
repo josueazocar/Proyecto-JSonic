@@ -84,6 +84,8 @@ public class Knuckles extends Player {
         }
 
 
+
+
         // 3. Maneja el ROMPE BLOQUES - Esta es una acción continua que SÍ permite movimiento en el eje X.
         // Se usa 'else if' para que SPIN solo se active si J o K no fueron presionadas.
         else if (Gdx.input.isKeyPressed(Input.Keys.L)) {

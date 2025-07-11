@@ -179,6 +179,7 @@ public abstract class Player extends Entity implements Disposable {
             proposedMovementState = EstadoPlayer.RIGHT;
         }
 
+
         if(!isMoving) {
             //En caso de que no se este presionando ninguna tecla
             // Solo establece IDLE si no se están presionando teclas de movimiento
