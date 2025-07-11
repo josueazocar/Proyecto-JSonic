@@ -46,6 +46,14 @@ public class Network {
         kryo.register(PaqueteActualizacionPuntuacion.class);
         kryo.register(PlayerState.CharacterType.class);
         kryo.register(PaqueteActualizacionContaminacion.class);
+
+        kryo.register(PaqueteInvocarDron.class);
+        kryo.register(PaqueteArbolNuevo.class);
+        kryo.register(PaqueteMensajeUI.class);
+        kryo.register(PaqueteDronEstado.class);
+        kryo.register(DronState.EstadoDron.class);
+
+        kryo.register(PaqueteBasuraDepositada.class);
     }
 
     // --- Definición de los Paquetes ---
@@ -114,11 +122,34 @@ public class Network {
         // se lo enviará solo al cliente que corresponda.
         public int nuevosAnillos;
         public int nuevaBasura;
+        public int totalBasuraReciclada;
     }
 
     public static class PaqueteActualizacionContaminacion {
         public float contaminationPercentage;
     }
 
+    public static class PaqueteInvocarDron {
+        // El cliente envía este paquete vacío para pedir que se active el dron.
+        // El servidor sabrá quién lo envió por el ID de la conexión.
+    }
+    public static class PaqueteDronEstado {
+        public int ownerId; // ID del jugador dueño
+        public DronState.EstadoDron nuevoEstado; // APARECIENDO, DESAPARECIENDO, etc.
+        public float x, y; // Posición inicial (solo para APARECIENDO)
+    }
+    public static class PaqueteArbolNuevo {
+        // El servidor envía esto a TODOS los clientes para decirles que dibujen un árbol.
+        public float x;
+        public float y;
+    }
+
+    public static class PaqueteMensajeUI {
+        // El servidor envía esto a UN cliente para mostrar un mensaje.
+        public String mensaje;
+    }
+    public static class PaqueteBasuraDepositada {
+        public int cantidad;
+    }
 }
 
