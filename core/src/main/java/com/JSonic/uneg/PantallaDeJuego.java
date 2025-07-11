@@ -441,6 +441,9 @@ public class PantallaDeJuego extends PantallaBase {
                     }
                 }
 
+                
+                porcentajeContaminacionActual = 0;
+
                 if (!idsItemsLimpiezaARecoger.isEmpty()) {
                     // CAMBIO: Actualizamos el mensaje de log para ser más preciso.
                     Gdx.app.log("PantallaDeJuego", "Enviando solicitud para recoger " + idsItemsLimpiezaARecoger.size() + " ítems de contaminación.");
