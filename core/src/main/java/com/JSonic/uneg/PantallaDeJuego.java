@@ -50,6 +50,7 @@ public class PantallaDeJuego extends PantallaBase {
     private ContadorUI contadorAnillos;
     private ContadorUI contadorBasura;
     private AnillosVisual anilloVisual;
+    private int basuraRecicladaTotal = 0;
     private final HashMap<Integer, RobotVisual> enemigosEnPantalla = new HashMap<>();
     private final HashMap<Integer, ItemVisual> itemsEnPantalla = new HashMap<>();
 
@@ -88,6 +89,7 @@ public class PantallaDeJuego extends PantallaBase {
         this.batch = juego.batch;
         this.gameClient = client; // Asignamos el cliente recibido
         this.localServer = server; // Asignamos el servidor recibido (puede ser null)
+
     }
 
     public PantallaDeJuego(JSonicJuego juego) {
@@ -99,7 +101,7 @@ public class PantallaDeJuego extends PantallaBase {
         camaraJuego = new OrthographicCamera();
         viewport = new FitViewport(VIRTUAL_WIDTH, VIRTUAL_HEIGHT, camaraJuego);
         manejadorNivel = new LevelManager(camaraJuego, batch);
-        manejadorNivel.cargarNivel("maps/Zona1N1.tmx");
+        manejadorNivel.cargarNivel(ConfiguracionJuego.mapaSeleccionado);
         personajeJugableEstado = new PlayerState();
 
         //para tomar lo metodos de LevelManager
@@ -112,14 +114,15 @@ public class PantallaDeJuego extends PantallaBase {
 
         // 2. Crea la instancia del personaje jugable localmente.
         // Este switch se asegura de que TÚ estás controlando al personaje correcto en tu pantalla.
-        System.out.println("[CLIENT] Creando jugador local como: " + miPersonaje);
+
+
         switch (miPersonaje) {
             case SONIC:
                 personajeJugable = new Sonic(personajeJugableEstado, manejadorNivel);
                 break;
             case TAILS:
                 // Asegúrate de que tienes una clase Tails que hereda de Player
-                personajeJugable = new Tails(personajeJugableEstado, manejadorNivel);
+                personajeJugable = new Tails(personajeJugableEstado, manejadorNivel, this.gameClient);
                 break;
             case KNUCKLES:
                 personajeJugable = new Knuckles(personajeJugableEstado, manejadorNivel);
@@ -148,10 +151,6 @@ public class PantallaDeJuego extends PantallaBase {
 
         if (!shaderNeblina.isCompiled()) {
             Gdx.app.error("Shader Error", "No se pudo compilar el shader de neblina: " + shaderNeblina.getLog());
-        }
-
-        if (!shaderNeblina.isCompiled()) {
-            Gdx.app.error("Shader Error", "No se pudo compilar el shader: " + shaderNeblina.getLog());
         }
 
         quadMesh = new Mesh(
@@ -248,6 +247,19 @@ public class PantallaDeJuego extends PantallaBase {
 
     @Override
     public void actualizar(float deltat) {
+        if (personajeJugable != null && this.gameClient != null) {
+            // Como ya sabemos que el cliente no es nulo, lo asignamos.
+            personajeJugable.setGameClient(this.gameClient);
+
+            // Ahora, dentro de este mismo bloque, comprobamos si es modo online.
+            // Ya no es necesario volver a preguntar si gameClient es nulo.
+            if (this.localServer == null) {
+                if (personajeJugable instanceof Tails) {
+                    ((Tails) personajeJugable).isOnlineMode = true;
+                    ((Tails) personajeJugable).setOnlineMode(true);
+                }
+            }
+        }
 
         if (Gdx.input.isKeyJustPressed(Input.Keys.ESCAPE)) {
             this.pause();
@@ -264,7 +276,6 @@ public class PantallaDeJuego extends PantallaBase {
         if (gameClient != null) {
             while (!gameClient.getPaquetesRecibidos().isEmpty()) {
                 Object paquete = gameClient.getPaquetesRecibidos().poll();
-                System.out.println("[CLIENT_DEBUG] Procesando paquete de tipo: " + paquete.getClass().getSimpleName());
 
                 if (paquete instanceof Network.RespuestaAccesoPaquete p) {
                     if (p.tuEstado != null) {
@@ -344,8 +355,10 @@ public class PantallaDeJuego extends PantallaBase {
                     System.out.println("[CLIENT] ¡Recibida actualización de puntuación! Anillos: " + p.nuevosAnillos + ", Basura: " + p.nuevaBasura);
                     this.anillosTotal = p.nuevosAnillos;
                     this.basuraTotal = p.nuevaBasura;
+                    this.basuraRecicladaTotal = p.totalBasuraReciclada;
                     contadorAnillos.setValor(this.anillosTotal);
                     contadorBasura.setValor(this.basuraTotal);
+//develop
                 } else if (paquete instanceof Network.PaqueteActualizacionContaminacion p) {
                     this.porcentajeContaminacionActual = p.contaminationPercentage;
                     contaminationLabel.setText("TOXIC: " + Math.round(this.porcentajeContaminacionActual) + "%");
@@ -382,6 +395,42 @@ public class PantallaDeJuego extends PantallaBase {
                     }
                     totalAnimalesMapa = animalesEnPantalla.size();
                     actualizarAnimalCountLabel();
+                }
+                if (paquete instanceof Network.PaqueteArbolNuevo p) {
+                    if (manejadorNivel != null) {
+                        // El servidor nos ordena crear un árbol en estas coordenadas.
+                        manejadorNivel.generarArbol(p.x, p.y);
+                        System.out.println("[CLIENT] Orden recibida para generar árbol en " + p.x + "," + p.y);
+                    }
+                }
+
+                else if (paquete instanceof Network.PaqueteMensajeUI p) {
+                    if (personajeJugable != null) {
+                        // El servidor nos ordena mostrar un mensaje.
+                        personajeJugable.mostrarMensaje(p.mensaje);
+                    }
+                } else if (paquete instanceof Network.PaqueteDronEstado p) {
+                    // 1. Buscamos al jugador dueño del dron
+                    Player dueño = null;
+                    if (personajeJugable.estado.id == p.ownerId) {
+                        dueño = personajeJugable;
+                    } else {
+                        dueño = otrosJugadores.get(p.ownerId);
+                    }
+
+                    // 2. Si encontramos al dueño y es un Tails...
+                    if (dueño instanceof Tails) {
+                        Tails tailsDueño = (Tails) dueño;
+                        Dron_Tails dron = tailsDueño.getDron();
+
+                        if (dron != null) {
+                            // ¡LÓGICA CLAVE! Asignamos el objetivo.
+                            dron.objetivo = tailsDueño;
+
+                            // Ahora llamamos a tu método para que el dron reaccione
+                            tailsDueño.gestionarDronDesdeRed(p.nuevoEstado, p.x, p.y);
+                        }
+                    }
                 }
             }
         }
@@ -429,6 +478,22 @@ public class PantallaDeJuego extends PantallaBase {
             if (item != null) item.dispose();
         }
 
+        // 1. Preguntamos al LevelManager si hay una planta en este mapa.
+        if (manejadorNivel != null) {
+            Rectangle planta = manejadorNivel.obtenerPlantaDeTratamiento();
+
+            if (planta != null && personajeJugable != null && personajeJugable instanceof Tails && personajeJugable.getBounds() != null && Intersector.overlaps(personajeJugable.getBounds(), planta)) {
+                if (this.basuraTotal > 0) {
+                    System.out.println("[CLIENTE] Tocando planta. Solicitando depositar basura al servidor...");
+
+                    if (gameClient != null) {
+                        Network.PaqueteBasuraDepositada paquete = new Network.PaqueteBasuraDepositada();
+                        paquete.cantidad = this.basuraTotal;
+                        gameClient.send(paquete);
+                    }
+                }
+            }
+        }
         personajeJugable.KeyHandler();
         personajeJugable.update(deltat);
 
@@ -442,7 +507,7 @@ public class PantallaDeJuego extends PantallaBase {
             eggman.update(deltat);
         }
 
-        // --- INICIO: LÓGICA DE COLISIÓN CON ANIMALES ---
+
 // --- INICIO: LÓGICA DE COLISIÓN CON ANIMALES ---
         Iterator<AnimalVisual> iteradorAnimales = animalesEnPantalla.values().iterator();
         while (iteradorAnimales.hasNext()) {
@@ -501,6 +566,10 @@ public class PantallaDeJuego extends PantallaBase {
         manejadorNivel.dibujar();
 
         batch.begin();
+
+        //for (ItemVisual item : itemsEnPantalla.values()) item.draw(batch);
+        manejadorNivel.dibujarArboles(batch);
+
         personajeJugable.draw(batch);
         for (Player otro : otrosJugadores.values()) otro.draw(batch);
         for (RobotVisual enemigo : enemigosEnPantalla.values()) enemigo.draw(batch);
@@ -511,12 +580,14 @@ public class PantallaDeJuego extends PantallaBase {
         }
 
 
+
         // AÑADE ESTO PARA DIBUJAR LOS ANIMALES
         for (AnimalVisual animal : animalesEnPantalla.values()) {
             animal.draw(batch, delta);
         }
 
         for (ItemVisual item : itemsEnPantalla.values()) item.draw(batch);
+//develop
         batch.end();
 
         renderizarNeblinaConShader();
@@ -718,6 +789,10 @@ public class PantallaDeJuego extends PantallaBase {
                     // Si algo sale mal, por defecto será Sonic
                     personajeJugable = new Sonic(personajeJugableEstado, manejadorNivel);
                     break;
+            }
+
+            if (jugadorVisual instanceof Tails) {
+                ((Tails) jugadorVisual).setOnlineMode(true);
             }
 
             otrosJugadores.put(estadoRecibido.id, jugadorVisual);

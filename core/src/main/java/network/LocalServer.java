@@ -22,7 +22,7 @@ public class LocalServer implements IGameServer {
     private final HashMap<Integer, ItemState> itemsActivos = new HashMap<>();
     private final HashMap<Integer, Integer> puntajesAnillos = new HashMap<>();
     private final HashMap<Integer, Integer> puntajesBasura = new HashMap<>();
-    private final ContaminationState contaminationState = new ContaminationState();
+    private static final ContaminationState contaminationState = new ContaminationState();
     //Declara un HashMap para asociar el ID del portal con su destino (para los portales
     private final HashMap<Integer, String> destinosPortales = new HashMap<>();
 
@@ -65,10 +65,15 @@ public class LocalServer implements IGameServer {
     private static final int ROBOT_SPEED = 1;
     private static final float ROBOT_DETECTION_RANGE = 300f;
     private static final float ROBOT_ATTACK_RANGE = 10f; // Usando el valor del código original
+    private int basuraReciclada = 0;
 
 
     public LocalServer() {
         // El constructor está vacío, la magia ocurre en start() y update()
+    }
+
+    public static void decreaseContamination(float porcentaje) {
+        contaminationState.decrease(porcentaje);
     }
 
     @Override
@@ -117,7 +122,7 @@ public class LocalServer implements IGameServer {
             clienteLocal.recibirPaqueteDelServidor(paquete);
         }
     }
-    //-----------fin de la funcion para genrar portales------------
+
 
     //esta funcion es para los animales
     // Nuevo método para generar animales en el mapa actual
@@ -335,7 +340,27 @@ public class LocalServer implements IGameServer {
                     clienteLocal.recibirPaqueteDelServidor(paqueteUpdate);
                 }
             }
+
             // --- FIN: CÓDIGO A AÑADIR ---
+
+            else if (objeto instanceof Network.PaqueteBasuraDepositada paquete) {
+                System.out.println("[LOCAL SERVER] Solicitud para depositar " + paquete.cantidad + " de basura recibida.");
+                int idJugador = 1;
+
+                // 1. Añadimos la cantidad depositada al total reciclado.
+                this.basuraReciclada += paquete.cantidad;
+
+                // 2. Reiniciamos el contador de basura del jugador a 0.
+                puntajesBasura.put(idJugador, 0);
+
+                // 3. Enviamos la actualización completa al cliente.
+                Network.PaqueteActualizacionPuntuacion paquetePuntaje = new Network.PaqueteActualizacionPuntuacion();
+                paquetePuntaje.nuevosAnillos = puntajesAnillos.getOrDefault(idJugador, 0);
+                paquetePuntaje.nuevaBasura = puntajesBasura.get(idJugador); // Será 0
+                paquetePuntaje.totalBasuraReciclada = this.basuraReciclada; // Enviamos el nuevo total
+                clienteLocal.recibirPaqueteDelServidor(paquetePuntaje);
+            }
+
 
         }
         // --- LÓGICA DE AUMENTO DE CONTAMINACIÓN ---
@@ -384,9 +409,11 @@ public class LocalServer implements IGameServer {
 
 
         }
+
        // --- FIN DE LÓGICA DE CAMBIO DE MAPA ---
         //----------------------------------------------------
         //aqui se cambio para que la logica donde se llamaba al servidor, fuera una funcion
+
         this.tiempoGeneracionTeleport += deltaTime;
         if (!this.teleportGenerado && this.tiempoGeneracionTeleport >= 20f) {
 
@@ -483,25 +510,26 @@ public class LocalServer implements IGameServer {
 
             // Lógica de Movimiento (solo se ejecuta si el estado es RUN)
             if (enemigo.estadoAnimacion == EnemigoState.EstadoEnemigo.RUN_RIGHT || enemigo.estadoAnimacion == EnemigoState.EstadoEnemigo.RUN_LEFT) {
-                float nextX = enemigo.x;
-                float nextY = enemigo.y;
+                float targetX = enemigo.x;
+                float targetY = enemigo.y;
 
-                if (dx > 0) nextX += ROBOT_SPEED; else if (dx < 0) nextX -= ROBOT_SPEED;
-                if (dy > 0) nextY += ROBOT_SPEED; else if (dy < 0) nextY -= ROBOT_SPEED;
+                if (dx > 0) targetX += ROBOT_SPEED; else if (dx < 0) targetX -= ROBOT_SPEED;
+                if (dy > 0) targetY += ROBOT_SPEED; else if (dy < 0) targetY -= ROBOT_SPEED;
 
-                Rectangle boundsXY = new Rectangle(nextX, nextY, 48, 48);
-                if (!manejadorNivel.colisionaConMapa(boundsXY)) {
-                    enemigo.x = nextX;
-                    enemigo.y = nextY;
-                } else {
-                    Rectangle boundsX = new Rectangle(nextX, enemigo.y, 48, 48);
-                    if (!manejadorNivel.colisionaConMapa(boundsX)) {
-                        enemigo.x = nextX;
-                    } else {
-                        Rectangle boundsY = new Rectangle(enemigo.x, nextY, 48, 48);
-                        if (!manejadorNivel.colisionaConMapa(boundsY)) {
-                            enemigo.y = nextY;
-                        }
+                if (manejadorNivel != null) {
+                    Rectangle robotBounds = new Rectangle(enemigo.x, enemigo.y, 48, 48);
+
+                    // Comprobar movimiento en X
+                    robotBounds.setX(targetX);
+                    if (!manejadorNivel.colisionaConMapa(robotBounds)) {
+                        enemigo.x = targetX;
+                    }
+
+                    // Comprobar movimiento en Y
+                    robotBounds.setX(enemigo.x);
+                    robotBounds.setY(targetY);
+                    if (!manejadorNivel.colisionaConMapa(robotBounds)) {
+                        enemigo.y = targetY;
                     }
                 }
             }

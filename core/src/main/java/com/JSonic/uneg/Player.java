@@ -9,6 +9,7 @@ import com.badlogic.gdx.math.Rectangle;
 import com.badlogic.gdx.maps.objects.RectangleMapObject;
 import com.badlogic.gdx.maps.MapObject;
 import com.badlogic.gdx.utils.Array;
+import network.interfaces.IGameClient;
 
 public abstract class Player extends Entity implements Disposable {
     protected EstadoPlayer lastDirection = EstadoPlayer.IDLE_RIGHT;
@@ -29,6 +30,12 @@ public abstract class Player extends Entity implements Disposable {
     protected String characterName;
 //hasta aqui
 
+    protected String mensajeUI;
+    protected float tiempoMensajeVisible;
+    protected static final float DURACION_MENSAJE = 3.0f; // Mensaje visible por 3 segundos
+    protected transient IGameClient gameClient;
+
+
     public Player(){
         super();
     }
@@ -36,11 +43,13 @@ public abstract class Player extends Entity implements Disposable {
     public Player(PlayerState estadoInicial) {
         super(estadoInicial);
         setDefaultValues();
+        this.gameClient = null;
     }
 
     public Player(PlayerState estadoInicial, LevelManager levelManager) {
         this(estadoInicial);
         this.levelManager = levelManager;
+        this.gameClient = null;
     }
 
     public void setLevelManager(LevelManager levelManager) {
@@ -80,20 +89,20 @@ public abstract class Player extends Entity implements Disposable {
      * @param newY La coordenada Y tentativa para el movimiento.
      * @return true si hay colisión, false de lo contrario.
      */
-    private boolean checkCollision(float newX, float newY) {
-        if (levelManager == null || levelManager.getMapaActual() == null) {
+    protected boolean checkCollision(float newX, float newY) {
+        if (levelManager == null) {
             return false;
         }
         if (bounds == null) {
             Gdx.app.log("Player", "Error: getBounds() no inicializado antes de checkCollision.");
             return false;
         }
-
-        // CAMBIO: Crea un rectángulo de colisión en la posición tentativa.
+        // Crea el hitbox en la posición futura.
         Rectangle futureBounds = new Rectangle(newX + collisionOffsetX, newY + collisionOffsetY, collisionWidth, collisionHeight);
 
+
         // CAMBIO: Itera sobre los objetos de la capa de colisiones del mapa.
-        if (levelManager.getCollisionObjects() != null) {
+       /* if (levelManager.getCollisionObjects() != null) {
             for (MapObject object : levelManager.getCollisionObjects()) {
                 if (object instanceof RectangleMapObject) {
                     Rectangle rectObject = ((RectangleMapObject) object).getRectangle();
@@ -104,7 +113,7 @@ public abstract class Player extends Entity implements Disposable {
                     }
                 }
             }
-        }
+        }*/
         // 2. NUEVA COMPROBACIÓN: Colisión con bloques rompibles
         if (levelManager.getBloquesRompibles() != null) {
             for (ObjetoRomperVisual bloque : levelManager.getBloquesRompibles()) {
@@ -124,7 +133,11 @@ public abstract class Player extends Entity implements Disposable {
             }
         }*/
 
-        return false;
+        //return false;
+
+        // Delega la comprobación al LevelManager, que conoce TODOS los obstáculos.
+        return levelManager.colisionaConMapa(futureBounds);
+
     }
 //colisiones fin
 
@@ -269,11 +282,20 @@ public abstract class Player extends Entity implements Disposable {
         }
     }
 
+    public void mostrarMensaje(String texto) {
+       // this.mensajeUI = texto;
+       // this.tiempoMensajeVisible = DURACION_MENSAJE;
+    }
 
     @Override
     public void dispose() {
         if (spriteSheet != null) {
             spriteSheet.dispose();
         }
+    }
+
+    public void setGameClient(IGameClient client) {
+        this.gameClient = client;
+        System.out.println("[PLAYER] setGameClient fue llamado. El cliente es: " + (this.gameClient != null ? "VÁLIDO" : "NULO"));
     }
 }
