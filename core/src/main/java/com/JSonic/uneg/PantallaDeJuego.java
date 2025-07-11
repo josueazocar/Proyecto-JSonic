@@ -1,9 +1,9 @@
 // Archivo: src/com/JSonic/uneg/PantallaDeJuego.java
 package com.JSonic.uneg;
 
-// Imports...
+// Tus imports se mantienen igual...
 import com.JSonic.uneg.EnemigoState.EnemigoType;
-import com.JSonic.uneg.Entity.EstadoPlayer; // Importación necesaria para el método restaurado
+import com.JSonic.uneg.Entity.EstadoPlayer;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Input;
 import com.badlogic.gdx.graphics.*;
@@ -31,7 +31,7 @@ import com.badlogic.gdx.math.Vector2;
 
 public class PantallaDeJuego extends PantallaBase {
 
-    // --- VARIABLES ORIGINALES ---
+    // --- TUS VARIABLES SE MANTIENEN IGUAL ---
     public static final float VIRTUAL_WIDTH = 900;
     public static final float VIRTUAL_HEIGHT = 505;
     private OrthographicCamera camaraJuego;
@@ -53,40 +53,35 @@ public class PantallaDeJuego extends PantallaBase {
     private AnillosVisual anilloVisual;
     private final HashMap<Integer, RobotVisual> enemigosEnPantalla = new HashMap<>();
     private final HashMap<Integer, ItemVisual> itemsEnPantalla = new HashMap<>();
-
     private int anillosTotal = 0;
     private int basuraTotal = 0;
     private float porcentajeContaminacionActual = 0f;
     private OrthographicCamera uiCamera;
-
     private ShaderProgram shaderNeblina;
     private Mesh quadMesh;
     private BitmapFont font;
     private Label contaminationLabel;
     private Vector3 screenCoords = new Vector3();
-
-    //para el teletransporte
     private float tiempoTranscurrido = 0f;
     private boolean teletransporteCreado = false;
-
-    // ---[AGREGADO]--- Instancia de RobotnikVisual (eggman)
     private RobotnikVisual eggman;
-
-    // ---[AGREGADO]--- Lógica para las bombas de Eggman
     private final ArrayList<Bomba> listaDeBombas = new ArrayList<>();
-    private float tiempoParaProximaBomba = 4.0f; // Tiempo inicial antes de la primera bomba
-    private static final float CADENCIA_BOMBA = 4.0f; // Eggman lanzará una bomba cada 4 segundos
+    private float tiempoParaProximaBomba = 4.0f;
+    private static final float CADENCIA_BOMBA = 4.0f;
+
+    private boolean sonicFlashActivoEnFrameAnterior = false;
+
 
     public PantallaDeJuego(JSonicJuego juego, IGameClient client, IGameServer server) {
         super();
         this.juegoPrincipal = juego;
         this.batch = juego.batch;
-        this.gameClient = client; // Asignamos el cliente recibido
-        this.localServer = server; // Asignamos el servidor recibido (puede ser null)
+        this.gameClient = client;
+        this.localServer = server;
     }
 
     public PantallaDeJuego(JSonicJuego juego) {
-        this(juego, null, null); // Llamamos al constructor con nulls si no hay cliente/servidor
+        this(juego, null, null);
     }
 
     @Override
@@ -97,33 +92,25 @@ public class PantallaDeJuego extends PantallaBase {
         manejadorNivel.cargarNivel("maps/ZonaJefeN2.tmx");
         personajeJugableEstado = new PlayerState();
 
-        //para tomar lo metodos de LevelManager
         Vector2 llegada = manejadorNivel.obtenerPosicionLlegada();
         personajeJugableEstado.x = llegada.x;
         personajeJugableEstado.y = llegada.y;
 
-        // 1. Elige el personaje que quieres ser para esta prueba.
-        PlayerState.CharacterType miPersonaje = PlayerState.CharacterType.KNUCKLES;
-
-        // 2. Asigna el tipo de personaje al estado que se usará para el jugador local.
+        PlayerState.CharacterType miPersonaje = PlayerState.CharacterType.SONIC;
         personajeJugableEstado.characterType = miPersonaje;
 
-        // 3. Crea la instancia del personaje jugable localmente.
-        // Este switch se asegura de que TÚ estás controlando al personaje correcto en tu pantalla.
         System.out.println("[CLIENT] Creando jugador local como: " + miPersonaje);
         switch (miPersonaje) {
             case SONIC:
                 personajeJugable = new Sonic(personajeJugableEstado, manejadorNivel);
                 break;
             case TAILS:
-                // Asegúrate de que tienes una clase Tails que hereda de Player
                 personajeJugable = new Tails(personajeJugableEstado, manejadorNivel);
                 break;
             case KNUCKLES:
                 personajeJugable = new Knuckles(personajeJugableEstado, manejadorNivel);
                 break;
             default:
-                // Si algo sale mal, por defecto será Sonic
                 personajeJugable = new Sonic(personajeJugableEstado, manejadorNivel);
                 break;
         }
@@ -138,7 +125,7 @@ public class PantallaDeJuego extends PantallaBase {
 
         uiCamera = new OrthographicCamera();
 
-        ShaderProgram.pedantic = false; // Evita errores si no se usan todos los uniformes
+        ShaderProgram.pedantic = false;
         shaderNeblina = new ShaderProgram(
             Gdx.files.internal("shaders/neblina.vert"),
             Gdx.files.internal("shaders/neblina.frag")
@@ -149,29 +136,23 @@ public class PantallaDeJuego extends PantallaBase {
         }
 
         quadMesh = new Mesh(
-            true, // es estático, no cambiará
-            4,    // 4 vértices
-            4,    // 4 índices
-            new VertexAttribute(VertexAttributes.Usage.Position, 3, "a_position") // 3 floats por vértice (x,y,z)
+            true, 4, 4,
+            new VertexAttribute(VertexAttributes.Usage.Position, 3, "a_position")
         );
 
-        // Definimos los 4 vértices de un rectángulo que cubre la pantalla
         float screenWidth = Gdx.graphics.getWidth();
         float screenHeight = Gdx.graphics.getHeight();
         float[] vertices = {
-            0, 0, 0,                      // Vértice 0: Abajo-izquierda
-            screenWidth, 0, 0,            // Vértice 1: Abajo-derecha
-            0, screenHeight, 0,           // Vértice 2: Arriba-izquierda
-            screenWidth, screenHeight, 0  // Vértice 3: Arriba-derecha
+            0, 0, 0,
+            screenWidth, 0, 0,
+            0, screenHeight, 0,
+            screenWidth, screenHeight, 0
         };
-
-        // Definimos el orden en que se dibujan los vértices para formar dos triángulos
         short[] indices = { 0, 1, 2, 3 };
 
         quadMesh.setVertices(vertices);
         quadMesh.setIndices(indices);
 
-        // CONFIGURACIÓN UI Anillos ---
         String numerosTexturaPath = "Fondos/numerosContadorAnillos.png";
         contadorAnillos = new ContadorUI(numerosTexturaPath);
         contadorBasura = new ContadorUI(numerosTexturaPath);
@@ -181,7 +162,6 @@ public class PantallaDeJuego extends PantallaBase {
         tablaUI.setFillParent(true);
         tablaUI.pad(10);
 
-        // Iconos y contadores
         anilloVisual = new AnillosVisual(new ItemState(0, 0, 0, ItemState.ItemType.ANILLO));
         Image anilloIcono = new Image(anilloVisual.animacion.getKeyFrame(0));
         Texture basuraIcono = new Texture("Items/basura.png");
@@ -225,8 +205,6 @@ public class PantallaDeJuego extends PantallaBase {
         if (gameClient != null) {
             while (!gameClient.getPaquetesRecibidos().isEmpty()) {
                 Object paquete = gameClient.getPaquetesRecibidos().poll();
-                System.out.println("[CLIENT_DEBUG] Procesando paquete de tipo: " + paquete.getClass().getSimpleName());
-
                 if (paquete instanceof Network.RespuestaAccesoPaquete p) {
                     if (p.tuEstado != null) {
                         inicializarJugadorLocal(p.tuEstado);
@@ -265,7 +243,7 @@ public class PantallaDeJuego extends PantallaBase {
                     }
                 } else if (paquete instanceof Network.PaqueteActualizacionEnemigos p) {
                     for (EnemigoState estadoServidor : p.estadosEnemigos.values()) {
-                        if (estadoServidor.tipo == EnemigoState.EnemigoType.ROBOTNIK) {
+                        if (estadoServidor.tipo == EnemigoType.ROBOTNIK) {
                             if (eggman != null) {
                                 eggman.estado.x = estadoServidor.x;
                                 eggman.estado.y = estadoServidor.y;
@@ -309,49 +287,42 @@ public class PantallaDeJuego extends PantallaBase {
                     contadorAnillos.setValor(this.anillosTotal);
                     contadorBasura.setValor(this.basuraTotal);
 
-                    if (anillosTotal == 100){//Condición para una vida más.
+                    if (anillosTotal == 100){
                         personajeJugable.setVida(personajeJugable.getVida() + 100);
                     }
 
                 } else if (paquete instanceof Network.PaqueteActualizacionContaminacion p) {
-
                     this.porcentajeContaminacionActual = p.contaminationPercentage;
                     if (porcentajeContaminacionActual >= 10 && porcentajeContaminacionActual < 30) {
-                        System.out.println("[JUGADOR RECIBIO DAÑO POR NIEBLA TOXICA] - VIDA: "+personajeJugable.getVida());
                         personajeJugable.setVida(personajeJugable.getVida() - 3);
                     }
                     if (porcentajeContaminacionActual >= 30 && porcentajeContaminacionActual < 60) {
                         personajeJugable.setVida(personajeJugable.getVida() - 5);
-                        System.out.println("[JUGADOR RECIBIO DAÑO POR NIEBLA TOXICA] - VIDA: "+personajeJugable.getVida());
                     } else if (porcentajeContaminacionActual >= 60 && porcentajeContaminacionActual < 70) {
                         personajeJugable.setVida(personajeJugable.getVida() - 7);
-                        System.out.println("[JUGADOR RECIBIO DAÑO POR NIEBLA TOXICA] - VIDA: "+personajeJugable.getVida());
                     } else if (porcentajeContaminacionActual >= 70 && porcentajeContaminacionActual <= 99) {
                         personajeJugable.setVida(personajeJugable.getVida() - 10);
-                        System.out.println("[JUGADOR RECIBIO DAÑO POR NIEBLA TOXICA] - VIDA: "+personajeJugable.getVida());
                     } else if (porcentajeContaminacionActual == 100) {
                         personajeJugable.setVida(0);
-                        System.out.println("[JUGADOR HA MUERTO POR NIEBLA TOXICA] - VIDA: "+personajeJugable.getVida());
                         personajeJugable = null;
                     }
-                    contaminationLabel.setText("TOXIC: " + Math.round(this.porcentajeContaminacionActual) + "%");
-
+                    if(contaminationLabel != null) {
+                        contaminationLabel.setText("TOXIC: " + Math.round(this.porcentajeContaminacionActual) + "%");
+                    }
                 }
             }
         }
 
-        // ---[AGREGADO]--- Lógica para que Eggman lance bombas periódicamente.
-            if (eggman != null) {
-                if(manejadorNivel.getNombreMapaActual().equals("maps/ZonaJefeN1.tmx") || manejadorNivel.getNombreMapaActual().equals("maps/ZonaJefeN2.tmx") || manejadorNivel.getNombreMapaActual().equals("maps/ZonaJefeN3.tmx")) {
-                    tiempoParaProximaBomba -= deltat;
-                    if (tiempoParaProximaBomba <= 0) {
-                        lanzarBombaDesdeEggman();
-                        tiempoParaProximaBomba = CADENCIA_BOMBA; // Reiniciar el temporizador
-                    }
+        if (eggman != null) {
+            if(manejadorNivel.getNombreMapaActual().equals("maps/ZonaJefeN1.tmx") || manejadorNivel.getNombreMapaActual().equals("maps/ZonaJefeN2.tmx") || manejadorNivel.getNombreMapaActual().equals("maps/ZonaJefeN3.tmx")) {
+                tiempoParaProximaBomba -= deltat;
+                if (tiempoParaProximaBomba <= 0) {
+                    lanzarBombaDesdeEggman();
+                    tiempoParaProximaBomba = CADENCIA_BOMBA;
                 }
             }
+        }
 
-        // ---[AGREGADO]--- Bucle para actualizar y gestionar las bombas
         Iterator<Bomba> iterBombas = listaDeBombas.iterator();
         while (iterBombas.hasNext()) {
             Bomba bomba = iterBombas.next();
@@ -360,11 +331,9 @@ public class PantallaDeJuego extends PantallaBase {
             if (bomba.isExplotando() && !bomba.yaHaHechoDanio()) {
                 if (bomba.getBounds().overlaps(personajeJugable.getBounds())) {
                     personajeJugable.setVida(personajeJugable.getVida() - 20);
-                    System.out.println("[JUGADOR] ¡ALCANZADO POR UNA EXPLOSION!-VIDA: " + personajeJugable.getVida());
                     bomba.marcarComoDanioHecho();
                 }
             }
-
             if (bomba.isParaEliminar()) {
                 bomba.dispose();
                 iterBombas.remove();
@@ -375,7 +344,6 @@ public class PantallaDeJuego extends PantallaBase {
             item.update(deltat);
         }
 
-        Integer idTeletransporteAEliminar = null;
         Iterator<Map.Entry<Integer, ItemVisual>> iter = itemsEnPantalla.entrySet().iterator();
         while (iter.hasNext()) {
             Map.Entry<Integer, ItemVisual> entry = iter.next();
@@ -385,7 +353,6 @@ public class PantallaDeJuego extends PantallaBase {
                 paquete.idItem = item.estado.id;
                 gameClient.send(paquete);
                 if (item.estado.tipo == ItemState.ItemType.TELETRANSPORTE) {
-                    System.out.println("[CLIENT] Tocado el teletransportador. Solicitando viaje al servidor...");
                     break;
                 }
             }
@@ -393,6 +360,9 @@ public class PantallaDeJuego extends PantallaBase {
 
         personajeJugable.KeyHandler();
         personajeJugable.update(deltat);
+
+        gestionarHabilidadDeLimpiezaDeSonic();
+
         for (Player otro : otrosJugadores.values()){
             otro.update(deltat);
         }
@@ -406,56 +376,29 @@ public class PantallaDeJuego extends PantallaBase {
                     personajeJugable.estado.estadoAnimacion == EstadoPlayer.SPECIAL_LEFT ||
                     personajeJugable.estado.estadoAnimacion == EstadoPlayer.SPECIAL_RIGHT;
 
-                if (jugadorEstaAtacando && enemigo.estado.estadoAnimacion != EnemigoState.EstadoEnemigo.HIT_LEFT ||
-                    jugadorEstaAtacando && enemigo.estado.estadoAnimacion != EnemigoState.EstadoEnemigo.HIT_RIGHT) {
+                if (jugadorEstaAtacando && enemigo.estado.estadoAnimacion != EnemigoState.EstadoEnemigo.HIT_LEFT && enemigo.estado.estadoAnimacion != EnemigoState.EstadoEnemigo.HIT_RIGHT) {
                     enemigo.setVida(enemigo.getVida() - 1);
-                    System.out.println("[ROBOT] HA SIDO GOLPEADO-VIDA:" + enemigo.getVida());
-                }
-
-                if (!jugadorEstaAtacando && enemigo.estado.estadoAnimacion == EnemigoState.EstadoEnemigo.HIT_LEFT ||
-                    jugadorEstaAtacando && enemigo.estado.estadoAnimacion == EnemigoState.EstadoEnemigo.HIT_RIGHT) {
+                } else if (!jugadorEstaAtacando && (enemigo.estado.estadoAnimacion == EnemigoState.EstadoEnemigo.HIT_LEFT || enemigo.estado.estadoAnimacion == EnemigoState.EstadoEnemigo.HIT_RIGHT)) {
                     personajeJugable.setVida(personajeJugable.getVida() - 1);
-                    System.out.println("[JUGADOR] HA SIDO GOLPEADO-VIDA:" + personajeJugable.getVida());
-                }
-
-                if (jugadorEstaAtacando && enemigo.estado.estadoAnimacion == EnemigoState.EstadoEnemigo.HIT_LEFT ||
-                    jugadorEstaAtacando && enemigo.estado.estadoAnimacion == EnemigoState.EstadoEnemigo.HIT_RIGHT) {
-
+                } else if (jugadorEstaAtacando && (enemigo.estado.estadoAnimacion == EnemigoState.EstadoEnemigo.HIT_LEFT || enemigo.estado.estadoAnimacion == EnemigoState.EstadoEnemigo.HIT_RIGHT)) {
                     Random random = new Random();
-                    switch (random.nextInt(3) + 1){
-                        case 1:
-                            personajeJugable.setVida(personajeJugable.getVida() - 1);
-                            System.out.println("[JUGADOR] HA SIDO GOLPEADO-VIDA:" + personajeJugable.getVida());
-                        break;
-                        case 2:
-                            enemigo.setVida(enemigo.getVida() - 1);
-                            System.out.println("[ROBOT] HA SIDO GOLPEADO-VIDA:" + enemigo.getVida());
-                        break;
-                        case 3:
-                            personajeJugable.setVida(personajeJugable.getVida() - 1);
-                            enemigo.setVida(enemigo.getVida() - 1);
-                            System.out.println("[JUGADOR] HA SIDO GOLPEADO-VIDA:" + personajeJugable.getVida());
-                            System.out.println("[ROBOT] HA SIDO GOLPEADO-VIDA:" + enemigo.getVida());
-                        break;
+                    if (random.nextBoolean()) {
+                        personajeJugable.setVida(personajeJugable.getVida() - 1);
+                    } else {
+                        enemigo.setVida(enemigo.getVida() - 1);
                     }
-
                 }
             }
             enemigo.update(deltat);
         }
-        //Comprobador de la vida del enemigo
         Iterator<RobotVisual> iterator = enemigosEnPantalla.values().iterator();
         while (iterator.hasNext()) {
             RobotVisual enemigo = iterator.next();
-
             if(enemigo.getVida() <= 0){
                 enemigo.dispose();
                 iterator.remove();
             }
         }
-
-        //Condicion para que el personaje muera
-       // if(personajeJugable.getVida() <= 0){}
 
         if (eggman != null){
             if (personajeJugable.getBounds().overlaps(eggman.getBounds())) {
@@ -468,7 +411,6 @@ public class PantallaDeJuego extends PantallaBase {
 
                 if (jugadorEstaAtacando) {
                     eggman.setVida(eggman.getVida() - 3);
-                    System.out.println("[ROBOTNIK] HA SIDO GOLPEADO-VIDA:" + eggman.getVida());
                 }
             }
             eggman.update(deltat);
@@ -479,6 +421,40 @@ public class PantallaDeJuego extends PantallaBase {
         manejadorNivel.limitarCamaraAMapa(camaraJuego);
         camaraJuego.update();
         mainStage.act(Math.min(deltat, 1 / 30f));
+    }
+
+    private void gestionarHabilidadDeLimpiezaDeSonic() {
+        if (personajeJugable instanceof Sonic) {
+            Sonic sonic = (Sonic) personajeJugable;
+
+            boolean flashActivoAhora = sonic.getFlashDurationTimer() > 0;
+
+            if (flashActivoAhora && !sonicFlashActivoEnFrameAnterior) {
+                Gdx.app.log("PantallaDeJuego", "Habilidad de limpieza de Sonic detectada!");
+                // CAMBIO: Renombramos la variable para que sea más genérica.
+                ArrayList<Integer> idsItemsLimpiezaARecoger = new ArrayList<>();
+
+                for (ItemVisual item : itemsEnPantalla.values()) {
+                    // CAMBIO PRINCIPAL: Ahora comprobamos si el ítem es BASURA o PIEZA_PLASTICO.
+                    if (item.estado.tipo == ItemState.ItemType.BASURA || item.estado.tipo == ItemState.ItemType.PIEZA_PLASTICO) {
+                        idsItemsLimpiezaARecoger.add(item.estado.id);
+                    }
+                }
+
+                if (!idsItemsLimpiezaARecoger.isEmpty()) {
+                    // CAMBIO: Actualizamos el mensaje de log para ser más preciso.
+                    Gdx.app.log("PantallaDeJuego", "Enviando solicitud para recoger " + idsItemsLimpiezaARecoger.size() + " ítems de contaminación.");
+
+                    // CAMBIO: Usamos un nombre de variable más genérico en el bucle.
+                    for (Integer idItem : idsItemsLimpiezaARecoger) {
+                        Network.PaqueteSolicitudRecogerItem paquete = new Network.PaqueteSolicitudRecogerItem();
+                        paquete.idItem = idItem;
+                        gameClient.send(paquete);
+                    }
+                }
+            }
+            this.sonicFlashActivoEnFrameAnterior = flashActivoAhora;
+        }
     }
 
     @Override
@@ -495,12 +471,10 @@ public class PantallaDeJuego extends PantallaBase {
         for (RobotVisual enemigo : enemigosEnPantalla.values()) enemigo.draw(batch);
 
         if (eggman != null){
-            System.out.println("NIVEL: " + manejadorNivel.getNombreMapaActual());
-           if(manejadorNivel.getNombreMapaActual().equals("maps/ZonaJefeN1.tmx") || manejadorNivel.getNombreMapaActual().equals("maps/ZonaJefeN2.tmx") || manejadorNivel.getNombreMapaActual().equals("maps/ZonaJefeN3.tmx"))
-            eggman.draw(batch);
+            if(manejadorNivel.getNombreMapaActual().equals("maps/ZonaJefeN1.tmx") || manejadorNivel.getNombreMapaActual().equals("maps/ZonaJefeN2.tmx") || manejadorNivel.getNombreMapaActual().equals("maps/ZonaJefeN3.tmx"))
+                eggman.draw(batch);
         }
 
-        // ---[AGREGADO]--- Bucle para dibujar todas las bombas activas
         for (Bomba bomba : listaDeBombas) {
             bomba.draw(batch);
         }
@@ -523,25 +497,18 @@ public class PantallaDeJuego extends PantallaBase {
         }
     }
 
-    // ---[AGREGADO]--- Nuevo método para lanzar una bomba desde la posición de Eggman
     private void lanzarBombaDesdeEggman() {
-        if (eggman == null || personajeJugable == null) return; // Chequeo de seguridad
-
-        System.out.println("[JUEGO] ¡Eggman está lanzando una bomba!");
-
+        if (eggman == null || personajeJugable == null) return;
         EnemigoState estadoBomba = new EnemigoState(0, eggman.estado.x, eggman.estado.y, 1, EnemigoType.ROBOT);
         Vector2 velocidad = new Vector2(
             personajeJugable.estado.x - eggman.estado.x,
             personajeJugable.estado.y - eggman.estado.y
         );
         velocidad.nor().scl(180f);
-
         estadoBomba.estadoAnimacion = (velocidad.x >= 0) ? EnemigoState.EstadoEnemigo.RUN_RIGHT : EnemigoState.EstadoEnemigo.RUN_LEFT;
         Bomba nuevaBomba = new Bomba(estadoBomba, velocidad, 2.5f);
         listaDeBombas.add(nuevaBomba);
     }
-
-    // ---[RESTAURADO]--- A PARTIR DE AQUÍ SE RESTAURAN TODOS LOS MÉTODOS QUE FALTABAN ---
 
     private void reiniciarTeletransporte() {
         teletransporteCreado = false;
@@ -579,16 +546,13 @@ public class PantallaDeJuego extends PantallaBase {
     }
 
     private void crearEnemigoVisual(EnemigoState estadoEnemigo) {
-        if (estadoEnemigo.tipo == EnemigoState.EnemigoType.ROBOTNIK) {
+        if (estadoEnemigo.tipo == EnemigoType.ROBOTNIK) {
             if (this.eggman == null) {
-                System.out.println("[CLIENT] Recibida orden de crear a ROBOTNIK (ID: " + estadoEnemigo.id + ")");
                 this.eggman = new RobotnikVisual(estadoEnemigo, manejadorNivel);
             }
             return;
         }
-
         if (!enemigosEnPantalla.containsKey(estadoEnemigo.id)) {
-            System.out.println("[CLIENT] Recibida orden de crear enemigo normal con ID: " + estadoEnemigo.id);
             RobotVisual nuevoRobot = new RobotVisual(estadoEnemigo, manejadorNivel, this.gameClient);
             enemigosEnPantalla.put(estadoEnemigo.id, nuevoRobot);
         }
@@ -599,7 +563,6 @@ public class PantallaDeJuego extends PantallaBase {
             enemigo.dispose();
         }
         enemigosEnPantalla.clear();
-
         for (ItemVisual item : itemsEnPantalla.values()) {
             item.dispose();
         }
@@ -607,25 +570,14 @@ public class PantallaDeJuego extends PantallaBase {
     }
 
     private void crearItemVisual(ItemState estadoItem) {
-        System.out.println("[CLIENT DEBUG] Recibida orden para crear item. TIPO: " + estadoItem.tipo + ", ID: " + estadoItem.id);
         if (!itemsEnPantalla.containsKey(estadoItem.id)) {
-            System.out.println("[CLIENT] Recibida orden de crear ítem tipo " + estadoItem.tipo + " con ID: " + estadoItem.id);
             ItemVisual nuevoItem = null;
             switch (estadoItem.tipo) {
-                case ANILLO:
-                    nuevoItem = new AnillosVisual(estadoItem);
-                    break;
-                case BASURA:
-                    nuevoItem = new BasuraVisual(estadoItem);
-                    break;
-                case PIEZA_PLASTICO:
-                    nuevoItem = new PiezaDePlasticoVisual(estadoItem);
-                    break;
-                case TELETRANSPORTE:
-                    nuevoItem = new TeletransporteVisual(estadoItem);
-                    break;
+                case ANILLO: nuevoItem = new AnillosVisual(estadoItem); break;
+                case BASURA: nuevoItem = new BasuraVisual(estadoItem); break;
+                case PIEZA_PLASTICO: nuevoItem = new PiezaDePlasticoVisual(estadoItem); break;
+                case TELETRANSPORTE: nuevoItem = new TeletransporteVisual(estadoItem); break;
             }
-
             if (nuevoItem != null) {
                 itemsEnPantalla.put(estadoItem.id, nuevoItem);
             }
@@ -636,23 +588,21 @@ public class PantallaDeJuego extends PantallaBase {
         Player jugadorVisual = otrosJugadores.get(estadoRecibido.id);
         if (jugadorVisual == null) {
             System.out.println("Creando nuevo jugador gráfico con ID: " + estadoRecibido.id);
-
-            // Determina qué personaje crear basándose en el tipo de personaje del *otro* jugador
             switch (estadoRecibido.characterType) {
                 case SONIC:
-                    jugadorVisual = new Sonic(estadoRecibido);
+                    jugadorVisual = new Sonic(estadoRecibido, manejadorNivel);
                     break;
                 case TAILS:
-                    jugadorVisual = new Tails(estadoRecibido);
+                    jugadorVisual = new Tails(estadoRecibido, manejadorNivel);
                     break;
                 case KNUCKLES:
-                    jugadorVisual = new Knuckles(estadoRecibido);
+                    // *** CORRECCIÓN: Se cambió "uneg.Knuckles" por "new Knuckles" ***
+                    jugadorVisual = new Knuckles(estadoRecibido, manejadorNivel);
                     break;
                 default:
-                    jugadorVisual = new Sonic(estadoRecibido);
+                    jugadorVisual = new Sonic(estadoRecibido, manejadorNivel);
                     break;
             }
-
             otrosJugadores.put(estadoRecibido.id, jugadorVisual);
         } else {
             jugadorVisual.estado.x = estadoRecibido.x;
@@ -698,13 +648,10 @@ public class PantallaDeJuego extends PantallaBase {
         if (shapeRenderer != null) shapeRenderer.dispose();
         for (RobotVisual enemigo : enemigosEnPantalla.values()) enemigo.dispose();
         if (eggman != null) eggman.dispose();
-
-        // ---[AGREGADO]--- Limpiar recursos de las bombas restantes al cerrar la pantalla
         for (Bomba bomba : listaDeBombas) {
             bomba.dispose();
         }
         listaDeBombas.clear();
-
         for (ItemVisual item : itemsEnPantalla.values()) item.dispose();
         if (contadorAnillos != null) contadorAnillos.dispose();
         if (contadorBasura != null) contadorBasura.dispose();

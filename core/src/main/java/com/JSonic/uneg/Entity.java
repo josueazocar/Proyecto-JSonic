@@ -54,7 +54,8 @@ public abstract class Entity {
         KICK_RIGHT,
         KICK_LEFT,
         SPECIAL_RIGHT,
-        SPECIAL_LEFT
+        SPECIAL_LEFT,
+        CLEAN
     }
 
     // Mapa para almacenar diferentes animaciones por estado

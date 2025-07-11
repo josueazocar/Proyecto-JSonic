@@ -25,7 +25,9 @@ public abstract class Player extends Entity implements Disposable {
     // Stores the proposed movement state (UP, DOWN, LEFT, RIGHT) before applying actions.
     protected EstadoPlayer proposedMovementState = null;
     protected boolean actionStateSet = false; // Flag to know if an action state has been set.
+    protected  boolean clean = false;
 //hasta aqui
+
 
     public Player(){
         super();
