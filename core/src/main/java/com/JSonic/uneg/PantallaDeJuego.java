@@ -523,30 +523,42 @@ public class PantallaDeJuego extends PantallaBase {
 
             if (flashActivoAhora && !sonicFlashActivoEnFrameAnterior) {
                 Gdx.app.log("PantallaDeJuego", "Habilidad de limpieza de Sonic detectada!");
-                // CAMBIO: Renombramos la variable para que sea más genérica.
-                ArrayList<Integer> idsItemsLimpiezaARecoger = new ArrayList<>();
 
+                // --- INICIO DE LA SOLUCIÓN CORRECTA ---
+
+                // 1. Notificamos al servidor que la habilidad fue usada.
+                // Esto es lo más importante para que el cambio sea permanente.
+                if (gameClient != null) {
+                    Gdx.app.log("PantallaDeJuego", "Enviando notificación de habilidad de limpieza al servidor.");
+                    Network.PaqueteHabilidadLimpiezaSonic paqueteHabilidad = new Network.PaqueteHabilidadLimpiezaSonic();
+                    gameClient.send(paqueteHabilidad);
+                }
+
+                // 2. Mantenemos la lógica de recoger los items de basura cercanos.
+                ArrayList<Integer> idsItemsLimpiezaARecoger = new ArrayList<>();
                 for (ItemVisual item : itemsEnPantalla.values()) {
-                    // CAMBIO PRINCIPAL: Ahora comprobamos si el ítem es BASURA o PIEZA_PLASTICO.
                     if (item.estado.tipo == ItemState.ItemType.BASURA || item.estado.tipo == ItemState.ItemType.PIEZA_PLASTICO) {
                         idsItemsLimpiezaARecoger.add(item.estado.id);
                     }
                 }
 
-
-                porcentajeContaminacionActual = 0;
-
                 if (!idsItemsLimpiezaARecoger.isEmpty()) {
-                    // CAMBIO: Actualizamos el mensaje de log para ser más preciso.
                     Gdx.app.log("PantallaDeJuego", "Enviando solicitud para recoger " + idsItemsLimpiezaARecoger.size() + " ítems de contaminación.");
-
-                    // CAMBIO: Usamos un nombre de variable más genérico en el bucle.
                     for (Integer idItem : idsItemsLimpiezaARecoger) {
                         Network.PaqueteSolicitudRecogerItem paquete = new Network.PaqueteSolicitudRecogerItem();
                         paquete.idItem = idItem;
                         gameClient.send(paquete);
                     }
                 }
+
+                // 3. Reseteamos el porcentaje LOCALMENTE para un efecto visual instantáneo.
+                // Así no esperamos la respuesta del servidor para ver el cambio.
+                this.porcentajeContaminacionActual = 0f;
+                if(contaminationLabel != null) {
+                    contaminationLabel.setText("TOXIC: " + Math.round(this.porcentajeContaminacionActual) + "%");
+                }
+
+                // --- FIN DE LA SOLUCIÓN CORRECTA ---
             }
             this.sonicFlashActivoEnFrameAnterior = flashActivoAhora;
         }

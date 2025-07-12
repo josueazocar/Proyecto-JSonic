@@ -113,7 +113,7 @@ public class LocalServer implements IGameServer {
             clienteLocal.recibirPaqueteDelServidor(paquete);
         }
     }
-   
+
 
     /**
      * Este es el "game loop" del servidor. Se llamará desde PantallaDeJuego.
@@ -135,7 +135,18 @@ public class LocalServer implements IGameServer {
                     estadoJugador.estadoAnimacion = paquete.estadoAnimacion;
                     // No necesitamos retransmitir porque solo hay un jugador.
                 }
-            } else if (objeto instanceof Network.PaqueteSolicitudRecogerItem paquete) {
+            }
+            // --- INICIO DE LA SOLUCIÓN CORRECTA ---
+            else if (objeto instanceof Network.PaqueteHabilidadLimpiezaSonic) {
+                System.out.println("[SERVER] ¡Recibida notificación de habilidad de limpieza de Sonic!");
+                // Usamos el método que ya tienes para reducir la contaminación.
+                // Poner un valor alto como 100 asegura que llegue a 0.
+                decreaseContamination(100.0f);
+                // El servidor ahora enviará automáticamente la actualización a todos los clientes
+                // con el nuevo valor 0, porque la variable de contaminación ha cambiado.
+            }
+            // --- FIN DE LA SOLUCIÓN CORRECTA ---
+            else if (objeto instanceof Network.PaqueteSolicitudRecogerItem paquete) {
                 // Primero, verificamos si el ítem existe con .get()
                 ItemState itemRecogido = itemsActivos.get(paquete.idItem);
 
@@ -169,7 +180,7 @@ public class LocalServer implements IGameServer {
                         // Creamos la ORDEN de cambio de mapa
                         Network.PaqueteOrdenCambiarMapa orden = new Network.PaqueteOrdenCambiarMapa();
                         orden.nuevoMapa = destinoMapa;
-                            /*!= null ? destinoMapa : "maps/ZonaJefeN1.tmx";*/
+                        /*!= null ? destinoMapa : "maps/ZonaJefeN1.tmx";*/
                         orden.nuevaPosX = llegadaX;
                         orden.nuevaPosY = llegadaY;
                         //orden.nuevaPosX = 70f;
@@ -184,7 +195,7 @@ public class LocalServer implements IGameServer {
                         clienteLocal.recibirPaqueteDelServidor(paqueteEliminado);
 
                         //para teletransporte
-                       // destinosPortales.remove(paquete.idItem); // Limpieza
+                        // destinosPortales.remove(paquete.idItem); // Limpieza
                     }
                     // CASO GENERAL: Es un ítem normal
                     else {
