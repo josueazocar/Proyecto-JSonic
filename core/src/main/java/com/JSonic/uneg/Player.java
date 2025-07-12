@@ -8,6 +8,8 @@ import com.badlogic.gdx.math.MathUtils; // Importar para MathUtils.clamp
 import com.badlogic.gdx.math.Rectangle;
 import com.badlogic.gdx.maps.objects.RectangleMapObject;
 import com.badlogic.gdx.maps.MapObject;
+import com.badlogic.gdx.math.Polygon;
+import com.badlogic.gdx.math.Intersector;
 import com.badlogic.gdx.utils.Array;
 import network.interfaces.IGameClient;
 
@@ -107,20 +109,16 @@ public abstract class Player extends Entity implements Disposable {
 
         // 2. NUEVA COMPROBACIÓN: Colisión con bloques rompibles
         if (levelManager.getBloquesRompibles() != null) {
+            Polygon futurePlayerPolygon = new Polygon(new float[]{
+                futureBounds.x, futureBounds.y,
+                futureBounds.x + futureBounds.width, futureBounds.y,
+                futureBounds.x + futureBounds.width, futureBounds.y + futureBounds.height,
+                futureBounds.x, futureBounds.y + futureBounds.height
+            });
             for (ObjetoRomperVisual bloque : levelManager.getBloquesRompibles()) {
-                if (futureBounds.overlaps(bloque.getBounds())) {
+                // Comprobar si el hitbox futuro del jugador se superpone con el de un bloque rompible.
+                if (Intersector.overlapConvexPolygons(futurePlayerPolygon, bloque.getBounds())) {
                     return true; // Hay colisión con un bloque rompible
-                }
-            }
-        }
-
-        // 3. Comprobar colisión con los animales (vivos o muertos)
-        java.util.Collection<AnimalVisual> animales = levelManager.getAnimalesVisuales();
-        if (animales != null) {
-            for (AnimalVisual animal : animales) {
-                // Si el hitbox futuro del jugador se superpone con el de un animal, hay colisión.
-                if (futureBounds.overlaps(animal.getBounds())) {
-                    return true; // Hay colisión con un animal
                 }
             }
         }
@@ -258,11 +256,19 @@ public abstract class Player extends Entity implements Disposable {
         // Usamos los bounds del jugador para ver si se superpone con un bloque
         Rectangle playerBounds = getBounds(); // Asumiendo que Player tiene un getBounds()
 
+        Polygon playerPolygon = new Polygon(new float[]{
+            playerBounds.x, playerBounds.y,
+            playerBounds.x + playerBounds.width, playerBounds.y,
+            playerBounds.x + playerBounds.width, playerBounds.y + playerBounds.height,
+            playerBounds.x, playerBounds.y + playerBounds.height
+        });
+
+
         // Usamos un iterador para poder eliminar elementos de forma segura
         java.util.Iterator<ObjetoRomperVisual> iter = levelManager.getBloquesRompibles().iterator();
         while (iter.hasNext()) {
             ObjetoRomperVisual bloque = iter.next();
-            if (playerBounds.overlaps(bloque.getBounds())) {
+            if (Intersector.overlapConvexPolygons(playerPolygon, bloque.getBounds())) {
                 iter.remove(); // Elimina el bloque de la lista en LevelManager
                 Gdx.app.log("Player", "Knuckles rompió un bloque.");
                 // Opcional: puedes añadir un sonido o efecto visual aquí

@@ -19,6 +19,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
 import java.util.concurrent.ConcurrentHashMap;
+import com.badlogic.gdx.math.Polygon;
 
 
 public class LevelManager {
@@ -44,6 +45,7 @@ public class LevelManager {
     //para los bloques u objetos irrompibles para otros jugadores menos para knuckles
     private Array<ObjetoRomperVisual> bloquesRompibles;
     private int proximoIdBloque = 30000;
+
     // Constructor que recibe la cámara y el SpriteBatch (aunque el batch no se use directamente aquí para dibujar el mapa)
     public LevelManager(OrthographicCamera camara, SpriteBatch batch) {
         this.camaraJuego = camara;
@@ -68,6 +70,7 @@ public class LevelManager {
     public Player getPlayer() {
         return player;
     }
+
     //para obtener los animales visuales
     public java.util.Collection<AnimalVisual> getAnimalesVisuales() {
         if (animalesVisuales == null) {
@@ -76,7 +79,8 @@ public class LevelManager {
         }
         return animalesVisuales.values();
     }
-//-----------------------------------
+
+    //-----------------------------------
     public void generarArbol(float x, float y) {
         // 1. Creamos el nuevo objeto Árbol
         Arbol_Tails nuevoArbol = new Arbol_Tails(x, y);
@@ -231,10 +235,12 @@ public class LevelManager {
     //----------------------------------------------------------
 
     // --- AÑADIDO: Métodos para gestionar los animales ---
+
     /**
      * Procesa un mapa completo de estados de animales, creando nuevos animales visuales
      * o actualizando los existentes.
      * Este método es llamado cuando el cliente recibe un PaqueteActualizacionAnimales.
+     *
      * @param estadosAnimales El HashMap que viene del paquete del servidor.
      */
     public void actualizarAnimalesDesdePaquete(java.util.HashMap<Integer, AnimalState> estadosAnimales) {
@@ -273,7 +279,7 @@ public class LevelManager {
             AnimalVisual nuevoAnimal = new AnimalVisual(estadoAnimal.id, estadoAnimal.x, estadoAnimal.y, animalTexture);
             animalesVisuales.put(estadoAnimal.id, nuevoAnimal);
             // Añadimos su hitbox a nuestra lista de colisiones dinámicas
-           // colisionesDinamicas.add(nuevoAnimal.getBounds());
+            // colisionesDinamicas.add(nuevoAnimal.getBounds());
         }
     }
 
@@ -289,6 +295,7 @@ public class LevelManager {
         }
     }
     //-------------------------------
+
     /**
      * Dibuja todos los animales en la pantalla.
      * Este método debe ser llamado desde la pantalla de juego principal.
@@ -483,7 +490,35 @@ public class LevelManager {
                 return true; // Colisión con un árbol
             }
         }
+        //colisiones con robots con BLOQUES ROMPIBLES
+        if (!bloquesRompibles.isEmpty()) {
+            // Polígono temporal para representar los límites de la entidad que se mueve (enemigo/jugador)
+            Polygon boundsPolygon = new Polygon();
+            // Array para los vértices del polígono temporal, declarado fuera del bucle para eficiencia.
+            float[] vertices = new float[8];
+
+            for (ObjetoRomperVisual bloque : bloquesRompibles) {
+                // Define los vértices del rectángulo de la entidad
+                vertices[0] = bounds.x;
+                vertices[1] = bounds.y;
+                vertices[2] = bounds.x + bounds.width;
+                vertices[3] = bounds.y;
+                vertices[4] = bounds.x + bounds.width;
+                vertices[5] = bounds.y + bounds.height;
+                vertices[6] = bounds.x;
+                vertices[7] = bounds.y + bounds.height;
+                boundsPolygon.setVertices(vertices);
+
+                // Comprueba si el polígono de la entidad se superpone con el polígono del bloque.
+                if (Intersector.overlapConvexPolygons(bloque.getBounds(), boundsPolygon)) {
+                    return true; // Colisión precisa con un bloque rompible
+                }
+            }
+        }
+        //----------------------------------------------------
+
         return false; // no hay colisión
+
     }
 
     public void dibujarArboles(SpriteBatch batch) {
@@ -491,6 +526,7 @@ public class LevelManager {
             arbol.draw(batch);
         }
     }
+
 
     /**
      * Busca en el mapa actual una capa de objeto que corresponda a una planta de tratamiento

@@ -4,13 +4,14 @@ import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.graphics.g2d.TextureRegion;
-import com.badlogic.gdx.math.Rectangle;
+import com.badlogic.gdx.math.Polygon;
 
+// Esta clase representa un objeto que puede ser destruido visualmente en el juego.
 public class ObjetoRomperVisual {
 
     private TextureRegion[] frames;
+    private Polygon bounds;
     private int estadoActual; // 0: intacto, 1: dañado, 2: destruyéndose
-    public Rectangle bounds;
     public final int id;
     public float x, y;
     private float size;
@@ -28,8 +29,20 @@ public class ObjetoRomperVisual {
         this.y = y;
         this.size = tileSize;
         this.estadoActual = 0;
-        this.bounds = new Rectangle(x, y, size, size);
 
+        // Define los vértices de la forma de tu hitbox.
+
+        float[] vertices = new float[]{
+                size * 0.05f, 0,                // Base izquierda (se mantiene igual)
+                size * 0.95f, 0,                // Base derecha (se mantiene igual)
+                size * 0.85f, size * 0.4f,      // Lado derecho, ahora a un 40% de la altura
+                size * 0.5f,  size * 0.55f,     // Punta del montículo, ahora a un 55% de la altura (antes 80%)
+                size * 0.15f, size * 0.4f       // Lado izquierdo, ahora a un 40% de la altura
+        };
+
+
+        this.bounds = new Polygon(vertices);
+        this.bounds.setPosition(x, y); // Mueve el polígono a su posición correcta en el mapa.
 
         Texture spriteSheet = new Texture("Items/BasuraDestruir.png");
         TextureRegion[][] tmp = TextureRegion.split(spriteSheet, spriteSheet.getWidth() / 2, spriteSheet.getHeight() / 2);
@@ -103,7 +116,7 @@ public class ObjetoRomperVisual {
         return debeSerEliminado;
     }
 
-    public Rectangle getBounds() {
+    public Polygon getBounds() {
         return bounds;
     }
 }

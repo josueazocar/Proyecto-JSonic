@@ -214,21 +214,6 @@ public class LocalServer implements IGameServer {
     //-------------------------------------
 
     //Logica para la muerte de los aniamales
-    //Logiga para las colisiones de animales
-    private boolean colisionaConAnimal(Rectangle bounds) {
-        for (AnimalState animal : animalesActivos.values()) {
-            // Solo colisionamos con animales que están vivos
-            //if (animal.estaVivo) {
-                // Asumimos un tamaño de 32x32 para el animal, puedes ajustarlo si es necesario.
-                Rectangle animalBounds = new Rectangle(animal.x, animal.y, 32, 32);
-                if (bounds.overlaps(animalBounds)) {
-                    return true; // Hay colisión
-                }
-           // }
-        }
-        return false; // No hay colisión
-    }
-    //----------------------fin de la logica--------------------------------------
 
     private void actualizarEstadoAnimalesPorContaminacion(float deltaTime) {
         if (contaminationState.getPercentage() >= 50) {
@@ -274,7 +259,7 @@ public class LocalServer implements IGameServer {
                     Rectangle nuevosLimites = new Rectangle(paquete.x, paquete.y, 32, 48);
 
                     // Verificamos que la nueva posición no colisione ni con el mapa ni con un animal.
-                    if (!manejadorNivel.colisionaConMapa(nuevosLimites) && !colisionaConAnimal(nuevosLimites)) {
+                    if (!manejadorNivel.colisionaConMapa(nuevosLimites)) {
                         estadoJugador.x = paquete.x;
                         estadoJugador.y = paquete.y;
                     }
@@ -557,14 +542,14 @@ public class LocalServer implements IGameServer {
 
                     // Comprobar movimiento en X
                     robotBounds.setX(targetX);
-                    if (!manejadorNivel.colisionaConMapa(robotBounds) && !colisionaConAnimal(robotBounds)) {
+                    if (!manejadorNivel.colisionaConMapa(robotBounds)) {
                         enemigo.x = targetX;
                     }
 
                     // Comprobar movimiento en Y
                     robotBounds.setX(enemigo.x);
                     robotBounds.setY(targetY);
-                    if (!manejadorNivel.colisionaConMapa(robotBounds) && !colisionaConAnimal(robotBounds)) {
+                    if (!manejadorNivel.colisionaConMapa(robotBounds)) {
                         enemigo.y = targetY;
                     }
                 }

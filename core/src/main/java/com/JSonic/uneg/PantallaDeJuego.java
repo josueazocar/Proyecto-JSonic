@@ -512,9 +512,14 @@ public class PantallaDeJuego extends PantallaBase {
 
                 // Buscamos el bloque rompible más cercano a Knuckles.
                 for (ObjetoRomperVisual bloque : manejadorNivel.getBloquesRompibles()) {
-                    // Usamos Vector2 para calcular la distancia entre el centro de Knuckles y el centro del bloque.
-                    Vector2 posKnuckles = new Vector2(knuckles.estado.x + knuckles.getTileSize()/2f, knuckles.estado.y + knuckles.getTileSize()/2f);
-                    Vector2 posBloque = new Vector2(bloque.x + bloque.bounds.width/2f, bloque.y + bloque.bounds.height/2f);
+                    // 1. Obtenemos el polígono del bloque.
+                    com.badlogic.gdx.math.Polygon bloquePolygon = bloque.getBounds();
+                    // 2. Obtenemos el rectángulo que lo envuelve para calcular su centro.
+                    Rectangle boundingBox = bloquePolygon.getBoundingRectangle();
+
+                    Vector2 posKnuckles = new Vector2(knuckles.estado.x + knuckles.getTileSize() / 2f, knuckles.estado.y + knuckles.getTileSize() / 2f);
+                    // 3. Usamos el tamaño del rectángulo envolvente para encontrar el centro del bloque.
+                    Vector2 posBloque = new Vector2(bloque.x + boundingBox.width / 2f, bloque.y + boundingBox.height / 2f);
                     float distancia = posKnuckles.dst(posBloque);
 
                     if (distancia < distanciaMinima) {
@@ -607,6 +612,7 @@ public class PantallaDeJuego extends PantallaBase {
         //for (ItemVisual item : itemsEnPantalla.values()) item.draw(batch);
         manejadorNivel.dibujarArboles(batch);
         manejadorNivel.dibujarBloques(batch);
+        manejadorNivel.dibujarAnimales(batch, delta);
 
         personajeJugable.draw(batch);
         for (Player otro : otrosJugadores.values()) otro.draw(batch);
@@ -617,10 +623,6 @@ public class PantallaDeJuego extends PantallaBase {
             eggman.draw(batch);
         }
 
-
-
-        // ---[CAMBIO]--- Se dibujan los animales obteniéndolos del LevelManager.
-        manejadorNivel.dibujarAnimales(batch, delta);
 
         for (ItemVisual item : itemsEnPantalla.values()) item.draw(batch);
 //develop
