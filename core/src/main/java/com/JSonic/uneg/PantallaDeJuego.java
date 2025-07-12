@@ -311,7 +311,7 @@ public class PantallaDeJuego extends PantallaBase {
                                 eggman.estado.y = estadoServidor.y;
                                 eggman.setEstadoActual(estadoServidor.estadoAnimacion);
                             }
-                        } 
+                        }
                          else {
                             RobotVisual enemigoVisual = enemigosEnPantalla.get(estadoServidor.id);
                             if (enemigoVisual != null) {
@@ -556,6 +556,14 @@ public class PantallaDeJuego extends PantallaBase {
                 if (bloqueMasCercano != null && distanciaMinima <= rangoMaximoDeGolpe) {
                     Gdx.app.log("PantallaDeJuego", "¡Bloque encontrado en rango! ID: " + bloqueMasCercano.id + ". Dando orden de destruir.");
                     bloqueMasCercano.destruir();
+                    if (gameClient != null) {
+                        Gdx.app.log("PantallaDeJuego", "Enviando paquete PaqueteBloqueDestruido al servidor.");
+                        // --- LÍNEA CORREGIDA ---
+                        Network.PaqueteBloqueDestruido paquete = new Network.PaqueteBloqueDestruido();
+                        paquete.idBloque = bloqueMasCercano.id;
+                        paquete.idJugador = personajeJugable.estado.id;
+                        gameClient.send(paquete);
+                    }
                 } else {
                     Gdx.app.log("PantallaDeJuego", "Golpe al aire. Ningún bloque en rango.");
                 }

@@ -374,6 +374,24 @@ public class LocalServer implements IGameServer {
 
             // --- FIN: CÓDIGO A AÑADIR ---
 
+            //Para que los bloques de basura sean contados como basura
+            else if (objeto instanceof Network.PaqueteBloqueDestruido paquete) {
+                System.out.println("[LOCAL SERVER] Bloque destruido por jugador ID: " + paquete.idJugador);
+
+                int puntajeActual = puntajesBasura.getOrDefault(paquete.idJugador, 0);
+                puntajesBasura.put(paquete.idJugador, puntajeActual + 1);
+
+                contaminationState.decrease(TRASH_CLEANUP_VALUE);
+                System.out.println("[LOCAL SERVER] Contaminación reducida a: " + contaminationState.getPercentage() + "%");
+
+                Network.PaqueteActualizacionPuntuacion paquetePuntaje = new Network.PaqueteActualizacionPuntuacion();
+                paquetePuntaje.nuevosAnillos = puntajesAnillos.getOrDefault(paquete.idJugador, 0);
+                paquetePuntaje.nuevaBasura = puntajesBasura.get(paquete.idJugador);
+                paquetePuntaje.totalBasuraReciclada = this.basuraReciclada;
+                clienteLocal.recibirPaqueteDelServidor(paquetePuntaje);
+            }
+            //--------------------------------------------------------------------------
+
             else if (objeto instanceof Network.PaqueteBasuraDepositada paquete) {
                 System.out.println("[LOCAL SERVER] Solicitud para depositar " + paquete.cantidad + " de basura recibida.");
                 int idJugador = 1;

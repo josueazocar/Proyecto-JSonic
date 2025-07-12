@@ -55,7 +55,7 @@ public class Network {
         kryo.register(PaqueteActualizacionAnimales.class);
         kryo.register(PaqueteSolicitudLiberarAnimal.class);
         kryo.register(PaqueteSolicitudMatarAnimal.class);
-
+        kryo.register(PaqueteBloqueDestruido.class);
 
         kryo.register(PaqueteInvocarDron.class);
         kryo.register(PaqueteArbolNuevo.class);
@@ -164,6 +164,10 @@ public class Network {
         public int idAnimal;
     }
 
+    public static class PaqueteBloqueDestruido {
+        public int idBloque;
+        public int idJugador;
+    }
 
     public static class PaqueteInvocarDron {
         // El cliente envía este paquete vacío para pedir que se active el dron.

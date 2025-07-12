@@ -216,7 +216,7 @@ public class LevelManager {
     }
 
     // ================== INICIO DEL CÓDIGO A AÑADIR ==================
-    public ObjetoRomperVisual getBloquePorId(int id) {
+    public ObjetoRomperVisual getBloqueRompiblePorId(int id) {
         for (ObjetoRomperVisual bloque : bloquesRompibles) {
             if (bloque.id == id) {
                 return bloque;
