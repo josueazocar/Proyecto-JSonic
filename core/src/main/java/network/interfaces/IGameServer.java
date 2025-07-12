@@ -1,6 +1,7 @@
 package network.interfaces;
 
 import com.JSonic.uneg.LevelManager;
+import com.JSonic.uneg.Player;
 
 public interface IGameServer {
 
@@ -9,9 +10,11 @@ public interface IGameServer {
     /**
      * Representa el bucle de juego principal del servidor, donde se actualiza la lógica
      * (movimiento de IA, generación de ítems, etc.).
-     * @param deltaTime El tiempo transcurrido desde el último fotograma.
+     *
+     * @param deltaTime        El tiempo transcurrido desde el último fotograma.
+     * @param personajeJugable
      */
-    void update(float deltaTime, com.JSonic.uneg.LevelManager manejadorNivel);
+    void update(float deltaTime, LevelManager manejadorNivel, Player personajeJugable);
 
     void dispose();
 }

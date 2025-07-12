@@ -12,19 +12,7 @@ import network.interfaces.IGameClient;
 import java.awt.*;
 import java.util.EnumMap;
 
-public class RobotVisual {
-    public EnemigoState estado;
-    protected Texture spriteSheet;
-    protected TextureRegion frameActual;
-    protected float tiempoXFrame;
-
-    protected EnumMap<EnemigoState.EstadoEnemigo, Animation<TextureRegion>> animations;
-    protected TextureRegion[] frameIdleRight;
-    protected TextureRegion[] frameIdleLeft;
-    protected TextureRegion[] frameRunRight;
-    protected TextureRegion[] frameRunLeft;
-    protected TextureRegion[] frameHitRight;
-    protected TextureRegion[] frameHitLeft;
+public class RobotVisual extends Enemy{
 
     private LevelManager levelManager;
     private IGameClient gameClient;
@@ -45,6 +33,7 @@ public class RobotVisual {
         tiempoXFrame = 0.0f;
         CargarSprites();
         setEstadoActual(estado.estadoAnimacion);
+        setVida(100);
     }
     public RobotVisual(EnemigoState estadoInicial) {
         this.estado = estadoInicial;

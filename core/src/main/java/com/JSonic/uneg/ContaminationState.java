@@ -22,6 +22,7 @@ public class ContaminationState {
     }
 
     public float getPercentage() {
+
         return percentage;
     }
 

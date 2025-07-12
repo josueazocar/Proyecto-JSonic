@@ -188,5 +188,11 @@ public class Network {
         public int cantidad;
     }
 
+    // En tu archivo Network.java, junto a los otros paquetes
+
+    public static class PaqueteHabilidadLimpiezaSonic {
+        // No necesita contenido, su sola existencia es el mensaje.
+    }
+
 }
 

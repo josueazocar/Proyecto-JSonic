@@ -36,6 +36,9 @@ public abstract class Player extends Entity implements Disposable {
     protected float tiempoMensajeVisible;
     protected static final float DURACION_MENSAJE = 3.0f; // Mensaje visible por 3 segundos
     protected transient IGameClient gameClient;
+    protected  boolean clean = false;
+//hasta aqui
+
 
 
     public Player(){
