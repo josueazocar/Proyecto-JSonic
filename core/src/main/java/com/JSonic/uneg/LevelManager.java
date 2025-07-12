@@ -2,17 +2,24 @@ package com.JSonic.uneg;
 
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.graphics.OrthographicCamera;
+import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.maps.tiled.TiledMap;
+import com.badlogic.gdx.maps.tiled.TiledMapTileLayer;
 import com.badlogic.gdx.maps.tiled.TmxMapLoader;
 import com.badlogic.gdx.maps.MapObjects;
 import com.badlogic.gdx.maps.tiled.renderers.OrthogonalTiledMapRenderer;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch; // Necesario para el constructor, aunque no se usa directamente en dibujar()
 import com.badlogic.gdx.math.MathUtils; // Importar para MathUtils.clamp
 import com.badlogic.gdx.math.Rectangle;
+import com.badlogic.gdx.math.Vector2;
+import com.badlogic.gdx.math.Intersector;
+import com.badlogic.gdx.maps.objects.RectangleMapObject;
 import com.badlogic.gdx.utils.Array;
-
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Random;
+import java.util.concurrent.ConcurrentHashMap;
+
 
 public class LevelManager {
 
@@ -30,13 +37,26 @@ public class LevelManager {
     private Player player;
 
 
+    // --- AÑADIDO PARA GESTIÓN DE ANIMALES ---
+    private Texture animalTexture; // Textura para todos los animales
+    private ConcurrentHashMap<Integer, AnimalVisual> animalesVisuales; // Mapa para guardar los animales
+    private Array<AnimalVisual> animales;
+    //para los bloques u objetos irrompibles para otros jugadores menos para knuckles
+    private Array<ObjetoRomperVisual> bloquesRompibles;
+    private int proximoIdBloque = 30000;
     // Constructor que recibe la cámara y el SpriteBatch (aunque el batch no se use directamente aquí para dibujar el mapa)
     public LevelManager(OrthographicCamera camara, SpriteBatch batch) {
         this.camaraJuego = camara;
         this.renderizadorMapa = null;
         this.mapaActual = null;
+
+        //Inicilizamos el mapa de animales visuales para evitar errores
+        this.animalesVisuales = new ConcurrentHashMap<>();
+        this.bloquesRompibles = new Array<>();
+
         this.arbolesGenerados = new Array<>();
         this.colisionesDinamicas = new Array<>();
+
     }
 
     // --- NUEVO MÉTODO PARA ESTABLECER EL JUGADOR ---
@@ -48,7 +68,15 @@ public class LevelManager {
     public Player getPlayer() {
         return player;
     }
-
+    //para obtener los animales visuales
+    public java.util.Collection<AnimalVisual> getAnimalesVisuales() {
+        if (animalesVisuales == null) {
+            // Devuelve una colección vacía para evitar NullPointerException
+            return java.util.Collections.emptyList();
+        }
+        return animalesVisuales.values();
+    }
+//-----------------------------------
     public void generarArbol(float x, float y) {
         // 1. Creamos el nuevo objeto Árbol
         Arbol_Tails nuevoArbol = new Arbol_Tails(x, y);
@@ -61,12 +89,14 @@ public class LevelManager {
 
         Gdx.app.log("LevelManager", "¡Árbol sembrado con éxito en " + x + ", " + y + "!");
     }
+
     public com.badlogic.gdx.maps.tiled.TiledMap getTiledMap() {
         return mapaActual;
     }
 
     //para el teletransporte
     private List<TeletransporteVisual> portalesVisuales = new ArrayList<>();
+
     // Método para cargar un nivel (mapa Tiled)
     public void cargarNivel(String rutaMapa) {
         nombreMapaActual = rutaMapa;
@@ -77,11 +107,24 @@ public class LevelManager {
         if (renderizadorMapa != null) {
             renderizadorMapa.dispose();
         }
+
+
+        // --- AÑADIDO: Carga de recursos para el nivel ---
+        // Si la textura ya existe, la liberamos antes de cargar una nueva
+        if (animalTexture != null) {
+            animalTexture.dispose();
+        }
+        // Cargamos la textura que usarán todos los animales de este nivel
+        animalTexture = new Texture(Gdx.files.internal("Items/Conejo1.png"));
+        animalesVisuales.clear(); // Limpiamos los animales del nivel anterior
+
+
         for (Arbol_Tails arbol : arbolesGenerados) {
             arbol.dispose();
         }
         arbolesGenerados.clear();
         colisionesDinamicas.clear();
+
         mapaActual = new TmxMapLoader().load(rutaMapa);
 
 
@@ -100,10 +143,166 @@ public class LevelManager {
         renderizadorMapa = new OrthogonalTiledMapRenderer(mapaActual, 1);
         procesarPortales();
 
+        // Inicializar la lista de bloques rompibles ---
+        bloquesRompibles.clear();
+        generarBloquesRompibles(5);
     }
 
     public String getNombreMapaActual() {
         return nombreMapaActual;
+    }
+
+    // Método para generar bloques rompibles ---
+    // Nuevo método para generar bloques en lugares válidos
+    private void generarBloquesRompibles(int cantidad) {
+        // Obtenemos la capa de colisiones como una capa genérica, sin forzar el tipo.
+        com.badlogic.gdx.maps.MapLayer capaDeColision = mapaActual.getLayers().get("Colisiones");
+        if (capaDeColision == null) {
+            Gdx.app.error("LevelManager", "La capa de colisiones 'Colisiones' no se encontró en el mapa.");
+            return;
+        }
+
+        // Obtenemos los objetos de colisión de esa capa.
+        MapObjects objetosColision = capaDeColision.getObjects();
+        Random random = new Random();
+        float anchoBloque = 100f; // Usamos el tamaño del tile como tamaño del bloque. getTileWidth()
+        float altoBloque = 100f; // .getTileHeight()
+
+        for (int i = 0; i < cantidad; i++) {
+            int intentos = 0;
+            boolean posicionValida = false;
+            float x = 0, y = 0;
+
+            // Busca una posición que no colisione.
+            do {
+                // Genera una posición aleatoria en píxeles dentro del mapa.
+                x = random.nextFloat() * (anchoMapaPixels - anchoBloque);
+                y = random.nextFloat() * (altoMapaPixels - altoBloque);
+
+                Rectangle boundsBloque = new Rectangle(x, y, anchoBloque, altoBloque);
+                boolean chocaConAlgo = false;
+
+                // Revisa si el nuevo bloque choca con algún objeto de colisión existente.
+                for (com.badlogic.gdx.maps.MapObject obj : objetosColision) {
+                    if (obj instanceof RectangleMapObject) {
+                        Rectangle rectColision = ((RectangleMapObject) obj).getRectangle();
+                        if (rectColision.overlaps(boundsBloque)) {
+                            chocaConAlgo = true;
+                            break; // Si choca con uno, no hace falta seguir revisando.
+                        }
+                    }
+                }
+
+                if (!chocaConAlgo) {
+                    posicionValida = true; // ¡Encontramos una posición válida!
+                }
+                intentos++;
+            } while (!posicionValida && intentos < 100); // Limita los intentos para evitar bucles infinitos.
+
+            if (posicionValida) {
+                // Asigna el ID al crear el bloque
+                bloquesRompibles.add(new ObjetoRomperVisual(proximoIdBloque++, x, y, anchoBloque));
+            }
+        }
+    }
+
+    // --- NUEVO: Método para que Knuckles acceda a los bloques ---
+    public Array<ObjetoRomperVisual> getBloquesRompibles() {
+        return bloquesRompibles;
+    }
+
+    // ================== INICIO DEL CÓDIGO A AÑADIR ==================
+    public ObjetoRomperVisual getBloquePorId(int id) {
+        for (ObjetoRomperVisual bloque : bloquesRompibles) {
+            if (bloque.id == id) {
+                return bloque;
+            }
+        }
+        return null;
+    }
+    // =================== FIN DEL CÓDIGO A AÑADIR ===================
+
+    // --- NUEVO: Método para dibujar los bloques rompibles ---
+    public void dibujarBloques(SpriteBatch batch) {
+        for (ObjetoRomperVisual bloque : bloquesRompibles) {
+            bloque.draw(batch);
+        }
+    }
+    //----------------------------------------------------------
+
+    // --- AÑADIDO: Métodos para gestionar los animales ---
+    /**
+     * Procesa un mapa completo de estados de animales, creando nuevos animales visuales
+     * o actualizando los existentes.
+     * Este método es llamado cuando el cliente recibe un PaqueteActualizacionAnimales.
+     * @param estadosAnimales El HashMap que viene del paquete del servidor.
+     */
+    public void actualizarAnimalesDesdePaquete(java.util.HashMap<Integer, AnimalState> estadosAnimales) {
+        if (estadosAnimales == null) return;
+
+        // Itera sobre cada estado de animal recibido en el paquete para añadir/actualizar.
+        for (AnimalState estado : estadosAnimales.values()) {
+            agregarOActualizarAnimal(estado);
+        }
+
+        // Ahora, elimina los animales visuales que ya no existen en el servidor.
+        java.util.Iterator<java.util.Map.Entry<Integer, AnimalVisual>> iter = animalesVisuales.entrySet().iterator();
+        while (iter.hasNext()) {
+            java.util.Map.Entry<Integer, AnimalVisual> entry = iter.next();
+            if (!estadosAnimales.containsKey(entry.getKey())) {
+                entry.getValue().dispose(); // Liberar recursos si es necesario
+                iter.remove();
+                Gdx.app.log("LevelManager", "Eliminado animal visual obsoleto con ID: " + entry.getKey());
+            }
+        }
+    }
+//fin metodo animales actualizar
+
+    /**
+     * Añade un nuevo animal visual al juego.
+     * Se llama cuando el servidor informa de un nuevo animal.
+     */
+    public void agregarOActualizarAnimal(AnimalState estadoAnimal) {
+        AnimalVisual visual = animalesVisuales.get(estadoAnimal.id);
+        if (visual != null) {
+            // Si el animal ya existe, solo actualizamos su estado
+            visual.update(estadoAnimal);
+        } else {
+            // Si es un animal nuevo, lo creamos y lo añadimos al mapa
+            Gdx.app.log("LevelManager", "Creando nuevo animal visual con ID: " + estadoAnimal.id);
+            AnimalVisual nuevoAnimal = new AnimalVisual(estadoAnimal.id, estadoAnimal.x, estadoAnimal.y, animalTexture);
+            animalesVisuales.put(estadoAnimal.id, nuevoAnimal);
+            // Añadimos su hitbox a nuestra lista de colisiones dinámicas
+           // colisionesDinamicas.add(nuevoAnimal.getBounds());
+        }
+    }
+
+    /**
+     * ---[CAMBIO]--- Nuevo método para limpiar los animales al cambiar de mapa.
+     */
+    public void limpiarAnimales() {
+        if (animalesVisuales != null) {
+            for (AnimalVisual animal : animalesVisuales.values()) {
+                animal.dispose();
+            }
+            animalesVisuales.clear();
+        }
+    }
+    //-------------------------------
+    /**
+     * Dibuja todos los animales en la pantalla.
+     * Este método debe ser llamado desde la pantalla de juego principal.
+     */
+    public void dibujarAnimales(SpriteBatch batch, float delta) {
+        if (animalesVisuales == null) return;
+        for (AnimalVisual animal : animalesVisuales.values()) {
+            animal.draw(batch, delta);
+        }
+    }
+
+    //para la texture de los animales
+    public Texture getAnimalTexture() {
+        return this.animalTexture;
     }
 
     // Dentro de LevelManager.java
@@ -116,8 +315,8 @@ public class LevelManager {
         MapObjects objetos = capaDestinox.getObjects();
         for (com.badlogic.gdx.maps.MapObject obj : objetos) {
             if ("Portal".equals(obj.getName())) {
-                float x = ((com.badlogic.gdx.maps.objects.RectangleMapObject)obj).getRectangle().x;
-                float y = ((com.badlogic.gdx.maps.objects.RectangleMapObject)obj).getRectangle().y;
+                float x = ((com.badlogic.gdx.maps.objects.RectangleMapObject) obj).getRectangle().x;
+                float y = ((com.badlogic.gdx.maps.objects.RectangleMapObject) obj).getRectangle().y;
                 float destinoX = obj.getProperties().get("destinoX", Float.class);
                 float destinoY = obj.getProperties().get("destinoY", Float.class);
                 String destinoMapa = obj.getProperties().get("destinoMapa", String.class);
@@ -141,6 +340,15 @@ public class LevelManager {
     public void actualizar(float deltaTime) {
         // En este caso, la cámara se actualiza y se limita en PantallaDeJuego,
         // no es necesario actualizar la cámara aquí.
+        //Para actualizar y eliminar los bloques rompibles
+        for (int i = bloquesRompibles.size - 1; i >= 0; i--) {
+            ObjetoRomperVisual bloque = bloquesRompibles.get(i);
+            bloque.update(deltaTime);
+            if (bloque.debeSerEliminado()) {
+                bloquesRompibles.removeIndex(i);
+                Gdx.app.log("LevelManager", "Bloque rompible eliminado permanentemente.");
+            }
+        }
     }
 
     // Método para dibujar el nivel en pantalla
@@ -179,27 +387,6 @@ public class LevelManager {
 
     }
 
-
-    // Método para liberar los recursos del nivel
-    public void dispose() {
-        if (mapaActual != null) {
-            mapaActual.dispose();
-            mapaActual = null;
-        }
-        if (renderizadorMapa != null) {
-            renderizadorMapa.dispose();
-            renderizadorMapa = null;
-        }
-
-         for (Arbol_Tails arbol : arbolesGenerados) {
-            arbol.dispose();
-        }
-    }
-
-    public TiledMap getMapaActual() {
-        return mapaActual;
-    }
-
     // Devuelve la posición del objeto Llegada en la capa "destinox"
     public com.badlogic.gdx.math.Vector2 obtenerPosicionLlegada() {
         com.badlogic.gdx.maps.MapLayer capaDestinox = mapaActual.getLayers().get("destinox");
@@ -219,6 +406,7 @@ public class LevelManager {
         public float x, y;
         public float destinoX, destinoY;
         public String destinoMapa;
+
         public PortalInfo(float x, float y, float destinoX, float destinoY, String destinoMapa) {
             this.x = x;
             this.y = y;
@@ -263,20 +451,21 @@ public class LevelManager {
     }
 
 
-public MapObjects getCollisionObjects() {
-    if (mapaActual == null) {
-        return null;
-    }
-    // Asumiendo que tu capa de colisiones se llama "Colisiones"
-    com.badlogic.gdx.maps.MapLayer collisionLayer = mapaActual.getLayers().get("Colisiones");
+    public MapObjects getCollisionObjects() {
+        if (mapaActual == null) {
+            return null;
+        }
 
-    // Si la capa no existe, devolvemos null y lo manejamos en PantallaDeJuego
-    if (collisionLayer == null) {
-        return null;
+        com.badlogic.gdx.maps.MapLayer collisionLayer = mapaActual.getLayers().get("Colisiones");
+
+        // Si la capa no existe, devolvemos null y lo manejamos en PantallaDeJuego
+        if (collisionLayer == null) {
+            return null;
+        }
+
+        return collisionLayer.getObjects();
     }
 
-    return collisionLayer.getObjects();
-}
     public boolean colisionaConMapa(Rectangle bounds) {
         MapObjects objetosColision = getCollisionObjects();
         if (objetosColision == null) return false;
@@ -296,6 +485,7 @@ public MapObjects getCollisionObjects() {
         }
         return false; // no hay colisión
     }
+
     public void dibujarArboles(SpriteBatch batch) {
         for (Arbol_Tails arbol : arbolesGenerados) {
             arbol.draw(batch);
@@ -305,6 +495,7 @@ public MapObjects getCollisionObjects() {
     /**
      * Busca en el mapa actual una capa de objeto que corresponda a una planta de tratamiento
      * y devuelve el rectángulo de su primer objeto.
+     *
      * @return El Rectangle de la planta de tratamiento, o null si no se encuentra en el mapa actual.
      */
     public com.badlogic.gdx.math.Rectangle obtenerPlantaDeTratamiento() {
@@ -335,4 +526,74 @@ public MapObjects getCollisionObjects() {
         return null;
     }
 
+
+    public Vector2 encontrarPosicionValida() {
+        MapObjects objetosColision = getCollisionObjects();
+        float mapWidth = getAnchoMapaPixels();
+        float mapHeight = getAltoMapaPixels();
+
+        boolean posicionValida = false;
+        float x = 0, y = 0;
+        int intentos = 0; // Para evitar un bucle infinito si el mapa está muy lleno
+
+        while (!posicionValida && intentos < 100) {
+            intentos++;
+            // Genera una posición aleatoria dentro del mapa
+            x = (float) (Math.random() * mapWidth);
+            y = (float) (Math.random() * mapHeight);
+
+            // Crea un rectángulo para la posición del animal (asumimos 32x32)
+            Rectangle animalBounds = new Rectangle(x, y, 32, 32);
+
+            // Revisa si choca con alguna pared
+            boolean chocaConPared = false;
+            if (objetosColision != null) {
+                for (com.badlogic.gdx.maps.MapObject obj : objetosColision) {
+                    if (obj instanceof RectangleMapObject) {
+                        if (Intersector.overlaps(((RectangleMapObject) obj).getRectangle(), animalBounds)) {
+                            chocaConPared = true;
+                            break;
+                        }
+                    }
+                }
+            }
+
+            if (!chocaConPared) {
+                posicionValida = true; // ¡Lugar encontrado!
+            }
+        }
+
+        // Si después de 100 intentos no encuentra lugar, al menos devuelve la última posición intentada.
+        return new Vector2(x, y);
+    }
+
+
+    // Método para liberar los recursos del nivel
+    public void dispose() {
+        if (mapaActual != null) {
+            mapaActual.dispose();
+            mapaActual = null;
+        }
+        if (renderizadorMapa != null) {
+            renderizadorMapa.dispose();
+            renderizadorMapa = null;
+        }
+        // --- AÑADIDO: Liberar la textura del animal ---
+        if (animalTexture != null) {
+            animalTexture.dispose();
+            animalTexture = null;
+        }
+        limpiarAnimales();
+        if (bloquesRompibles != null) {
+            // Si los bloques tienen recursos propios (como Texturas), hay que liberarlos aquí.
+            // Por ahora, solo limpiamos la lista.
+            bloquesRompibles.clear();
+        }
+        if (arbolesGenerados != null) {
+            for (Arbol_Tails arbol : arbolesGenerados) {
+                arbol.dispose();
+            }
+            arbolesGenerados.clear();
+        }
+    }
 }

@@ -26,12 +26,17 @@ public abstract class Player extends Entity implements Disposable {
     // Stores the proposed movement state (UP, DOWN, LEFT, RIGHT) before applying actions.
     protected EstadoPlayer proposedMovementState = null;
     protected boolean actionStateSet = false; // Flag to know if an action state has been set.
+    //para identificar quien esta tocando el bloque
+    protected String characterName;
+//hasta aqui
+
     protected String mensajeUI;
     protected float tiempoMensajeVisible;
     protected static final float DURACION_MENSAJE = 3.0f; // Mensaje visible por 3 segundos
     protected transient IGameClient gameClient;
     protected  boolean clean = false;
 //hasta aqui
+
 
 
     public Player(){
@@ -53,6 +58,7 @@ public abstract class Player extends Entity implements Disposable {
     public void setLevelManager(LevelManager levelManager) {
         this.levelManager = levelManager;
     }
+
 
     @Override
     protected void setDefaultValues() {
@@ -97,8 +103,33 @@ public abstract class Player extends Entity implements Disposable {
         // Crea el hitbox en la posición futura.
         Rectangle futureBounds = new Rectangle(newX + collisionOffsetX, newY + collisionOffsetY, collisionWidth, collisionHeight);
 
-        // Delega la comprobación al LevelManager, que conoce TODOS los obstáculos.
-        return levelManager.colisionaConMapa(futureBounds);
+        // 1. Comprobar colisión con el mapa (bloques, árboles, etc.)
+        if (levelManager.colisionaConMapa(futureBounds)) {
+            return true; // Hay colisión con el mapa
+        }
+
+        // 2. NUEVA COMPROBACIÓN: Colisión con bloques rompibles
+        if (levelManager.getBloquesRompibles() != null) {
+            for (ObjetoRomperVisual bloque : levelManager.getBloquesRompibles()) {
+                if (futureBounds.overlaps(bloque.getBounds())) {
+                    return true; // Hay colisión con un bloque rompible
+                }
+            }
+        }
+
+        // 3. Comprobar colisión con los animales (vivos o muertos)
+        java.util.Collection<AnimalVisual> animales = levelManager.getAnimalesVisuales();
+        if (animales != null) {
+            for (AnimalVisual animal : animales) {
+                // Si el hitbox futuro del jugador se superpone con el de un animal, hay colisión.
+                if (futureBounds.overlaps(animal.getBounds())) {
+                    return true; // Hay colisión con un animal
+                }
+            }
+        }
+
+        // Si no hubo colisión con NADA de lo anterior, permite el movimiento.
+        return false;
     }
 //colisiones fin
 
@@ -213,6 +244,32 @@ public abstract class Player extends Entity implements Disposable {
             if (playerBounds.overlaps(item.getBounds())) {
                 item.onCollect(this); // Método a definir en ItemVisual
                 items.removeIndex(i);
+            }
+        }
+    }
+        //esto es para romper bloques
+    public void intentarRomperBloque() {
+        // Solo Knuckles puede romper bloques
+        if (!"Knuckles".equals(this.characterName)) {
+            return;
+        }
+
+        if (levelManager == null || levelManager.getBloquesRompibles() == null) {
+            return;
+        }
+
+        // Usamos los bounds del jugador para ver si se superpone con un bloque
+        Rectangle playerBounds = getBounds(); // Asumiendo que Player tiene un getBounds()
+
+        // Usamos un iterador para poder eliminar elementos de forma segura
+        java.util.Iterator<ObjetoRomperVisual> iter = levelManager.getBloquesRompibles().iterator();
+        while (iter.hasNext()) {
+            ObjetoRomperVisual bloque = iter.next();
+            if (playerBounds.overlaps(bloque.getBounds())) {
+                iter.remove(); // Elimina el bloque de la lista en LevelManager
+                Gdx.app.log("Player", "Knuckles rompió un bloque.");
+                // Opcional: puedes añadir un sonido o efecto visual aquí
+                break; // Rompe solo un bloque a la vez
             }
         }
     }

@@ -27,6 +27,7 @@ public class ItemState {
     // Constructor vacío es útil para la serialización en red (KryoNet).
     public ItemState() {}
 
+
     // Constructor para facilitar la creación de ítems.
     public ItemState(int id, float x, float y, ItemType tipo) {
         this.id = id;

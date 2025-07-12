@@ -47,6 +47,16 @@ public class Network {
         kryo.register(PlayerState.CharacterType.class);
         kryo.register(PaqueteActualizacionContaminacion.class);
 
+        //animales
+        // --- Nuevas adiciones para los animales ---
+        kryo.register(AnimalState.class); // Clase del estado del animal
+        kryo.register(PaqueteEstadoAnimalActualizado.class); // Paquete para un solo animal actualizado
+        kryo.register(PaqueteAnimalNuevo.class); // Paquete para un animal nuevo
+        kryo.register(PaqueteActualizacionAnimales.class);
+        kryo.register(PaqueteSolicitudLiberarAnimal.class);
+        kryo.register(PaqueteSolicitudMatarAnimal.class);
+
+
         kryo.register(PaqueteInvocarDron.class);
         kryo.register(PaqueteArbolNuevo.class);
         kryo.register(PaqueteMensajeUI.class);
@@ -129,6 +139,32 @@ public class Network {
         public float contaminationPercentage;
     }
 
+
+    // ANIMALES --Para actualizar el estado de un animal en el juego.--- ANIMALES
+    public static class PaqueteEstadoAnimalActualizado {
+        public int idAnimal;
+        public boolean estaVivo;
+    }
+
+    public static class PaqueteAnimalNuevo {
+        public AnimalState estadoAnimal;
+    }
+
+    // Este paquete es para sincronizar periódicamente todos los animales
+    public static class PaqueteActualizacionAnimales {
+        // Usamos HashMap<Integer, AnimalState> para enviar el estado de todos los animales
+        public HashMap<Integer, AnimalState> estadosAnimales;
+    }
+
+    public static class PaqueteSolicitudLiberarAnimal {
+        public int idAnimal;
+    }
+
+    public static class PaqueteSolicitudMatarAnimal {
+        public int idAnimal;
+    }
+
+
     public static class PaqueteInvocarDron {
         // El cliente envía este paquete vacío para pedir que se active el dron.
         // El servidor sabrá quién lo envió por el ID de la conexión.
@@ -157,5 +193,6 @@ public class Network {
     public static class PaqueteHabilidadLimpiezaSonic {
         // No necesita contenido, su sola existencia es el mensaje.
     }
+
 }
 

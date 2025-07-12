@@ -22,8 +22,8 @@ public class AnillosVisual extends ItemVisual {
         // Si no, ajusta estos valores. AnchoTotal / numFrames = AnchoFrame
         // Ejemplo: si la imagen mide 384px de ancho -> 384 / 12 = 32px por frame.
          int frameCount = 4;
-         int frameWidth = spriteSheet.getWidth() / frameCount;
-         int frameHeight = spriteSheet.getHeight();
+         int frameWidth = spriteSheet.getWidth()/ frameCount;
+         int frameHeight = spriteSheet.getHeight() ;
 
         // 3. Dividir la hoja en frames individuales
         TextureRegion[][] tmp = TextureRegion.split(spriteSheet, frameWidth, frameHeight);
