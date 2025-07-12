@@ -234,12 +234,6 @@ public class PantallaDeJuego extends PantallaBase {
 
     }
 
-    //para poder crear varios portales se necesita reiniciar el teletransporte
-    private void reiniciarTeletransporte() {
-        teletransporteCreado = false;
-        tiempoTranscurrido = 0f;
-    }
-
     @Override
     public void actualizar(float deltat) {
         if (personajeJugable != null && this.gameClient != null) {
@@ -494,13 +488,14 @@ public class PantallaDeJuego extends PantallaBase {
                 item.dispose();
                 break; // Salimos para procesar solo un ítem por fotograma.
             }
-        }
 
-        if (idTeletransporteAEliminar != null) {
+             if (idTeletransporteAEliminar != null) {
             limpiarEnemigosEItems();
-            ItemVisual item = itemsEnPantalla.remove(idTeletransporteAEliminar);
+            item = itemsEnPantalla.remove(idTeletransporteAEliminar);
             if (item != null) item.dispose();
         }
+        }
+
 
         // 1. Preguntamos al LevelManager si hay una planta en este mapa.
         if (manejadorNivel != null) {
@@ -523,6 +518,45 @@ public class PantallaDeJuego extends PantallaBase {
         //--------------------------------
         personajeJugable.KeyHandler();
         personajeJugable.update(deltat);
+
+        gestionarHabilidadDeLimpiezaDeSonic();
+
+        // --- INICIO DEL CÓDIGO A AÑADIR ---
+        // Este bloque hace de intermediario entre Knuckles y los bloques rompibles
+        if (personajeJugable instanceof Knuckles) {
+            Knuckles knuckles = (Knuckles) personajeJugable;
+
+            // Preguntamos si Knuckles acaba de iniciar un golpe.
+            if (knuckles.haIniciadoGolpe()) {
+                Gdx.app.log("PantallaDeJuego", "Knuckles ha iniciado un golpe. Buscando bloque cercano...");
+
+                ObjetoRomperVisual bloqueMasCercano = null;
+                float distanciaMinima = Float.MAX_VALUE;
+                float rangoMaximoDeGolpe = 85f; // Rango del puñetazo en píxeles. ¡Puedes ajustar este valor!
+
+                // Buscamos el bloque rompible más cercano a Knuckles.
+                for (ObjetoRomperVisual bloque : manejadorNivel.getBloquesRompibles()) {
+                    // Usamos Vector2 para calcular la distancia entre el centro de Knuckles y el centro del bloque.
+                    Vector2 posKnuckles = new Vector2(knuckles.estado.x + knuckles.getTileSize()/2f, knuckles.estado.y + knuckles.getTileSize()/2f);
+                    Vector2 posBloque = new Vector2(bloque.x + bloque.bounds.width/2f, bloque.y + bloque.bounds.height/2f);
+                    float distancia = posKnuckles.dst(posBloque);
+
+                    if (distancia < distanciaMinima) {
+                        distanciaMinima = distancia;
+                        bloqueMasCercano = bloque;
+                    }
+                }
+
+                // Si encontramos un bloque cercano y está dentro del rango del golpe...
+                if (bloqueMasCercano != null && distanciaMinima <= rangoMaximoDeGolpe) {
+                    Gdx.app.log("PantallaDeJuego", "¡Bloque encontrado en rango! ID: " + bloqueMasCercano.id + ". Dando orden de destruir.");
+                    bloqueMasCercano.destruir();
+                } else {
+                    Gdx.app.log("PantallaDeJuego", "Golpe al aire. Ningún bloque en rango.");
+                }
+            }
+        }
+        // --- FIN DEL CÓDIGO A AÑADIR ---
 
         for (Player otro : otrosJugadores.values()) {
             otro.update(deltat);
@@ -643,9 +677,9 @@ public class PantallaDeJuego extends PantallaBase {
 
         batch.begin();
 
-        //for (ItemVisual item : itemsEnPantalla.values()) item.draw(batch);
         manejadorNivel.dibujarArboles(batch);
         manejadorNivel.dibujarBloques(batch);
+        manejadorNivel.dibujarAnimales(batch, delta);
 
         personajeJugable.draw(batch);
         for (Player otro : otrosJugadores.values()) otro.draw(batch);
@@ -660,9 +694,6 @@ public class PantallaDeJuego extends PantallaBase {
             bomba.draw(batch);
         }
 
-
-        // ---[CAMBIO]--- Se dibujan los animales obteniéndolos del LevelManager.
-        manejadorNivel.dibujarAnimales(batch, delta);
 
         for (ItemVisual item : itemsEnPantalla.values()) item.draw(batch);
         batch.end();
@@ -696,19 +727,6 @@ public class PantallaDeJuego extends PantallaBase {
         }
     }
 
-    @Override
-    public void pause() {
-        if (soundManager != null) {
-            soundManager.pauseBackgroundMusic();
-        }
-    }
-
-    @Override
-    public void resume() {
-        if (soundManager != null) {
-            soundManager.resumeBackgroundMusic();
-        }
-    }
 
       private void lanzarBombaDesdeEggman() {
         if (eggman == null || personajeJugable == null) return;
@@ -877,14 +895,6 @@ public class PantallaDeJuego extends PantallaBase {
             jugador.estado.y = y;
             jugador.setEstadoActual(estadoAnim);
         }
-    }
-
-    @Override
-    public void resize(int width, int height) {
-        super.resize(width, height);
-        if (viewport != null) viewport.update(width, height, true);
-        mainStage.getViewport().update(width, height, true);
-        if (uiCamera != null) uiCamera.setToOrtho(false, width, height);
     }
 
     @Override
