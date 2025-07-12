@@ -165,8 +165,8 @@ public class LevelManager {
         // Obtenemos los objetos de colisión de esa capa.
         MapObjects objetosColision = capaDeColision.getObjects();
         Random random = new Random();
-        float anchoBloque = getTileWidth(); // Usamos el tamaño del tile como tamaño del bloque.
-        float altoBloque = getTileHeight();
+        float anchoBloque = 100f; // Usamos el tamaño del tile como tamaño del bloque. getTileWidth()
+        float altoBloque = 100f; // .getTileHeight()
 
         for (int i = 0; i < cantidad; i++) {
             int intentos = 0;

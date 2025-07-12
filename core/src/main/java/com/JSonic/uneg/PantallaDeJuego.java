@@ -70,6 +70,7 @@ public class PantallaDeJuego extends PantallaBase {
     private ShaderProgram shaderNeblina;
     private Mesh quadMesh;
     private BitmapFont font;
+    private BitmapFont smallFont;
     private Label contaminationLabel;
     private Vector3 screenCoords = new Vector3();
 
@@ -82,6 +83,7 @@ public class PantallaDeJuego extends PantallaBase {
 
     // ---[AGREGADO]--- Instancia de RobotnikVisual (eggman)
     private RobotnikVisual eggman;
+    private Texture animalMuertoIcono;
 
     public PantallaDeJuego(JSonicJuego juego, IGameClient client, IGameServer server) {
         super();
@@ -198,8 +200,13 @@ public class PantallaDeJuego extends PantallaBase {
 
         mainStage.addActor(tablaUI);
 
+        //tamanio de los label
         font = new BitmapFont(Gdx.files.internal("Fuentes/juego_fuente2.fnt"));
         font.getData().setScale(0.65f);
+
+        smallFont = new BitmapFont(Gdx.files.internal("Fuentes/juego_fuente2.fnt"));
+        smallFont.getData().setScale(0.45f);
+
         // 2. Define un estilo para nuestro texto (Label).
         Label.LabelStyle labelStyle = new Label.LabelStyle(font, Color.PURPLE);
 
@@ -223,14 +230,18 @@ public class PantallaDeJuego extends PantallaBase {
 
         // CONFIGURACIÓN UI Animales ---
         // Puedes reutilizar la misma fuente si quieres.
-        Label.LabelStyle animalCountLabelStyle = new Label.LabelStyle(font, Color.WHITE); // Cambia el color si lo deseas
-        animalCountLabel = new Label("Animales: 0/0", animalCountLabelStyle); // Texto inicial
+        animalMuertoIcono = new Texture(Gdx.files.internal("Items/animalMuerto.png"));
+        Label.LabelStyle animalCountLabelStyle = new Label.LabelStyle(smallFont, Color.WHITE); // Cambia el color si lo deseas
+        animalCountLabel = new Label("0/10", animalCountLabelStyle); // Texto inicial
 
         // Crea una NUEVA tabla para la esquina inferior izquierda
         Table tablaInferiorIzquierda = new Table();
         tablaInferiorIzquierda.setFillParent(true);
         tablaInferiorIzquierda.bottom().left(); // Alineada abajo a la izquierda
         tablaInferiorIzquierda.pad(15); // Un poco de padding
+
+        Image icono = new Image(animalMuertoIcono);
+        tablaInferiorIzquierda.add(icono).size(45, 33);
 
         tablaInferiorIzquierda.add(animalCountLabel);
 
@@ -497,7 +508,7 @@ public class PantallaDeJuego extends PantallaBase {
 
                 ObjetoRomperVisual bloqueMasCercano = null;
                 float distanciaMinima = Float.MAX_VALUE;
-                float rangoMaximoDeGolpe = 60f; // Rango del puñetazo en píxeles. ¡Puedes ajustar este valor!
+                float rangoMaximoDeGolpe = 85f; // Rango del puñetazo en píxeles. ¡Puedes ajustar este valor!
 
                 // Buscamos el bloque rompible más cercano a Knuckles.
                 for (ObjetoRomperVisual bloque : manejadorNivel.getBloquesRompibles()) {
@@ -535,7 +546,7 @@ public class PantallaDeJuego extends PantallaBase {
 
 
 // --- INICIO: LÓGICA DE COLISIÓN CON ANIMALES ---
-        Iterator<AnimalVisual> iteradorAnimales = manejadorNivel.getAnimalesVisuales().iterator();
+       /* Iterator<AnimalVisual> iteradorAnimales = manejadorNivel.getAnimalesVisuales().iterator();
         while (iteradorAnimales.hasNext()) {
             AnimalVisual animal = iteradorAnimales.next();
 
@@ -572,7 +583,7 @@ public class PantallaDeJuego extends PantallaBase {
                     }
                 }
             }
-        }
+        }*/
         // --- FIN: LÓGICA DE COLISIÓN CON ANIMALES ---
 
         camaraJuego.position.x = personajeJugable.estado.x;
@@ -711,7 +722,16 @@ public class PantallaDeJuego extends PantallaBase {
     }
     //para actualizar el label de los animales
     private void actualizarAnimalCountLabel() {
-        animalCountLabel.setText("Animals: " + animalesVivos + "/" + totalAnimalesMapa + " (" + animalesMuertos + " Muertes)");
+        // Si no hay animales en el mapa, no mostramos nada.
+        if (totalAnimalesMapa <= 0) {
+            animalCountLabel.setText("");
+            // Opcional: podrías ocultar también el icono si lo deseas
+            // (requiere guardar una referencia al actor Image del icono)
+            return;
+        }
+
+        // Actualizamos el texto del label con el nuevo formato: Muertos / Total
+        animalCountLabel.setText(animalesMuertos + "/" + totalAnimalesMapa);
     }
 
     //para limpiar los enemigos en los otros mapasaaaaaaaa
@@ -868,6 +888,11 @@ public class PantallaDeJuego extends PantallaBase {
         if (shaderNeblina != null) shaderNeblina.dispose();
         if (quadMesh != null) quadMesh.dispose();
         if (font != null) font.dispose();
+        if (smallFont != null) smallFont.dispose();
+        if (animalMuertoIcono != null) animalMuertoIcono.dispose();
+        if (animalCountLabel != null) {
+            animalCountLabel.remove();
+        }
     }
 
     public SoundManager getSoundManager() {

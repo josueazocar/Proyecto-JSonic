@@ -70,20 +70,6 @@ public class AnimalVisual {
         }
     }
 
-    // Método para cambiar el estado del animal a "muerto"
-
-   // public void setEstaVivo(boolean vivo) {
-      //  this.estaVivo = vivo;
-    //}
-
-    // Cambia el estado y la animación a "muerto"
-    /*public void morir() {
-        if (estaVivo) {
-            this.estaVivo = false;
-            this.animacion = animacionMuerto; // Cambiamos a la animación de muerto
-            this.tiempoAnimacion = 0; // Reiniciamos el tiempo para la nueva animación
-        }
-    }*/
 
     // Dibuja el animal en la pantalla
     public void draw(SpriteBatch batch, float delta) {
