@@ -16,6 +16,7 @@ import com.badlogic.gdx.math.Intersector;
 import com.badlogic.gdx.maps.objects.RectangleMapObject;
 import com.badlogic.gdx.utils.Array;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Random;
 import java.util.concurrent.ConcurrentHashMap;
@@ -149,14 +150,14 @@ public class LevelManager {
 
         // Inicializar la lista de bloques rompibles ---
         bloquesRompibles.clear();
-        generarBloquesRompibles(5);
+        //generarBloquesRompibles(5);
     }
 
     public String getNombreMapaActual() {
         return nombreMapaActual;
     }
 
-    // Método para generar bloques rompibles ---
+    // Metodo para generar bloques rompibles ---
     // Nuevo método para generar bloques en lugares válidos
     private void generarBloquesRompibles(int cantidad) {
         // Obtenemos la capa de colisiones como una capa genérica, sin forzar el tipo.
@@ -210,18 +211,32 @@ public class LevelManager {
         }
     }
 
-    // --- NUEVO: Método para que Knuckles acceda a los bloques ---
+    // --- NUEVO: Metodo para que Knuckles acceda a los bloques ---
     public Array<ObjetoRomperVisual> getBloquesRompibles() {
         return bloquesRompibles;
     }
+    public void crearBloquesDesdeServidor(HashMap<Integer, Rectangle> datosDeBloques) {
+        bloquesRompibles.clear(); // Limpiamos cualquier bloque que pudiera existir.
+        Gdx.app.log("LevelManager", "Recibiendo datos de bloques desde el servidor. Creando " + datosDeBloques.size() + " bloques.");
 
+        for (java.util.Map.Entry<Integer, Rectangle> entry : datosDeBloques.entrySet()) {
+            int id = entry.getKey();
+            Rectangle rect = entry.getValue();
+            // Creamos el ObjetoRomperVisual con la ID y posición exactas del servidor.
+            bloquesRompibles.add(new ObjetoRomperVisual(id, rect.x, rect.y, rect.width));
+        }
+    }
     // ================== INICIO DEL CÓDIGO A AÑADIR ==================
-    public ObjetoRomperVisual getBloqueRompiblePorId(int id) {
+    public ObjetoRomperVisual getBloquePorId(int id) {
         for (ObjetoRomperVisual bloque : bloquesRompibles) {
+            // Comparamos la ID de cada bloque con la ID que estamos buscando.
             if (bloque.id == id) {
+                // Si encontramos una coincidencia, devolvemos ese objeto 'bloque' inmediatamente y salimos del metodo.
                 return bloque;
             }
         }
+        // Si el bucle termina y no hemos encontrado ninguna coincidencia,
+        // significa que no hay ningún bloque con esa ID en la lista.
         return null;
     }
     // =================== FIN DEL CÓDIGO A AÑADIR ===================

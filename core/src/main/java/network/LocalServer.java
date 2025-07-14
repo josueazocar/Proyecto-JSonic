@@ -8,6 +8,7 @@ import network.interfaces.IGameServer;
 
 import java.util.HashMap;
 import java.util.Queue;
+import java.util.Random;
 import java.util.concurrent.ConcurrentLinkedQueue;
 
 /**
@@ -51,6 +52,8 @@ public class LocalServer implements IGameServer {
 
     //declaraciones de HashMap
     private final HashMap<Integer, AnimalState> animalesActivos = new HashMap<>();
+    private final HashMap<Integer, Rectangle> bloquesRompibles = new HashMap<>();
+    private int proximoIdBloque = 30000; // Un rango de IDs para bloques
     private int proximoIdAnimal = 20000; // Usamos un ID base alto para evitar conflictos con otros IDs
     // Variables para la lógica de muerte por contaminación
     private float tiempoParaProximaMuerteAnimal = 20f; // Temporizador para la muerte secuencial (20 segundos)
@@ -122,7 +125,29 @@ public class LocalServer implements IGameServer {
         }
     }
 
+    private void generarBloquesParaElNivel(LevelManager manejadorNivel) {
+        bloquesRompibles.clear();
+        int cantidad = 5;
+        Random random = new Random();
+        System.out.println("[LOCAL SERVER] Generando " + cantidad + " bloques para el mapa: " + manejadorNivel.getNombreMapaActual());
 
+        for (int i = 0; i < cantidad; i++) {
+            int intentos = 0;
+            boolean colocado = false;
+            while (!colocado && intentos < 100) {
+                float x = random.nextFloat() * (manejadorNivel.getAnchoMapaPixels() - 100f);
+                float y = random.nextFloat() * (manejadorNivel.getAltoMapaPixels() - 100f);
+                Rectangle bounds = new Rectangle(x, y, 100f, 100f);
+
+                // Usamos la ventaja del LocalServer: ¡puede comprobar colisiones!
+                if (!manejadorNivel.colisionaConMapa(bounds)) {
+                    bloquesRompibles.put(proximoIdBloque++, bounds);
+                    colocado = true;
+                }
+                intentos++;
+            }
+        }
+    }
     //esta funcion es para los animales
     // Nuevo método para generar animales en el mapa actual
     private void generarAnimales(LevelManager manejadorNivel) {
@@ -389,6 +414,11 @@ public class LocalServer implements IGameServer {
                 paquetePuntaje.nuevaBasura = puntajesBasura.get(paquete.idJugador);
                 paquetePuntaje.totalBasuraReciclada = this.basuraReciclada;
                 clienteLocal.recibirPaqueteDelServidor(paquetePuntaje);
+
+                System.out.println("[LOCAL SERVER] Enviando confirmación de destrucción para el bloque ID: " + paquete.idBloque);
+                Network.PaqueteBloqueConfirmadoDestruido confirmacion = new Network.PaqueteBloqueConfirmadoDestruido();
+                confirmacion.idBloque = paquete.idBloque;
+                clienteLocal.recibirPaqueteDelServidor(confirmacion); // "Enviamos" la confirmación.
             }
             //--------------------------------------------------------------------------
 
@@ -436,6 +466,7 @@ public class LocalServer implements IGameServer {
             itemsActivos.clear();
             destinosPortales.clear(); // Importante para los portales
             animalesActivos.clear(); //para los animales
+            bloquesRompibles.clear();
 
             // 2. Reiniciar temporizadores de generación
             teleportGenerado = false;
@@ -447,6 +478,12 @@ public class LocalServer implements IGameServer {
 
             // 3. Regenerar entidades para el nuevo mapa
             generarAnimales(manejadorNivel); // Esto ya lo tenías, y está bien
+            generarBloquesParaElNivel(manejadorNivel);
+
+            Network.PaqueteSincronizarBloques paqueteSync = new Network.PaqueteSincronizarBloques();
+            paqueteSync.todosLosBloques = new HashMap<>(this.bloquesRompibles);
+            clienteLocal.recibirPaqueteDelServidor(paqueteSync);
+            System.out.println("[LOCAL SERVER] Enviando estado de bloques al cliente local.");
 
             // 4. Volver a crear a Robotnik en el nuevo mapa (si es necesario)
             // Nota: Esto es opcional si quieres que Robotnik aparezca en todos los mapas.

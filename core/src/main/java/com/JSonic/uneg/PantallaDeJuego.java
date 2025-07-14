@@ -30,6 +30,8 @@ import com.badlogic.gdx.scenes.scene2d.ui.Table;
 import com.badlogic.gdx.scenes.scene2d.ui.Image;
 import com.badlogic.gdx.math.Vector2;
 
+import static com.JSonic.uneg.PlayerState.CharacterType.SONIC;
+
 public class PantallaDeJuego extends PantallaBase {
 
     // --- TUS VARIABLES SE MANTIENEN IGUAL ---
@@ -75,7 +77,7 @@ public class PantallaDeJuego extends PantallaBase {
     private Vector3 screenCoords = new Vector3();
 
     //Para la seleccion de personaje
-    public static PlayerState.CharacterType miPersonaje = PlayerState.CharacterType.SONIC;
+    public static PlayerState.CharacterType miPersonaje = SONIC;
     private float tiempoTranscurrido = 0f;
     private boolean teletransporteCreado = false;
     private RobotnikVisual eggman;
@@ -271,6 +273,8 @@ public class PantallaDeJuego extends PantallaBase {
                     if (p.tuEstado != null) {
                         inicializarJugadorLocal(p.tuEstado);
                         System.out.println("[CLIENT] Conexión aceptada. Extrayendo y enviando plano del mapa...");
+
+                        // --- INICIO DEL CÓDIGO A AÑADIR ---
                         java.util.ArrayList<Rectangle> paredes = new java.util.ArrayList<>();
                         MapObjects objetosColision = manejadorNivel.getCollisionObjects();
                         if (objetosColision != null) {
@@ -280,11 +284,14 @@ public class PantallaDeJuego extends PantallaBase {
                                 }
                             }
                         }
+
                         Network.PaqueteInformacionMapa paqueteMapa = new Network.PaqueteInformacionMapa();
                         paqueteMapa.paredes = paredes;
-                        gameClient.send(paqueteMapa);
+                        gameClient.send(paqueteMapa); // Enviamos el plano al servidor
                         System.out.println("[CLIENT] Plano del mapa con " + paredes.size() + " paredes enviado.");
+                        // --- FIN DEL CÓDIGO A AÑADIR ---
                     }
+
                 } else if (paquete instanceof Network.PaqueteJugadorConectado p) {
                     if (personajeJugableEstado != null && p.nuevoJugador.id != personajeJugableEstado.id) {
                         agregarOActualizarOtroJugador(p.nuevoJugador);
@@ -427,6 +434,21 @@ public class PantallaDeJuego extends PantallaBase {
                             tailsDueño.gestionarDronDesdeRed(p.nuevoEstado, p.x, p.y);
                         }
                     }
+                } else if (paquete instanceof Network.PaqueteBloqueConfirmadoDestruido p) {
+                    Gdx.app.log("PantallaDeJuego", "Recibida orden del servidor para destruir bloque ID: " + p.idBloque);
+
+                    // Necesitarás una forma de obtener el bloque por su ID desde el LevelManager.
+                    // Deberás crear este método: manejadorNivel.getBloquePorId(p.idBloque)
+                    ObjetoRomperVisual bloqueADestruir = manejadorNivel.getBloquePorId(p.idBloque);
+
+                    if (bloqueADestruir != null) {
+                        bloqueADestruir.destruir(); // Ahora sí, se ejecuta la destrucción visual.
+                    }
+                } else if (paquete instanceof Network.PaqueteSincronizarBloques p) {
+                    if (manejadorNivel != null) {
+                        Gdx.app.log("PantallaDeJuego", "Recibido paquete de sincronización de bloques. Actualizando nivel...");
+                        manejadorNivel.crearBloquesDesdeServidor(p.todosLosBloques);
+                    }
                 }
             }
         }
@@ -555,7 +577,7 @@ public class PantallaDeJuego extends PantallaBase {
                 // Si encontramos un bloque cercano y está dentro del rango del golpe...
                 if (bloqueMasCercano != null && distanciaMinima <= rangoMaximoDeGolpe) {
                     Gdx.app.log("PantallaDeJuego", "¡Bloque encontrado en rango! ID: " + bloqueMasCercano.id + ". Dando orden de destruir.");
-                    bloqueMasCercano.destruir();
+                 //---> Knucles basura// bloqueMasCercano.destruir();
                     if (gameClient != null) {
                         Gdx.app.log("PantallaDeJuego", "Enviando paquete PaqueteBloqueDestruido al servidor.");
                         // --- LÍNEA CORREGIDA ---
@@ -874,7 +896,7 @@ public class PantallaDeJuego extends PantallaBase {
         Player jugadorVisual = otrosJugadores.get(estadoRecibido.id);
         if (jugadorVisual == null) {
             System.out.println("Creando nuevo jugador gráfico con ID: " + estadoRecibido.id);
-            switch (estadoRecibido.characterType) {
+            switch (personajeJugableEstado.characterType) {
                 case SONIC:
                     jugadorVisual = new Sonic(estadoRecibido, manejadorNivel);
                     break;

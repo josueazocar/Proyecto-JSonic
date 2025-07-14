@@ -281,8 +281,6 @@ public abstract class Player extends Entity implements Disposable {
     }
 
     public void mostrarMensaje(String texto) {
-       // this.mensajeUI = texto;
-       // this.tiempoMensajeVisible = DURACION_MENSAJE;
     }
 
     @Override
@@ -294,6 +292,6 @@ public abstract class Player extends Entity implements Disposable {
 
     public void setGameClient(IGameClient client) {
         this.gameClient = client;
-        System.out.println("[PLAYER] setGameClient fue llamado. El cliente es: " + (this.gameClient != null ? "VÁLIDO" : "NULO"));
+        //System.out.println("[PLAYER] setGameClient fue llamado. El cliente es: " + (this.gameClient != null ? "VÁLIDO" : "NULO"));
     }
 }

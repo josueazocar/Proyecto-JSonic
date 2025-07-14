@@ -11,6 +11,7 @@ import network.interfaces.IGameServer;
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.ArrayList;
+import java.util.Random;
 
 public class GameServer implements IGameServer {
 
@@ -25,6 +26,8 @@ public class GameServer implements IGameServer {
     private final HashMap<Integer, DronState> dronesActivos = new HashMap<>();
     private final ArrayList<Rectangle> colisionesDinamicas = new ArrayList<>(); // Árboles, rocas, etc.
     private int proximoIdDron = 20000; // Un rango de IDs para los drones
+    private final HashMap<Integer, Rectangle> bloquesRompibles = new HashMap<>();
+    private int proximoIdBloque = 30000; // Un rango de IDs para bloques
 
     // Estado global compartido por todo el equipo.
     private final ContaminationState contaminationState = new ContaminationState();
@@ -108,6 +111,7 @@ public class GameServer implements IGameServer {
                 Network.PaqueteActualizacionContaminacion paqueteContaminacion = new Network.PaqueteActualizacionContaminacion();
                 paqueteContaminacion.contaminationPercentage = contaminationState.getPercentage();
                 conexion.sendTCP(paqueteContaminacion);
+                sincronizarBloquesConClientes();
             }
 
             public void received(Connection conexion, Object objeto) {
@@ -221,6 +225,8 @@ public class GameServer implements IGameServer {
                     if (paredesDelMapa == null) {
                         paredesDelMapa = paquete.paredes;
                         System.out.println("[SERVER] Plano del mapa recibido con " + paredesDelMapa.size() + " paredes. ¡Ahora puedo ver las paredes!");
+                        generarBloquesParaElNivel();
+                        sincronizarBloquesConClientes();
                     }
                 }
                 if (objeto instanceof Network.PaqueteInvocarDron) {
@@ -280,6 +286,32 @@ public class GameServer implements IGameServer {
                         }
                         System.out.println("[SERVER] Paquetes de actualización de puntuación enviados a todos los jugadores.");
                     }
+                } if (objeto instanceof Network.PaqueteBloqueDestruido paquete) {
+                    PlayerState jugador = jugadores.get(paquete.idJugador);
+
+                    // --- VALIDACIÓN (¡Muy importante para la seguridad!) ---
+                    // Aquí comprobamos si la petición es válida.
+                    // Por ahora, solo comprobaremos que el bloque exista en nuestra lista.
+                    if (jugador != null && bloquesRompibles.containsKey(paquete.idBloque)) {
+
+                        // ¡Petición válida! Destruimos el bloque en el estado del servidor.
+                        bloquesRompibles.remove(paquete.idBloque);
+                        System.out.println("[SERVER] El jugador " + paquete.idJugador + " (Knuckles) ha destruido el bloque ID: " + paquete.idBloque);
+
+                        // --- LÓGICA DE JUEGO (copiada de tu LocalServer) ---
+                        // Le damos al jugador los puntos de basura por destruir el bloque.
+                        int puntajeActual = puntajesBasuraIndividuales.getOrDefault(paquete.idJugador, 0);
+                        puntajesBasuraIndividuales.put(paquete.idJugador, puntajeActual + 1);
+                        totalBasuraGlobal++; // Actualizamos el total del equipo
+                        contaminationState.decrease(TRASH_CLEANUP_VALUE);
+                        System.out.println("[SERVER] Basura recogida. Contaminación reducida a " + contaminationState.getPercentage());
+                        // (Aquí deberías enviar los paquetes de actualización de puntuación y contaminación a todos)
+
+                        // --- ORDENAR A TODOS LOS CLIENTES QUE DESTRUYAN EL BLOQUE ---
+                        Network.PaqueteBloqueConfirmadoDestruido respuesta = new Network.PaqueteBloqueConfirmadoDestruido();
+                        respuesta.idBloque = paquete.idBloque;
+                        servidor.sendToAllTCP(respuesta); // ¡Enviamos la confirmación a todos!
+                    }
                 }
             }
 
@@ -322,7 +354,6 @@ public class GameServer implements IGameServer {
                     return; // Salimos del hilo si es interrumpido.
                 }
             }
-
             System.out.println("[SERVER] ¡Plano del mapa detectado! Iniciando bucle de juego principal.");
 
             final float FIXED_DELTA_TIME = 1 / 60f;
@@ -336,6 +367,7 @@ public class GameServer implements IGameServer {
                 }
             }
         }).start();
+
 
         System.out.println("[SERVER] Servidor online iniciado y escuchando en el puerto " + Network.PORT);
     }
@@ -540,7 +572,54 @@ public class GameServer implements IGameServer {
         }
     }
 
+    private void generarBloquesParaElNivel() {
+        // Limpiamos los bloques del nivel anterior.
+        bloquesRompibles.clear();
 
+        // MUY IMPORTANTE: Si aún no tenemos el plano, no podemos generar nada.
+        if (paredesDelMapa == null) {
+            System.out.println("[SERVER] No se pueden generar bloques. Esperando el plano del mapa del cliente...");
+            return;
+        }
+
+        Random random = new Random();
+        int cantidad = 5;
+        float anchoMapa = 1920f;
+        float altoMapa = 1280f;
+
+        System.out.println("[SERVER] Generando " + cantidad + " bloques usando el plano del mapa...");
+        for (int i = 0; i < cantidad; i++) {
+            int intentos = 0;
+            boolean colocado = false;
+            while (!colocado && intentos < 100) {
+                float x = random.nextFloat() * (anchoMapa - 100f);
+                float y = random.nextFloat() * (altoMapa - 100f);
+                Rectangle bounds = new Rectangle(x, y, 100f, 100f);
+
+                // Comprobamos si el nuevo bloque choca con alguna pared del plano.
+                boolean hayColision = false;
+                for (Rectangle pared : paredesDelMapa) {
+                    if (pared.overlaps(bounds)) {
+                        hayColision = true;
+                        break;
+                    }
+                }
+
+                if (!hayColision) {
+                    bloquesRompibles.put(proximoIdBloque++, bounds);
+                    colocado = true;
+                }
+                intentos++;
+            }
+        }
+        System.out.println("[SERVER] Bloques generados. Total: " + bloquesRompibles.size());
+    }
+    private void sincronizarBloquesConClientes() {
+        Network.PaqueteSincronizarBloques paqueteSync = new Network.PaqueteSincronizarBloques();
+        paqueteSync.todosLosBloques = new HashMap<>(this.bloquesRompibles); // Enviamos una copia
+        servidor.sendToAllTCP(paqueteSync);
+        System.out.println("[SERVER] Enviando estado de bloques a todos los clientes.");
+    }
     private void spawnNuevoEnemigo() {
         // Si todavía no hemos recibido el plano del mapa, no generamos nada.
         if (paredesDelMapa == null) {
@@ -692,6 +771,18 @@ public class GameServer implements IGameServer {
                 }
             }
         }
+        // 3. Comprobación contra los bloques de basura de Knuckles
+        // Nos aseguramos de que la lista exista y no esté vacía.
+        if (bloquesRompibles != null && !bloquesRompibles.isEmpty()) {
+            // Iteramos sobre cada 'Rectangle' de bloque que el servidor tiene en memoria.
+            for (Rectangle bloque : bloquesRompibles.values()) {
+                // Si el 'bounds' del robot se superpone con el del bloque...
+                if (bloque.overlaps(bounds)) {
+                    return true; // ¡Hay colisión! El robot no puede moverse aquí.
+                }
+            }
+        }
+
         return false;
     }
 

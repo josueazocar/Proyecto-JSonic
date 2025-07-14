@@ -1,6 +1,7 @@
 package network;
 
 import com.JSonic.uneg.*;
+import com.badlogic.gdx.math.Rectangle;
 import com.esotericsoftware.kryo.Kryo;
 import com.esotericsoftware.kryonet.EndPoint;
 
@@ -56,6 +57,7 @@ public class Network {
         kryo.register(PaqueteSolicitudLiberarAnimal.class);
         kryo.register(PaqueteSolicitudMatarAnimal.class);
         kryo.register(PaqueteBloqueDestruido.class);
+        kryo.register(PaqueteBloqueConfirmadoDestruido.class);
 
         kryo.register(PaqueteInvocarDron.class);
         kryo.register(PaqueteArbolNuevo.class);
@@ -64,6 +66,8 @@ public class Network {
         kryo.register(DronState.EstadoDron.class);
 
         kryo.register(PaqueteBasuraDepositada.class);
+        kryo.register(PaqueteSincronizarBloques.class);
+      //  Kryo.register(PaqueteHabilidadLimpiezaSonic.class);
     }
 
     // --- Definición de los Paquetes ---
@@ -169,6 +173,10 @@ public class Network {
         public int idJugador;
     }
 
+    public static class PaqueteBloqueConfirmadoDestruido {
+        public int idBloque; // La ID del bloque a destruir.
+    }
+
     public static class PaqueteInvocarDron {
         // El cliente envía este paquete vacío para pedir que se active el dron.
         // El servidor sabrá quién lo envió por el ID de la conexión.
@@ -196,6 +204,11 @@ public class Network {
 
     public static class PaqueteHabilidadLimpiezaSonic {
         // No necesita contenido, su sola existencia es el mensaje.
+    }
+
+    public static class PaqueteSincronizarBloques {
+        // Enviamos el mismo tipo de mapa que usa el servidor para que sea fácil.
+        public HashMap<Integer, Rectangle> todosLosBloques;
     }
 
 }
