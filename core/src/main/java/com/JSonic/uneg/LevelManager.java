@@ -277,24 +277,30 @@ public class LevelManager {
             }
         }
     }
-//fin metodo animales actualizar
 
     /**
      * Añade un nuevo animal visual al juego.
      * Se llama cuando el servidor informa de un nuevo animal.
      */
     public void agregarOActualizarAnimal(AnimalState estadoAnimal) {
+        // Busca si ya existe un objeto visual para este ID
         AnimalVisual visual = animalesVisuales.get(estadoAnimal.id);
         if (visual != null) {
-            // Si el animal ya existe, solo actualizamos su estado
-            visual.update(estadoAnimal);
+            // --- CASO 1: El animal visual YA EXISTE ---
+
+            // Su estado interno se actualiza automáticamente porque 'visual.estado'
+            // y 'estadoAnimal' apuntan a la misma información en tu mapa de estados.
+            // Solo necesitamos llamar a su update() para que la parte VISUAL (animación) reaccione al cambio.
+            visual.estado = estadoAnimal;
+            visual.update();
+
         } else {
-            // Si es un animal nuevo, lo creamos y lo añadimos al mapa
+            // --- CASO 2: Es un ANIMAL NUEVO ---
+            // Creamos un nuevo AnimalVisual usando el constructor corregido,
+            // pasándole el objeto de estado completo.
             Gdx.app.log("LevelManager", "Creando nuevo animal visual con ID: " + estadoAnimal.id);
-            AnimalVisual nuevoAnimal = new AnimalVisual(estadoAnimal.id, estadoAnimal.x, estadoAnimal.y, animalTexture);
+            AnimalVisual nuevoAnimal = new AnimalVisual(estadoAnimal, animalTexture); // ¡Constructor corregido!
             animalesVisuales.put(estadoAnimal.id, nuevoAnimal);
-            // Añadimos su hitbox a nuestra lista de colisiones dinámicas
-            // colisionesDinamicas.add(nuevoAnimal.getBounds());
         }
     }
 

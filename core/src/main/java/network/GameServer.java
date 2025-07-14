@@ -35,7 +35,7 @@ public class GameServer implements IGameServer {
     public int totalBasuraGlobal = 0;
 
     //  Variables de control para la contaminación.
-    private static final float CONTAMINATION_RATE_PER_SECOND = 0.65f; // El % sube 0.65 puntos por segundo.
+    private static final float CONTAMINATION_RATE_PER_SECOND = 1; // El % sube 0.65 puntos por segundo.
     private static final float TRASH_CLEANUP_VALUE = 3f; // Cada basura recogida reduce el % en 3 puntos.
     private float tiempoDesdeUltimaContaminacion = 0f;
     private static final float INTERVALO_ACTUALIZACION_CONTAMINACION = 1.0f; // Enviaremos una actualización cada segundo.
@@ -62,6 +62,13 @@ public class GameServer implements IGameServer {
     private float tiempoGeneracionTeleport = 0f;
     private boolean teleportGenerado = false;
     private int basuraReciclada = 0;
+
+    private final HashMap<Integer, AnimalState> animalesActivos = new HashMap<>();
+    private int proximoIdAnimal = 20000; // ID base para evitar colisiones con otros IDs
+
+    // Variables para la lógica de muerte por contaminación
+    private float tiempoParaProximaMuerteAnimal = 20f; // Temporizador (ej: 20 segundos)
+    private boolean muertesAnimalesActivas = false;
 
 
     public GameServer() {
@@ -226,6 +233,7 @@ public class GameServer implements IGameServer {
                         paredesDelMapa = paquete.paredes;
                         System.out.println("[SERVER] Plano del mapa recibido con " + paredesDelMapa.size() + " paredes. ¡Ahora puedo ver las paredes!");
                         generarBloquesParaElNivel();
+                        generarAnimales();
                         sincronizarBloquesConClientes();
                     }
                 }
@@ -311,6 +319,21 @@ public class GameServer implements IGameServer {
                         Network.PaqueteBloqueConfirmadoDestruido respuesta = new Network.PaqueteBloqueConfirmadoDestruido();
                         respuesta.idBloque = paquete.idBloque;
                         servidor.sendToAllTCP(respuesta); // ¡Enviamos la confirmación a todos!
+                    }
+                }  if (objeto instanceof Network.PaqueteSolicitudMatarAnimal paquete) {
+                    // La lógica es prácticamente idéntica a la del LocalServer.
+                    // Usamos 'synchronized' para evitar condiciones de carrera si dos eventos
+                    // intentan matar al mismo animal a la vez.
+                    synchronized (animalesActivos) {
+                        AnimalState animal = animalesActivos.get(paquete.idAnimal);
+                        if (animal != null && animal.estaVivo) {
+                            animal.estaVivo = false;
+                            System.out.println("[SERVER] Recibida solicitud para matar al animal ID: " + animal.id);
+
+                            // No necesitamos crear un paquete nuevo. Como nuestro bucle principal ya envía
+                            // el estado completo de 'animalesActivos' constantemente, este cambio
+                            // se propagará automáticamente a todos los clientes en el siguiente tick.
+                        }
                     }
                 }
             }
@@ -525,6 +548,7 @@ public class GameServer implements IGameServer {
 
         actualizarDrones(deltaTime);
         actualizarEnemigosAI(deltaTime);
+        actualizarEstadoAnimalesPorContaminacion(deltaTime);
 
         generarNuevosItems(deltaTime);
         generarNuevosEnemigos(deltaTime);
@@ -533,6 +557,12 @@ public class GameServer implements IGameServer {
         Network.PaqueteActualizacionEnemigos paqueteUpdate = new Network.PaqueteActualizacionEnemigos();
         paqueteUpdate.estadosEnemigos = this.enemigosActivos;
         servidor.sendToAllTCP(paqueteUpdate);
+
+        if (animalesActivos != null && !animalesActivos.isEmpty()) {
+            Network.PaqueteActualizacionAnimales paqueteAnimales = new Network.PaqueteActualizacionAnimales();
+            paqueteAnimales.estadosAnimales = this.animalesActivos; // Usa el mapa principal directamente
+            servidor.sendToAllTCP(paqueteAnimales);
+        }
     }
 
     private void generarNuevosItems(float deltaTime) {
@@ -784,6 +814,96 @@ public class GameServer implements IGameServer {
         }
 
         return false;
+    }
+
+    private void generarAnimales() {
+        // No podemos generar animales si el servidor aún no conoce el mapa.
+        if (paredesDelMapa == null) {
+            System.out.println("[SERVER] No se pueden generar animales. Esperando el plano del mapa del cliente...");
+            return;
+        }
+
+        animalesActivos.clear();
+        proximoIdAnimal = 20000;
+        muertesAnimalesActivas = false;
+        tiempoParaProximaMuerteAnimal = 20f;
+
+        int cantidadAnimales = 10; // La cantidad de animales que quieres por mapa.
+        Random random = new Random();
+        float anchoMapa = 1920f;  // Debes tener estas dimensiones accesibles.
+        float altoMapa = 1280f; // O pasarlas como parámetro si varían.
+
+        for (int i = 0; i < cantidadAnimales; i++) {
+            int intentos = 0;
+            boolean colocado = false;
+            while (!colocado && intentos < 100) {
+                float x = random.nextFloat() * (anchoMapa - 32);
+                float y = random.nextFloat() * (altoMapa - 32);
+                Rectangle animalBounds = new Rectangle(x, y, 32, 32);
+
+                if (!hayColision(animalBounds)) { // Usamos tu método de colisión existente
+                    String texturaPath = "Items/Conejo1.png"; // El cliente usará esta ruta
+                    AnimalState nuevoAnimal = new AnimalState(proximoIdAnimal++, x, y, texturaPath);
+                    animalesActivos.put(nuevoAnimal.id, nuevoAnimal);
+                    colocado = true;
+                }
+                intentos++;
+            }
+        }
+
+        System.out.println("[SERVER] Generados " + animalesActivos.size() + " animales para el nuevo nivel.");
+
+        // Una vez generados, enviamos la lista completa a TODOS los clientes.
+        if (!animalesActivos.isEmpty()) {
+            Network.PaqueteActualizacionAnimales paqueteInicial = new Network.PaqueteActualizacionAnimales();
+            paqueteInicial.estadosAnimales = new HashMap<>(this.animalesActivos);
+            servidor.sendToAllTCP(paqueteInicial);
+            System.out.println("[SERVER] Enviando estado inicial de animales a todos los clientes.");
+        }
+    }
+
+    private void matarSiguienteAnimalVivo() {
+        for (AnimalState animal : animalesActivos.values()) {
+            if (animal.estaVivo) {
+                animal.estaVivo = false; // El estado del animal cambia en el servidor.
+                System.out.println("[SERVER] Contaminación alta. Matando animal ID: " + animal.id);
+
+                // Notificamos a TODOS los clientes sobre el estado actualizado del animal.
+                // Usamos el mismo paquete para consistencia.
+                Network.PaqueteActualizacionAnimales paquete = new Network.PaqueteActualizacionAnimales();
+                paquete.estadosAnimales = new HashMap<>(this.animalesActivos);
+                servidor.sendToAllTCP(paquete);
+
+                return; // Salimos del bucle una vez que matamos a uno.
+            }
+        }
+    }
+
+    /**
+     * Revisa el nivel de contaminación y gestiona la muerte secuencial de animales.
+     */
+    private void actualizarEstadoAnimalesPorContaminacion(float deltaTime) {
+        // Si no hay animales, no hay nada que hacer.
+        if (animalesActivos.isEmpty()) return;
+
+        if (contaminationState.getPercentage() >= 50) {
+            if (!muertesAnimalesActivas) {
+                muertesAnimalesActivas = true;
+                matarSiguienteAnimalVivo();
+                tiempoParaProximaMuerteAnimal = 20f;
+            } else {
+                tiempoParaProximaMuerteAnimal -= deltaTime;
+                if (tiempoParaProximaMuerteAnimal <= 0) {
+                    matarSiguienteAnimalVivo();
+                    tiempoParaProximaMuerteAnimal = 20f;
+                }
+            }
+        } else {
+            if (muertesAnimalesActivas) {
+                muertesAnimalesActivas = false;
+                tiempoParaProximaMuerteAnimal = 20f;
+            }
+        }
     }
 
     @Override

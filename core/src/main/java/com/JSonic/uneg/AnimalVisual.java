@@ -1,3 +1,4 @@
+// Archivo: src/com/JSonic/uneg/AnimalVisual.java
 package com.JSonic.uneg;
 
 import com.badlogic.gdx.graphics.Texture;
@@ -8,110 +9,83 @@ import com.badlogic.gdx.math.Rectangle;
 
 public class AnimalVisual {
 
-    // --- Propiedades del estado del animal (datos) ---
-    public int id;
-    public float x, y;
-    public boolean estaVivo = true;
+    // --- Referencia directa al estado (¡el patrón a seguir!) ---
+    public AnimalState estado; // Puede ser 'public' o 'private' con un getter
 
     // --- Propiedades visuales (solo para el cliente) ---
-    private transient Texture spriteSheet; // 'transient' para que no se envíe por red
-    private transient Animation<TextureRegion> animacion;
+    private transient Texture spriteSheet;
     private transient Animation<TextureRegion> animacionVivo;
     private transient Animation<TextureRegion> animacionMuerto;
+    private transient Animation<TextureRegion> animacionActual;
     private float tiempoAnimacion = 0f;
-
-    //para colisiones
     private transient Rectangle bounds;
 
-    // Constructor para crear el objeto visual del animal
-    public AnimalVisual(int id, float x, float y, Texture spriteSheet) {
-        this.id = id;
-        this.x = x;
-        this.y = y;
+    // El constructor ahora recibe el objeto de estado completo.
+    public AnimalVisual(AnimalState estadoInicial, Texture spriteSheet) {
+        this.estado = estadoInicial;
         this.spriteSheet = spriteSheet;
-        this.bounds = new Rectangle(x, y, spriteSheet.getWidth(), spriteSheet.getHeight() / 2f);
+        this.bounds = new Rectangle(estado.x, estado.y, 0, 0); // El tamaño se ajusta al cargar la animación
         cargarAnimacion();
     }
 
-
-    // Carga las animaciones desde la hoja de sprites
     private void cargarAnimacion() {
-        // Asumimos que la textura tiene 2 filas: una para vivo, una para muerto
         TextureRegion[][] tmp = TextureRegion.split(spriteSheet, spriteSheet.getWidth(), spriteSheet.getHeight() / 2);
 
-        // Fila 1: Animación del animal vivo
         animacionVivo = new Animation<>(0.25f, tmp[0]);
         animacionVivo.setPlayMode(Animation.PlayMode.LOOP);
 
-        // Fila 2: Animación del animal muerto (un solo frame)
         animacionMuerto = new Animation<>(1f, tmp[1]);
+        animacionMuerto.setPlayMode(Animation.PlayMode.NORMAL);
 
-        // La animación por defecto es la de "vivo"
-        this.animacion = animacionVivo;
+        // Ajustar el tamaño del hitbox basado en el frame
+        this.bounds.setSize(tmp[0][0].getRegionWidth(), tmp[0][0].getRegionHeight());
+
+        // La animación inicial depende del estado inicial.
+        this.animacionActual = estado.estaVivo ? animacionVivo : animacionMuerto;
     }
 
-    //método update
-    public void update(AnimalState state) {
-        this.x = state.x;
-        this.y = state.y;
-        this.bounds.setPosition(this.x, this.y);
+    /**
+     * El método update ahora es más simple.
+     * Solo se encarga de la lógica visual, como cambiar de animación.
+     */
+    public void update() {
+        // Sincroniza la posición del hitbox con la del estado
+        this.bounds.setPosition(estado.x, estado.y);
 
-        // Si el estado del servidor es diferente al estado actual
-        if (this.estaVivo != state.estaVivo) {
-            this.estaVivo = state.estaVivo;
-            if (this.estaVivo) {
-                // Si el animal revive (en caso de que implementes esa lógica)
-                this.animacion = animacionVivo;
-            } else {
-                // Si el animal muere
-                this.animacion = animacionMuerto;
-            }
-            this.tiempoAnimacion = 0; // Reinicia la animación al cambiar de estado
+        // Comprueba si el estado de vida ha cambiado para cambiar la animación
+        Animation<TextureRegion> nuevaAnimacion = estado.estaVivo ? animacionVivo : animacionMuerto;
+        if (this.animacionActual != nuevaAnimacion) {
+            this.animacionActual = nuevaAnimacion;
+            this.tiempoAnimacion = 0; // Reinicia la animación
         }
     }
 
-
-    // Dibuja el animal en la pantalla
+    // El método draw ahora lee directamente del estado.
     public void draw(SpriteBatch batch, float delta) {
-        if (animacion == null) return;
+        if (animacionActual == null) return;
 
         tiempoAnimacion += delta;
-        TextureRegion currentFrame = animacion.getKeyFrame(tiempoAnimacion, true);
-        batch.draw(currentFrame, x, y);
+        TextureRegion currentFrame = animacionActual.getKeyFrame(tiempoAnimacion);
+
+        // Dibuja en la posición dictada por el objeto de estado
+        batch.draw(currentFrame, estado.x, estado.y);
     }
 
-    // Getter para el hitbox
-
+    // Getters que delegan la información al objeto de estado
     public int getId() {
-        return this.id;
+        return this.estado.id;
     }
 
     public boolean estaVivo() {
-        return estaVivo;
+        return this.estado.estaVivo;
     }
 
-
-
-    /**
-     * Cambia el estado de vida del animal.
-     * Renombrado de setEstaVivo a setVivo para coincidir con PantallaDeJuego.
-     */
-    public void setVivo(boolean vivo) {
-        this.estaVivo = vivo;
-    }
-
-    /**
-     * Devuelve el rectángulo de colisión para ser usado en Intersector.overlaps().
-     */
     public Rectangle getBounds() {
         return this.bounds;
     }
 
-
     public void dispose() {
-        /*if (spriteSheet != null) {
-            spriteSheet.dispose();
-            spriteSheet = null;
-        }*/
+        // La gestión de texturas idealmente se hace con un AssetManager
+        // para evitar liberar un recurso que otro objeto podría estar usando.
     }
 }
