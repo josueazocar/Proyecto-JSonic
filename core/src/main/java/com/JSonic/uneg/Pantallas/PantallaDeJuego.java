@@ -280,23 +280,10 @@ public class PantallaDeJuego extends PantallaBase {
                     if (p.tuEstado != null) {
                         inicializarJugadorLocal(p.tuEstado);
                         System.out.println("[CLIENT] Conexión aceptada. Extrayendo y enviando plano del mapa...");
+                        Vector2 posicionLlegadaReal = manejadorNivel.obtenerPosicionLlegada();
+                        System.out.println("[CLIENT] Posición de llegada real leída del mapa: " + posicionLlegadaReal.x + ", " + posicionLlegadaReal.y);
+                        enviarInformacionDelMapaActualAlServidor();
 
-                        // --- INICIO DEL CÓDIGO A AÑADIR ---
-                        java.util.ArrayList<Rectangle> paredes = new java.util.ArrayList<>();
-                        MapObjects objetosColision = manejadorNivel.getCollisionObjects();
-                        if (objetosColision != null) {
-                            for (com.badlogic.gdx.maps.MapObject obj : objetosColision) {
-                                if (obj instanceof com.badlogic.gdx.maps.objects.RectangleMapObject) {
-                                    paredes.add(((com.badlogic.gdx.maps.objects.RectangleMapObject) obj).getRectangle());
-                                }
-                            }
-                        }
-
-                        Network.PaqueteInformacionMapa paqueteMapa = new Network.PaqueteInformacionMapa();
-                        paqueteMapa.paredes = paredes;
-                        gameClient.send(paqueteMapa); // Enviamos el plano al servidor
-                        System.out.println("[CLIENT] Plano del mapa con " + paredes.size() + " paredes enviado.");
-                        // --- FIN DEL CÓDIGO A AÑADIR ---
                     }
 
                 } else if (paquete instanceof Network.PaqueteJugadorConectado p) {
@@ -340,23 +327,12 @@ public class PantallaDeJuego extends PantallaBase {
                     manejadorNivel.cargarNivel(p.nuevoMapa);
                     limpiarEnemigosEItems();
                     reiniciarTeletransporte();
-                    personajeJugable.estado.x = p.nuevaPosX;
-                    personajeJugable.estado.y = p.nuevaPosY;
+                    Vector2 posicionLlegadaReal = manejadorNivel.obtenerPosicionLlegada();
+                    personajeJugable.estado.x = posicionLlegadaReal.x;
+                    personajeJugable.estado.y = posicionLlegadaReal.y;
+                    System.out.println("[CLIENT] Posición de llegada real leída del mapa: " + posicionLlegadaReal.x + ", " + posicionLlegadaReal.y);
+                    enviarInformacionDelMapaActualAlServidor();
 
-                    System.out.println("[CLIENT] Enviando nuevo plano del mapa al servidor...");
-                    java.util.ArrayList<com.badlogic.gdx.math.Rectangle> paredes = new java.util.ArrayList<>();
-                    MapObjects objetosColision = manejadorNivel.getCollisionObjects();
-                    if (objetosColision != null) {
-                        for (com.badlogic.gdx.maps.MapObject obj : objetosColision) {
-                            if (obj instanceof com.badlogic.gdx.maps.objects.RectangleMapObject) {
-                                paredes.add(((com.badlogic.gdx.maps.objects.RectangleMapObject) obj).getRectangle());
-                            }
-                        }
-                    }
-                    Network.PaqueteInformacionMapa paqueteMapa = new Network.PaqueteInformacionMapa();
-                    paqueteMapa.paredes = paredes;
-                    gameClient.send(paqueteMapa);
-                    System.out.println("[CLIENT] Nuevo plano del mapa con " + paredes.size() + " paredes enviado.");
                 } else if (paquete instanceof Network.PaqueteActualizacionPuntuacion p) {
                     this.anillosTotal = p.nuevosAnillos;
                     this.basuraTotal = p.nuevaBasura;
@@ -857,6 +833,44 @@ public class PantallaDeJuego extends PantallaBase {
         estadoBomba.estadoAnimacion = (velocidad.x >= 0) ? EnemigoState.EstadoEnemigo.RUN_RIGHT : EnemigoState.EstadoEnemigo.RUN_LEFT;
         Bomba nuevaBomba = new Bomba(estadoBomba, velocidad, 2.5f);
         listaDeBombas.add(nuevaBomba);
+    }
+
+    private void enviarInformacionDelMapaActualAlServidor() {
+        if (gameClient == null || manejadorNivel == null) return;
+
+        System.out.println("[CLIENT] Extrayendo y enviando información del mapa: " + manejadorNivel.getNombreMapaActual());
+
+        // 1. Extraer las paredes.
+        ArrayList<Rectangle> paredes = new ArrayList<>();
+        MapObjects objetosColision = manejadorNivel.getCollisionObjects();
+        if (objetosColision != null) {
+            for (com.badlogic.gdx.maps.MapObject obj : objetosColision) {
+                if (obj instanceof com.badlogic.gdx.maps.objects.RectangleMapObject) {
+                    paredes.add(((com.badlogic.gdx.maps.objects.RectangleMapObject) obj).getRectangle());
+                }
+            }
+        }
+
+        // 2. Extraer los portales.
+        ArrayList<Network.PortalInfo> portalesDelMapa = new ArrayList<>();
+        for (LevelManager.PortalInfo infoNivel : manejadorNivel.obtenerPortales()) {
+            Network.PortalInfo infoRed = new Network.PortalInfo();
+            infoRed.x = infoNivel.x;
+            infoRed.y = infoNivel.y;
+            infoRed.destinoX = infoNivel.destinoX;
+            infoRed.destinoY = infoNivel.destinoY;
+            infoRed.destinoMapa = infoNivel.destinoMapa;
+            portalesDelMapa.add(infoRed);
+        }
+
+        // 3. Crear y enviar el paquete completo.
+        Network.PaqueteInformacionMapa paqueteMapa = new Network.PaqueteInformacionMapa();
+        paqueteMapa.paredes = paredes;
+        paqueteMapa.portales = portalesDelMapa;
+
+        gameClient.send(paqueteMapa);
+
+        System.out.println("[CLIENT] Plano del mapa con " + paredes.size() + " paredes y " + portalesDelMapa.size() + " portales enviado.");
     }
 
     private void reiniciarTeletransporte() {

@@ -278,10 +278,10 @@ public class LocalServer implements IGameServer {
      */
     @Override
     public void update(float deltaTime, LevelManager manejadorNivel, Player personajeJugable) {
-        // --- 1. PROCESAR PAQUETES DEL CLIENTE ---
+
         while (!paquetesEntrantes.isEmpty()) {
             Object objeto = paquetesEntrantes.poll();
-//ver si funciona bien
+
             if (objeto instanceof Network.PaquetePosicionJugador paquete) {
                 PlayerState estadoJugador = jugadores.get(paquete.id);
                 if (estadoJugador != null) {
@@ -302,27 +302,22 @@ public class LocalServer implements IGameServer {
                     }
                 }
             }
-            // --- INICIO DE LA SOLUCIÓN CORRECTA ---
+
             else if (objeto instanceof Network.PaqueteHabilidadLimpiezaSonic) {
                 System.out.println("[SERVER] ¡Recibida notificación de habilidad de limpieza de Sonic!");
-                // Usamos el método que ya tienes para reducir la contaminación.
-                // Poner un valor alto como 100 asegura que llegue a 0.
                 decreaseContamination(100.0f);
                 // El servidor ahora enviará automáticamente la actualización a todos los clientes
                 // con el nuevo valor 0, porque la variable de contaminación ha cambiado.
             }
-            // --- FIN DE LA SOLUCIÓN CORRECTA ---
+
             else if (objeto instanceof Network.PaqueteSolicitudRecogerItem paquete) {
                 // Primero, verificamos si el ítem existe con .get()
                 ItemState itemRecogido = itemsActivos.get(paquete.idItem);
 
                 if (itemRecogido != null) {
 
-                    // CASO ESPECIAL: Es un teletransportador
                     if (itemRecogido.tipo == ItemState.ItemType.TELETRANSPORTE) {
                         System.out.println("[LOCAL SERVER] Jugador ha activado el teletransportador.");
-                        //itemsActivos.remove(paquete.idItem); // Lo eliminamos
-                        //usar destino para lograr guardar los de los maps
                         String destinoMapa = destinosPortales.get(paquete.idItem);
                         if (destinoMapa == null) {
                             System.err.println("[LOCAL SERVER] Error: El portal con ID " + paquete.idItem + " no tiene un mapa de destino definido.");
@@ -334,16 +329,10 @@ public class LocalServer implements IGameServer {
 
                         manejadorNivel.cargarNivel(destinoMapa);
                         com.badlogic.gdx.math.Vector2 llegada = manejadorNivel.obtenerPosicionLlegada();
-                        float llegadaX = llegada.x;
-                        float llegadaY = llegada.y; // Valor por defecto
-
-
 
                         // Creamos la ORDEN de cambio de mapa
                         Network.PaqueteOrdenCambiarMapa orden = new Network.PaqueteOrdenCambiarMapa();
                         orden.nuevoMapa = destinoMapa;
-                        orden.nuevaPosX = llegadaX;
-                        orden.nuevaPosY = llegadaY;
 
                         // "Enviamos" la orden al cliente local
                         clienteLocal.recibirPaqueteDelServidor(orden);
@@ -353,8 +342,6 @@ public class LocalServer implements IGameServer {
                         paqueteEliminado.idItem = paquete.idItem;
                         clienteLocal.recibirPaqueteDelServidor(paqueteEliminado);
 
-                        //para teletransporte
-                         // destinosPortales.remove(paquete.idItem); // Limpieza
                     }
                     // CASO GENERAL: Es un ítem normal
                     else {
@@ -622,7 +609,6 @@ public class LocalServer implements IGameServer {
     }
 
     private void actualizarEnemigosAI(float deltaTime, LevelManager manejadorNivel, Player personajeJugable) {
-        System.out.println("[LOCAL SERVER] SE esta iniciando la IA de los enemigos");
         PlayerState jugador = jugadores.get(1);
         if (jugador == null)
             return;

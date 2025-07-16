@@ -26,7 +26,8 @@ public class GameServer implements IGameServer {
     private final HashMap<Integer, Integer> puntajesAnillosIndividuales = new HashMap<>();
     private final HashMap<Integer, Integer> puntajesBasuraIndividuales = new HashMap<>();
     private final HashMap<Integer, DronState> dronesActivos = new HashMap<>();
-    private final ArrayList<Rectangle> colisionesDinamicas = new ArrayList<>(); // Árboles, rocas, etc.
+    private final ArrayList<Rectangle> colisionesDinamicas = new ArrayList<>();
+    private final HashMap<Integer, Network.PortalInfo> infoPortales = new HashMap<>();
     private int proximoIdDron = 20000; // Un rango de IDs para los drones
     private final HashMap<Integer, Rectangle> bloquesRompibles = new HashMap<>();
     private int proximoIdBloque = 30000; // Un rango de IDs para bloques
@@ -129,6 +130,8 @@ public class GameServer implements IGameServer {
             public void received(Connection conexion, Object objeto) {
                 if (objeto instanceof Network.PaquetePosicionJugador paquete) {
                     PlayerState estadoJugador = jugadores.get(paquete.id);
+
+                    System.out.println("-----> [DEBUGGER 4 - RECEPTOR SERVIDOR] Recibida posición del jugador " + paquete.id + ": (" + paquete.x + ", " + paquete.y + ")");
                     if (estadoJugador != null) {
                         estadoJugador.x = paquete.x;
                         estadoJugador.y = paquete.y;
@@ -165,19 +168,34 @@ public class GameServer implements IGameServer {
                             // CASO ESPECIAL: Es un teletransportador.
                             if (itemRecogido.tipo == ItemState.ItemType.TELETRANSPORTE) {
                                 System.out.println("[SERVER] Jugador " + conexion.getID() + " ha activado el teletransportador.");
-                                itemsActivos.remove(paquete.idItem); // Ahora sí lo eliminamos de la lista.
+
+                                Network.PortalInfo infoDestino = infoPortales.get(paquete.idItem);
+                                if (infoDestino == null) {
+                                    System.err.println("[SERVER] Error: No se encontró información de destino para el portal ID: " + paquete.idItem);
+                                    return; // Salimos para evitar un crash.
+                                }
+                                itemsActivos.remove(paquete.idItem);
+                                infoPortales.remove(paquete.idItem);
+
 
                                 // Creamos la ORDEN de cambio de mapa.
                                 Network.PaqueteOrdenCambiarMapa orden = new Network.PaqueteOrdenCambiarMapa();
-                                orden.nuevoMapa = "maps/ZonaJefeN1.tmx";
-                                orden.nuevaPosX = 70f;
-                                orden.nuevaPosY = 250f;
-
+                                orden.nuevoMapa = infoDestino.destinoMapa;
                                 // Enviamos la orden de cambio de mapa a TODOS los jugadores.
                                 servidor.sendToAllTCP(orden);
 
                                 // Limpiamos los enemigos del mapa anterior.
                                 enemigosActivos.clear();
+
+                                System.out.println("[SERVER] Enviando paquetes de posición autoritativos para forzar la sincronización.");
+                                for (PlayerState jugador : jugadores.values()) {
+                                    Network.PaquetePosicionJugador paquetePosicion = new Network.PaquetePosicionJugador();
+                                    paquetePosicion.id = jugador.id;
+                                    paquetePosicion.x = jugador.x;
+                                    paquetePosicion.y = jugador.y;
+                                    paquetePosicion.estadoAnimacion = jugador.estadoAnimacion;
+                                    servidor.sendToAllTCP(paquetePosicion);
+                                }
 
                                 // ¡LÓGICA CLAVE! Comprobamos si el nuevo mapa es una zona de jefe.
                                 if (orden.nuevoMapa.contains("ZonaJefe")) {
@@ -259,7 +277,32 @@ public class GameServer implements IGameServer {
                     // Solo lo guardamos si aún no lo tenemos.
                     if (paredesDelMapa == null) {
                         paredesDelMapa = paquete.paredes;
-                        System.out.println("[SERVER] Plano del mapa recibido con " + paredesDelMapa.size() + " paredes. ¡Ahora puedo ver las paredes!");
+                        System.out.println("[SERVER] Plano del mapa recibido con " + paredesDelMapa.size() + " paredes.");
+
+                        // --- INICIO DE LA LÓGICA AÑADIDA ---
+                        if (paquete.portales != null && !paquete.portales.isEmpty()) {
+                            System.out.println("[SERVER] Recibida información de " + paquete.portales.size() + " portales. Creándolos...");
+
+                            // Iteramos sobre la información de cada portal recibida.
+                            for (Network.PortalInfo info : paquete.portales) {
+                                // Creamos el ItemState para el portal.
+                                ItemState estadoPortal = new ItemState(proximoIdItem++, info.x, info.y, ItemState.ItemType.TELETRANSPORTE);
+
+                                // Lo añadimos a la lista de ítems activos del servidor.
+                                itemsActivos.put(estadoPortal.id, estadoPortal);
+
+                                // Guardamos su información de destino en nuestro nuevo HashMap.
+                                infoPortales.put(estadoPortal.id, info);
+
+                                // Notificamos a TODOS los clientes que deben crear este nuevo ítem (el portal).
+                                Network.PaqueteItemNuevo paqueteNuevoItem = new Network.PaqueteItemNuevo();
+                                paqueteNuevoItem.estadoItem = estadoPortal;
+                                servidor.sendToAllTCP(paqueteNuevoItem);
+                            }
+                        }
+                        // --- FIN DE LA LÓGICA AÑADIDA ---
+
+                        // La lógica para generar bloques y animales se mantiene.
                         generarBloquesParaElNivel();
                         generarAnimales();
                         sincronizarBloquesConClientes();

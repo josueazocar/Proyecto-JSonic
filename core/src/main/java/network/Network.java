@@ -6,6 +6,7 @@ import com.badlogic.gdx.math.Rectangle;
 import com.esotericsoftware.kryo.Kryo;
 import com.esotericsoftware.kryonet.EndPoint;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 
 // Esta clase centraliza el registro de todos los paquetes de red.
@@ -73,6 +74,7 @@ public class Network {
         kryo.register(PaqueteAtaqueJugadorAEnemigo.class);
         kryo.register(PaqueteEntidadEliminada.class);
         kryo.register(PaqueteActualizacionVida.class);
+        kryo.register(PortalInfo.class);
     }
 
     // --- Definición de los Paquetes ---
@@ -128,12 +130,11 @@ public class Network {
     }
     public static class PaqueteInformacionMapa {
         public java.util.ArrayList<com.badlogic.gdx.math.Rectangle> paredes;
+        public ArrayList<PortalInfo> portales;
     }
 
     public static class PaqueteOrdenCambiarMapa {
         public String nuevoMapa;
-        public float nuevaPosX;
-        public float nuevaPosY;
     }
 
     public static class PaqueteActualizacionPuntuacion {
@@ -234,6 +235,14 @@ public class Network {
     public static class PaqueteActualizacionVida {
         public int idJugador;
         public int nuevaVida;
+    }
+
+    public static class PortalInfo {
+        public float x, y;
+        public float destinoX, destinoY;
+        public String destinoMapa;
+
+        public PortalInfo() {} // Constructor vacío para KryoNet
     }
 
 }
