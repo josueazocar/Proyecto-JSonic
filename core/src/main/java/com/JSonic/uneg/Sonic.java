@@ -79,7 +79,9 @@ public class Sonic extends Player {
         screenProjectionMatrix = new Matrix4();
     }
 
-
+    public void activarEfectoFlash() {
+        this.flashDurationTimer = 0.25f;
+    }
     @Override
     public void KeyHandler() {
         float currentX = estado.x;
@@ -87,10 +89,10 @@ public class Sonic extends Player {
 
         super.KeyHandler();
 
-        if (Gdx.input.isKeyJustPressed(Input.Keys.SPACE) && cleanCooldownTimer <= 0) {
-            this.flashDurationTimer = 0.25f;
-            this.cleanCooldownTimer = CLEAN_COOLDOWN_SECONDS;
-            Gdx.app.log("Sonic", "Habilidad activada. Cooldown de " + CLEAN_COOLDOWN_SECONDS + "s iniciado.");
+        if (Gdx.input.isKeyJustPressed(Input.Keys.SPACE) ) {
+          //  this.flashDurationTimer = 0.25f;
+          //  this.cleanCooldownTimer = CLEAN_COOLDOWN_SECONDS;
+           Gdx.app.log("Sonic", "Habilidad activada. Cooldown de " + CLEAN_COOLDOWN_SECONDS + "s iniciado.");
 
         }
 
@@ -155,9 +157,20 @@ public class Sonic extends Player {
         }
     }
 
+    public void iniciarCooldownVisual() {
+        this.cleanCooldownTimer = CLEAN_COOLDOWN_SECONDS;
+    }
 
     protected String getSpriteSheetPath() {
         return "Entidades/Player/Sonic/sonic.png";
+    }
+
+    public boolean isCleanAbilityReady() {
+        return cleanCooldownTimer <= 0;
+    }
+
+    public TextureRegion getCooldownIndicatorFrame() {
+        return this.cooldownIndicatorFrame;
     }
 
     @Override
@@ -354,12 +367,7 @@ public class Sonic extends Player {
         } else {
             Gdx.app.log("Sonic", "Advertencia: 'frameActual' es nulo en el método draw(). No se puede dibujar a Sonic.");
         }
-
-        if (cleanCooldownTimer <= 0 && cooldownIndicatorFrame != null) {
-            float indicatorX = estado.x + (getTileSize() / 2) - (INDICATOR_SIZE / 2);
-            float indicatorY = estado.y + getTileSize();
-            batch.draw(cooldownIndicatorFrame, indicatorX, indicatorY, INDICATOR_SIZE, INDICATOR_SIZE);
-        }
+        
 
         // --- LÓGICA DE DESTELLO CORREGIDA ---
         if (flashDurationTimer > 0) {

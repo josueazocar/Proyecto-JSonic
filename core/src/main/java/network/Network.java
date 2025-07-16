@@ -67,7 +67,8 @@ public class Network {
 
         kryo.register(PaqueteBasuraDepositada.class);
         kryo.register(PaqueteSincronizarBloques.class);
-      //  Kryo.register(PaqueteHabilidadLimpiezaSonic.class);
+        kryo.register(PaqueteSolicitudHabilidadLimpieza.class);
+        kryo.register(PaqueteHabilidadLimpiezaSonic.class);
     }
 
     // --- Definición de los Paquetes ---
@@ -204,6 +205,9 @@ public class Network {
 
     public static class PaqueteHabilidadLimpiezaSonic {
         // No necesita contenido, su sola existencia es el mensaje.
+    }
+
+    public static class PaqueteSolicitudHabilidadLimpieza {
     }
 
     public static class PaqueteSincronizarBloques {

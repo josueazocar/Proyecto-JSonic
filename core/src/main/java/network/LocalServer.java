@@ -6,6 +6,7 @@ import com.badlogic.gdx.math.Rectangle;
 import network.interfaces.IGameClient;
 import network.interfaces.IGameServer;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Queue;
 import java.util.Random;
@@ -63,6 +64,8 @@ public class LocalServer implements IGameServer {
     private final Queue<Object> paquetesEntrantes = new ConcurrentLinkedQueue<>();
 
     // Referencia directa al único cliente que existirá en este modo
+    private float cooldownHabilidadLimpieza = 0f;
+    private static final float COOLDOWN_HABILIDAD_SONIC = 40.0f;
     private LocalClient clienteLocal;
     private int proximoIdJugador = 1; // En modo local, siempre empezamos en 1
     private static final int ROBOT_SPEED = 1;
@@ -439,6 +442,33 @@ public class LocalServer implements IGameServer {
                 paquetePuntaje.totalBasuraReciclada = this.basuraReciclada; // Enviamos el nuevo total
                 clienteLocal.recibirPaqueteDelServidor(paquetePuntaje);
             }
+           else if (objeto instanceof Network.PaqueteSolicitudHabilidadLimpieza) {
+                // --- INICIO DE LA MODIFICACIÓN ---
+                // ¡El servidor ahora comprueba su propio temporizador!
+                if (cooldownHabilidadLimpieza <= 0) {
+                    System.out.println("[LOCAL SERVER] Habilidad de limpieza de Sonic activada.");
+
+                    // 1. Reiniciamos el cooldown del servidor.
+                    cooldownHabilidadLimpieza = COOLDOWN_HABILIDAD_SONIC;
+
+                    // 2. Aplicamos el efecto al estado del juego.
+                    decreaseContamination(100.0f);
+
+                    // 3. Recogemos la basura (lógica que ya tenías).
+                    for (ItemState item : new ArrayList<>(itemsActivos.values())) {
+                        if (item.tipo == ItemState.ItemType.BASURA || item.tipo == ItemState.ItemType.PIEZA_PLASTICO) {
+                            procesarRecogidaItem(1, item.id);
+                        }
+                    }
+
+                    // 4. Enviamos la notificación de éxito al cliente.
+                    Network.PaqueteHabilidadLimpiezaSonic notificacion = new Network.PaqueteHabilidadLimpiezaSonic();
+                    clienteLocal.recibirPaqueteDelServidor(notificacion);
+                } else {
+                    // Si el jugador lo intenta antes de tiempo, el servidor local lo ignora.
+                    System.out.println("[LOCAL SERVER] Habilidad en cooldown. Solicitud ignorada.");
+                }
+            }
 
 
         }
@@ -454,6 +484,9 @@ public class LocalServer implements IGameServer {
             tiempoDesdeUltimaContaminacion = 0f; // Reseteamos el temporizador
         }
 
+        if (cooldownHabilidadLimpieza > 0) {
+            cooldownHabilidadLimpieza -= deltaTime;
+        }
         //para que se genere mas de un portal y en diferentes mapas
         // --- LÓGICA DE CAMBIO DE MAPA ---
         String mapaActual = manejadorNivel.getNombreMapaActual();
@@ -529,6 +562,29 @@ public class LocalServer implements IGameServer {
         }
     }
 
+    private void procesarRecogidaItem(int idJugador, int idItem) {
+        ItemState itemRecogido = itemsActivos.remove(idItem);
+        if (itemRecogido == null) return;
+
+        if (itemRecogido.tipo == ItemState.ItemType.ANILLO) {
+            int puntaje = puntajesAnillos.getOrDefault(idJugador, 0);
+            puntajesAnillos.put(idJugador, puntaje + 1);
+        } else if (itemRecogido.tipo == ItemState.ItemType.BASURA || itemRecogido.tipo == ItemState.ItemType.PIEZA_PLASTICO) {
+            int puntaje = puntajesBasura.getOrDefault(idJugador, 0);
+            puntajesBasura.put(idJugador, puntaje + 1);
+            contaminationState.decrease(TRASH_CLEANUP_VALUE);
+        }
+
+        // Notificar al cliente (actualización de puntaje y eliminación de ítem)
+        Network.PaqueteActualizacionPuntuacion paquetePuntaje = new Network.PaqueteActualizacionPuntuacion();
+        paquetePuntaje.nuevosAnillos = puntajesAnillos.getOrDefault(idJugador, 0);
+        paquetePuntaje.nuevaBasura = puntajesBasura.getOrDefault(idJugador, 0);
+        clienteLocal.recibirPaqueteDelServidor(paquetePuntaje);
+
+        Network.PaqueteItemEliminado paqueteEliminado = new Network.PaqueteItemEliminado();
+        paqueteEliminado.idItem = idItem;
+        clienteLocal.recibirPaqueteDelServidor(paqueteEliminado);
+    }
 
      private void actualizarEnemigosAI(float deltaTime, LevelManager manejadorNivel, Player personajeJugable)  {
         PlayerState jugador = jugadores.get(1);

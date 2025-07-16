@@ -449,6 +449,20 @@ public class PantallaDeJuego extends PantallaBase {
                         Gdx.app.log("PantallaDeJuego", "Recibido paquete de sincronización de bloques. Actualizando nivel...");
                         manejadorNivel.crearBloquesDesdeServidor(p.todosLosBloques);
                     }
+                } else if (paquete instanceof Network.PaqueteHabilidadLimpiezaSonic) {
+                    Gdx.app.log("PantallaDeJuego", "¡Recibida confirmación del servidor! La habilidad de limpieza fue exitosa.");
+
+                    if (personajeJugable instanceof Sonic) {
+                        // 2. Activamos los efectos visuales y de UI.
+                        ((Sonic) personajeJugable).activarEfectoFlash();
+                        ((Sonic) personajeJugable).iniciarCooldownVisual();
+                    }
+
+                    // 3. Reseteamos la contaminación visualmente para todos.
+                    this.porcentajeContaminacionActual = 0f;
+                    if(contaminationLabel != null) {
+                        contaminationLabel.setText("TOXIC: 0%");
+                    }
                 }
             }
         }
@@ -654,51 +668,24 @@ public class PantallaDeJuego extends PantallaBase {
     }
 
     private void gestionarHabilidadDeLimpiezaDeSonic() {
+        // Solo nos interesa esta lógica si el jugador es una instancia de Sonic.
         if (personajeJugable instanceof Sonic) {
-            Sonic sonic = (Sonic) personajeJugable;
 
-            boolean flashActivoAhora = sonic.getFlashDurationTimer() > 0;
+            // --- INICIO DE LA CORRECCIÓN ---
+            // Se elimina la dependencia del temporizador de destello.
+            // Ahora, detectamos la pulsación de la tecla directamente aquí.
+            if (Gdx.input.isKeyJustPressed(Input.Keys.SPACE)) {
 
-            if (flashActivoAhora && !sonicFlashActivoEnFrameAnterior) {
-                Gdx.app.log("PantallaDeJuego", "Habilidad de limpieza de Sonic detectada!");
+                Gdx.app.log("PantallaDeJuego", "Tecla ESPACIO detectada. Enviando SOLICITUD de habilidad al servidor...");
 
-                // --- INICIO DE LA SOLUCIÓN CORRECTA ---
-
-                // 1. Notificamos al servidor que la habilidad fue usada.
-                // Esto es lo más importante para que el cambio sea permanente.
+                // La lógica de envío es la misma: la interfaz se encarga de dirigirlo
+                // al LocalServer o al GameServer.
                 if (gameClient != null) {
-                    Gdx.app.log("PantallaDeJuego", "Enviando notificación de habilidad de limpieza al servidor.");
-                    Network.PaqueteHabilidadLimpiezaSonic paqueteHabilidad = new Network.PaqueteHabilidadLimpiezaSonic();
-                    gameClient.send(paqueteHabilidad);
+                    Network.PaqueteSolicitudHabilidadLimpieza paqueteSolicitud = new Network.PaqueteSolicitudHabilidadLimpieza();
+                    gameClient.send(paqueteSolicitud);
                 }
-
-                // 2. Mantenemos la lógica de recoger los items de basura cercanos.
-                ArrayList<Integer> idsItemsLimpiezaARecoger = new ArrayList<>();
-                for (ItemVisual item : itemsEnPantalla.values()) {
-                    if (item.estado.tipo == ItemState.ItemType.BASURA || item.estado.tipo == ItemState.ItemType.PIEZA_PLASTICO) {
-                        idsItemsLimpiezaARecoger.add(item.estado.id);
-                    }
-                }
-
-                if (!idsItemsLimpiezaARecoger.isEmpty()) {
-                    Gdx.app.log("PantallaDeJuego", "Enviando solicitud para recoger " + idsItemsLimpiezaARecoger.size() + " ítems de contaminación.");
-                    for (Integer idItem : idsItemsLimpiezaARecoger) {
-                        Network.PaqueteSolicitudRecogerItem paquete = new Network.PaqueteSolicitudRecogerItem();
-                        paquete.idItem = idItem;
-                        gameClient.send(paquete);
-                    }
-                }
-
-                // 3. Reseteamos el porcentaje LOCALMENTE para un efecto visual instantáneo.
-                // Así no esperamos la respuesta del servidor para ver el cambio.
-                this.porcentajeContaminacionActual = 0f;
-                if(contaminationLabel != null) {
-                    contaminationLabel.setText("TOXIC: " + Math.round(this.porcentajeContaminacionActual) + "%");
-                }
-
-                // --- FIN DE LA SOLUCIÓN CORRECTA ---
             }
-            this.sonicFlashActivoEnFrameAnterior = flashActivoAhora;
+            // --- FIN DE LA CORRECCIÓN ---
         }
     }
 
@@ -717,6 +704,21 @@ public class PantallaDeJuego extends PantallaBase {
         manejadorNivel.dibujarAnimales(batch, delta);
 
         personajeJugable.draw(batch);
+
+        if (personajeJugable instanceof Sonic) {
+            Sonic miSonic = (Sonic) personajeJugable;
+
+            // Si la habilidad está lista y tenemos un frame para dibujar...
+            if (miSonic.isCleanAbilityReady() && miSonic.getCooldownIndicatorFrame() != null) {
+                // Calculamos la posición del indicador sobre la cabeza de nuestro Sonic
+                float indicatorX = miSonic.estado.x + (miSonic.getTileSize() / 2) - (32f / 2); // Asumiendo 32f como tamaño del indicador
+                float indicatorY = miSonic.estado.y + miSonic.getTileSize();
+
+                // ¡Lo dibujamos!
+                batch.draw(miSonic.getCooldownIndicatorFrame(), indicatorX, indicatorY, 32f, 32f);
+            }
+        }
+
         for (Player otro : otrosJugadores.values()) otro.draw(batch);
         for (RobotVisual enemigo : enemigosEnPantalla.values()) enemigo.draw(batch);
 

@@ -64,6 +64,8 @@ public class GameServer implements IGameServer {
     private int basuraReciclada = 0;
 
     private final HashMap<Integer, AnimalState> animalesActivos = new HashMap<>();
+    private final HashMap<Integer, Float> cooldownsHabilidadLimpieza = new HashMap<>();
+    private static final float COOLDOWN_HABILIDAD_SONIC = 40.0f; // Cooldown real
     private int proximoIdAnimal = 20000; // ID base para evitar colisiones con otros IDs
 
     // Variables para la lógica de muerte por contaminación
@@ -89,6 +91,7 @@ public class GameServer implements IGameServer {
                 jugadores.put(conexion.getID(), nuevoEstado);
                 puntajesAnillosIndividuales.put(conexion.getID(), 0);
                 puntajesBasuraIndividuales.put(conexion.getID(), 0);
+                cooldownsHabilidadLimpieza.put(conexion.getID(), 0f);
 
                 Network.PaqueteJugadorConectado packetNuevoJugador = new Network.PaqueteJugadorConectado();
                 packetNuevoJugador.nuevoJugador = nuevoEstado;
@@ -336,6 +339,53 @@ public class GameServer implements IGameServer {
                         }
                     }
                 }
+                if (objeto instanceof Network.PaqueteSolicitudHabilidadLimpieza) {
+                    int jugadorId = conexion.getID();
+                    float cooldownActual = cooldownsHabilidadLimpieza.getOrDefault(jugadorId, 0f);
+
+                    // ¡El servidor es la autoridad! Comprueba si el cooldown ha terminado.
+                    if (cooldownActual <= 0) {
+                        System.out.println("[SERVER] Jugador " + jugadorId + " usó la habilidad de limpieza. ¡Aprobado!");
+
+                        // 1. Aplicar el efecto al estado del juego.
+                        contaminationState.decrease(100.0f);
+
+                        // 2. RECOGER TODOS LOS ÍTEMS DE BASURA DEL MAPA.
+                        // Creamos una copia de las claves para iterar de forma segura mientras eliminamos elementos.
+                        ArrayList<Integer> idsItemsARecoger = new ArrayList<>();
+                        synchronized (itemsActivos) { // Sincronizamos para evitar problemas de concurrencia
+                            for (ItemState item : itemsActivos.values()) {
+                                if (item.tipo == ItemState.ItemType.BASURA || item.tipo == ItemState.ItemType.PIEZA_PLASTICO) {
+                                    idsItemsARecoger.add(item.id);
+                                }
+                            }
+                        }
+
+                        // Procesamos la recogida de cada ítem.
+                        for (Integer idItem : idsItemsARecoger) {
+                            // Para cada ítem de basura, aplicamos la misma lógica que si el jugador
+                            // lo hubiera recogido normalmente.
+                            procesarRecogidaItem(jugadorId, idItem);
+                        }
+
+                        // 2. Reiniciar el cooldown para este jugador.
+                        cooldownsHabilidadLimpieza.put(jugadorId, COOLDOWN_HABILIDAD_SONIC);
+
+                        // 3. Notificar a TODOS los clientes del efecto.
+                        // Usamos el paquete que ya tenías para esto.
+                        Network.PaqueteHabilidadLimpiezaSonic notificacion = new Network.PaqueteHabilidadLimpiezaSonic();
+                        servidor.sendToAllTCP(notificacion);
+
+                        // También enviamos la actualización de contaminación inmediatamente.
+                        Network.PaqueteActualizacionContaminacion paqueteContaminacion = new Network.PaqueteActualizacionContaminacion();
+                        paqueteContaminacion.contaminationPercentage = contaminationState.getPercentage();
+                        servidor.sendToAllTCP(paqueteContaminacion);
+
+                    } else {
+                        // Si el jugador intenta usar la habilidad antes de tiempo, el servidor simplemente lo ignora.
+                        System.out.println("[SERVER] Jugador " + jugadorId + " intentó usar la habilidad, pero está en cooldown. ¡Ignorado!");
+                    }
+                }
             }
 
             public void disconnected(Connection conexion) {
@@ -393,6 +443,37 @@ public class GameServer implements IGameServer {
 
 
         System.out.println("[SERVER] Servidor online iniciado y escuchando en el puerto " + Network.PORT);
+    }
+
+    private void procesarRecogidaItem(int idJugador, int idItem) {
+        synchronized (itemsActivos) {
+            ItemState itemRecogido = itemsActivos.remove(idItem);
+            if (itemRecogido == null) return; // El ítem ya fue recogido por otro evento.
+
+            System.out.println("[SERVER] Ítem con ID " + idItem + " recogido por jugador " + idJugador);
+
+            if (itemRecogido.tipo == ItemState.ItemType.ANILLO) {
+                int puntaje = puntajesAnillosIndividuales.getOrDefault(idJugador, 0);
+                puntajesAnillosIndividuales.put(idJugador, puntaje + 1);
+                totalAnillosGlobal++;
+            } else if (itemRecogido.tipo == ItemState.ItemType.BASURA || itemRecogido.tipo == ItemState.ItemType.PIEZA_PLASTICO) {
+                int puntaje = puntajesBasuraIndividuales.getOrDefault(idJugador, 0);
+                puntajesBasuraIndividuales.put(idJugador, puntaje + 1);
+                totalBasuraGlobal++;
+                contaminationState.decrease(TRASH_CLEANUP_VALUE);
+            }
+
+            // Notificar al jugador específico sobre su nuevo puntaje.
+            Network.PaqueteActualizacionPuntuacion paquetePuntaje = new Network.PaqueteActualizacionPuntuacion();
+            paquetePuntaje.nuevosAnillos = puntajesAnillosIndividuales.getOrDefault(idJugador, 0);
+            paquetePuntaje.nuevaBasura = puntajesBasuraIndividuales.getOrDefault(idJugador, 0);
+            servidor.sendToTCP(idJugador, paquetePuntaje);
+
+            // Notificar a TODOS los jugadores que el ítem ha desaparecido del mundo.
+            Network.PaqueteItemEliminado paqueteEliminado = new Network.PaqueteItemEliminado();
+            paqueteEliminado.idItem = idItem;
+            servidor.sendToAllTCP(paqueteEliminado);
+        }
     }
 
     private void actualizarEnemigosAI(float deltaTime) {
@@ -520,6 +601,8 @@ public class GameServer implements IGameServer {
             tiempoDesdeUltimaContaminacion = 0f; // Reseteamos el temporizador
         }
 
+
+
         this.tiempoGeneracionTeleport += deltaTime;
         if ((int)this.tiempoGeneracionTeleport % 2 == 0 && (int)this.tiempoGeneracionTeleport != 0) {
         }
@@ -562,6 +645,13 @@ public class GameServer implements IGameServer {
             Network.PaqueteActualizacionAnimales paqueteAnimales = new Network.PaqueteActualizacionAnimales();
             paqueteAnimales.estadosAnimales = this.animalesActivos; // Usa el mapa principal directamente
             servidor.sendToAllTCP(paqueteAnimales);
+        }
+
+        for (Integer jugadorId : cooldownsHabilidadLimpieza.keySet()) {
+            float cooldownActual = cooldownsHabilidadLimpieza.get(jugadorId);
+            if (cooldownActual > 0) {
+                cooldownsHabilidadLimpieza.put(jugadorId, cooldownActual - deltaTime);
+            }
         }
     }
 
