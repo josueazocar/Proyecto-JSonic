@@ -20,5 +20,6 @@ public class PlayerState extends EntityState {
             this.x = 0f;
             this.y = 0f;
             this.estadoAnimacion = Player.EstadoPlayer.IDLE_RIGHT; // Estado inicial
+            this.vida = 100;
         }
 }

@@ -13,6 +13,8 @@ public class Enemy extends Entity {
     protected Texture spriteSheet;
     protected TextureRegion frameActual;
     protected float tiempoXFrame;
+    protected static final float COOLDOWN_ENTRE_GOLPES = 0.5f; // Medio segundo entre golpes
+    protected float tiempoDesdeUltimoGolpe = 0f;
 
     protected EnumMap<EnemigoState.EstadoEnemigo, Animation<TextureRegion>> animations;
     protected TextureRegion[] frameIdleRight;
@@ -36,6 +38,14 @@ public class Enemy extends Entity {
     @Override
     protected void setDefaultValues() {
 
+    }
+
+    public void marcarComoGolpeado() {
+        this.tiempoDesdeUltimoGolpe = COOLDOWN_ENTRE_GOLPES;
+    }
+
+    public boolean haSidoGolpeadoRecientemente() {
+        return tiempoDesdeUltimoGolpe > 0;
     }
 
     @Override

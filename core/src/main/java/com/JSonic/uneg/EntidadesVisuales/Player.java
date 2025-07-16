@@ -128,14 +128,26 @@ protected EnumMap<EstadoPlayer, Animation<TextureRegion>> animations;
         bounds.set(estado.x + collisionOffsetX, estado.y + collisionOffsetY, collisionWidth, collisionHeight);
         return bounds;
     }
-//colisiones
 
-    /**
-     * CAMBIO: Nuevo método privado para verificar colisiones con los objetos del mapa.
-     * @param newX La coordenada X tentativa para el movimiento.
-     * @param newY La coordenada Y tentativa para el movimiento.
-     * @return true si hay colisión, false de lo contrario.
-     */
+    public boolean estaAtacando() {
+        if (this.estado == null || this.estado.estadoAnimacion == null) {
+            return false;
+        }
+
+        switch (this.estado.estadoAnimacion) {
+            case HIT_RIGHT:
+            case HIT_LEFT:
+            case KICK_RIGHT:
+            case KICK_LEFT:
+            case SPECIAL_RIGHT:
+            case SPECIAL_LEFT:
+            case PUNCH_LEFT:
+            case PUNCH_RIGHT:
+                return true;
+            default:
+                return false;
+        }
+    }
     protected boolean checkCollision(float newX, float newY) {
         if (levelManager == null) {
             return false;

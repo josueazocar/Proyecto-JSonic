@@ -73,7 +73,7 @@ public class GameServer implements IGameServer {
     // Variables para la lógica de muerte por contaminación
     private float tiempoParaProximaMuerteAnimal = 20f; // Temporizador (ej: 20 segundos)
     private boolean muertesAnimalesActivas = false;
-
+    private volatile boolean alMenosUnJugadorHaEnviadoPosicion = false;
 
     public GameServer() {
         servidor = new Server();
@@ -134,6 +134,11 @@ public class GameServer implements IGameServer {
                         estadoJugador.y = paquete.y;
                         estadoJugador.estadoAnimacion = paquete.estadoAnimacion;
                         servidor.sendToAllExceptTCP(conexion.getID(), paquete);
+
+                        if (!alMenosUnJugadorHaEnviadoPosicion) {
+                            System.out.println("[SERVER] Primera posición real recibida. ¡La IA puede comenzar!");
+                            alMenosUnJugadorHaEnviadoPosicion = true;
+                        }
                     }
                 }
                 if (objeto instanceof Network.SolicitudAccesoPaquete solicitud) {
@@ -165,17 +170,35 @@ public class GameServer implements IGameServer {
                                 // Creamos la ORDEN de cambio de mapa.
                                 Network.PaqueteOrdenCambiarMapa orden = new Network.PaqueteOrdenCambiarMapa();
                                 orden.nuevoMapa = "maps/ZonaJefeN1.tmx";
-                                orden.nuevaPosX = 70f;   // Coordenada X de llegada en el nuevo mapa.
-                                orden.nuevaPosY = 250f;  // Coordenada Y de llegada en el nuevo mapa.
+                                orden.nuevaPosX = 70f;
+                                orden.nuevaPosY = 250f;
 
-                                // Enviamos la orden A TODOS los jugadores conectados para cambiar de mapa.
+                                // Enviamos la orden de cambio de mapa a TODOS los jugadores.
                                 servidor.sendToAllTCP(orden);
 
-                                // Adicionalmente, notificamos a TODOS los jugadores que este ítem (el portal) ya no existe.
+                                // Limpiamos los enemigos del mapa anterior.
+                                enemigosActivos.clear();
+
+                                // ¡LÓGICA CLAVE! Comprobamos si el nuevo mapa es una zona de jefe.
+                                if (orden.nuevoMapa.contains("ZonaJefe")) {
+                                    System.out.println("[SERVER] Detectado mapa de jefe. ¡Creando a Robotnik!");
+
+                                    // Solo si es un mapa de jefe, creamos y enviamos la instancia del jefe.
+                                    EnemigoState estadoRobotnik = new EnemigoState(999, 300, 100, 100, EnemigoState.EnemigoType.ROBOTNIK);
+                                    enemigosActivos.put(estadoRobotnik.id, estadoRobotnik);
+
+                                    Network.PaqueteEnemigoNuevo paqueteRobotnik = new Network.PaqueteEnemigoNuevo();
+                                    paqueteRobotnik.estadoEnemigo = estadoRobotnik;
+                                    servidor.sendToAllTCP(paqueteRobotnik);
+                                }
+
+                                // Notificamos a todos que el portal ha sido eliminado.
                                 Network.PaqueteItemEliminado paqueteEliminado = new Network.PaqueteItemEliminado();
                                 paqueteEliminado.idItem = paquete.idItem;
                                 servidor.sendToAllTCP(paqueteEliminado);
-                                paredesDelMapa = null; // El servidor "olvida" el mapa anterior.
+
+                                // El servidor "olvida" las paredes del mapa anterior para poder cargar las nuevas.
+                                paredesDelMapa = null;
                             }
                             // CASO GENERAL: Es cualquier otro ítem (anillo, basura, etc.).
                             else {
@@ -387,12 +410,29 @@ public class GameServer implements IGameServer {
                         // Si el jugador intenta usar la habilidad antes de tiempo, el servidor simplemente lo ignora.
                         System.out.println("[SERVER] Jugador " + jugadorId + " intentó usar la habilidad, pero está en cooldown. ¡Ignorado!");
                     }
+                }  if (objeto instanceof Network.PaqueteAtaqueJugadorAEnemigo paquete) {
+                    synchronized (enemigosActivos) {
+                        EnemigoState enemigo = enemigosActivos.get(paquete.idEnemigo);
+                        if (enemigo != null && enemigo.vida > 0) {
+                            enemigo.vida -= paquete.danio;
+                            System.out.println("[SERVER] Enemigo ID " + enemigo.id + " recibió " + paquete.danio + " de daño. Vida restante: " + enemigo.vida);
+                            if (enemigo.vida <= 0) {
+                                System.out.println("[SERVER] ¡Enemigo ID " + enemigo.id + " ha sido derrotado!");
+                                enemigosActivos.remove(enemigo.id);
+                                Network.PaqueteEntidadEliminada notificacionMuerte = new Network.PaqueteEntidadEliminada();
+                                notificacionMuerte.idEntidad = enemigo.id;
+                                notificacionMuerte.esJugador = false;
+                                servidor.sendToAllTCP(notificacionMuerte);
+                            }
+                        }
+                    }
                 }
             }
 
             public void disconnected(Connection conexion) {
                 System.out.println("[SERVER] Un cliente se ha desconectado.");
                 jugadores.remove(conexion.getID());
+                cooldownsHabilidadLimpieza.remove(conexion.getID());
             }
         });
 
@@ -403,16 +443,6 @@ public class GameServer implements IGameServer {
             return;
         }
         servidor.start();
-
-        // Damos vida a Robotnik en el servidor.
-        // Usamos un ID alto como 999 para distinguirlo fácilmente.
-        EnemigoState estadoRobotnik = new EnemigoState(999, 300, 100, 100, EnemigoState.EnemigoType.ROBOTNIK);
-        this.enemigosActivos.put(estadoRobotnik.id, estadoRobotnik);
-        System.out.println("[SERVER] Robotnik ha sido creado en el servidor.");
-
-        Network.PaqueteEnemigoNuevo paqueteRobotnik = new Network.PaqueteEnemigoNuevo();
-        paqueteRobotnik.estadoEnemigo = estadoRobotnik;
-        servidor.sendToAllTCP(paqueteRobotnik);
 
         new Thread(() -> {
             System.out.println("[SERVER] Hilo de juego iniciado. Esperando el plano del mapa del primer cliente...");
@@ -479,30 +509,69 @@ public class GameServer implements IGameServer {
     }
 
     private void actualizarEnemigosAI(float deltaTime) {
+        // Si no hay jugadores en el servidor, no hay nada que hacer.
         if (jugadores.isEmpty()) {
             return;
         }
 
+        // Iteramos sobre cada enemigo activo en el servidor.
         for (EnemigoState enemigo : enemigosActivos.values()) {
-            // --- Lógica para Robotnik (Jefe) ---
-            if (enemigo.tipo == EnemigoState.EnemigoType.ROBOTNIK) {
-                PlayerState jugadorMasCercano = null;
-                float distanciaMinima = Float.MAX_VALUE;
+            // 1. Actualizamos el estado interno del enemigo (incluido su cooldown de ataque).
+            enemigo.actualizar(deltaTime);
 
-                for (PlayerState jugador : jugadores.values()) {
+            // 2. Buscamos al jugador VIVO más cercano.
+            PlayerState jugadorMasCercano = null;
+            float distanciaMinima = Float.MAX_VALUE;
+
+            for (PlayerState jugador : jugadores.values()) {
+                // Los enemigos solo persiguen a jugadores que no han sido derrotados.
+                if (jugador.vida > 0) {
                     float d = (float) Math.sqrt(Math.pow(jugador.x - enemigo.x, 2) + Math.pow(jugador.y - enemigo.y, 2));
                     if (d < distanciaMinima) {
                         distanciaMinima = d;
                         jugadorMasCercano = jugador;
                     }
                 }
+            }
 
-                if (jugadorMasCercano == null) continue;
+            // Si no se encontró ningún jugador vivo, el enemigo se queda quieto.
+            if (jugadorMasCercano == null) {
+                enemigo.estadoAnimacion = enemigo.mirandoDerecha ? EnemigoState.EstadoEnemigo.IDLE_RIGHT : EnemigoState.EstadoEnemigo.IDLE_LEFT;
+                continue; // Pasamos al siguiente enemigo.
+            }
 
+            // 3. Se aplica la lógica específica según el tipo de enemigo.
+
+            // --- Lógica para Robotnik (Jefe) ---
+            if (enemigo.tipo == EnemigoState.EnemigoType.ROBOTNIK) {
                 float distanciaX = jugadorMasCercano.x - enemigo.x;
                 float distanciaY = jugadorMasCercano.y - enemigo.y;
 
-                if (distanciaMinima > RANGO_DETENERSE_ROBOTNIK) {
+                if (distanciaMinima <= RANGO_DETENERSE_ROBOTNIK) {
+                    // Si está en rango, ataca.
+                    enemigo.estadoAnimacion = enemigo.mirandoDerecha ? EnemigoState.EstadoEnemigo.IDLE_RIGHT : EnemigoState.EstadoEnemigo.IDLE_LEFT;
+                    if (enemigo.puedeAtacar()) {
+                        enemigo.reiniciarCooldownAtaque();
+                        jugadorMasCercano.vida -= 5; // Daño del jefe.
+                        System.out.println("[SERVER] JEFE atacó a Jugador ID " + jugadorMasCercano.id + ". Vida restante: " + jugadorMasCercano.vida);
+
+                        // Notifica al jugador sobre su nueva vida.
+                        Network.PaqueteActualizacionVida paqueteVida = new Network.PaqueteActualizacionVida();
+                        paqueteVida.idJugador = jugadorMasCercano.id;
+                        paqueteVida.nuevaVida = jugadorMasCercano.vida;
+                        servidor.sendToTCP(jugadorMasCercano.id, paqueteVida);
+
+                        // Comprueba si el jugador ha sido derrotado.
+                        if (jugadorMasCercano.vida <= 0) {
+                            jugadores.remove(jugadorMasCercano.id);
+                            Network.PaqueteEntidadEliminada notificacionMuerte = new Network.PaqueteEntidadEliminada();
+                            notificacionMuerte.idEntidad = jugadorMasCercano.id;
+                            notificacionMuerte.esJugador = true;
+                            servidor.sendToAllTCP(notificacionMuerte);
+                        }
+                    }
+                } else {
+                    // Si está lejos, se mueve hacia el jugador.
                     Vector2 direccionDeseada = new Vector2(distanciaX, distanciaY).nor();
                     enemigo.x += direccionDeseada.x * VELOCIDAD_ROBOTNIK * deltaTime;
                     enemigo.y += direccionDeseada.y * VELOCIDAD_ROBOTNIK * deltaTime;
@@ -511,30 +580,15 @@ public class GameServer implements IGameServer {
                         enemigo.mirandoDerecha = direccionDeseada.x > 0;
                     }
                     enemigo.estadoAnimacion = enemigo.mirandoDerecha ? EnemigoState.EstadoEnemigo.RUN_RIGHT : EnemigoState.EstadoEnemigo.RUN_LEFT;
-                } else {
-                    enemigo.estadoAnimacion = enemigo.mirandoDerecha ? EnemigoState.EstadoEnemigo.IDLE_RIGHT : EnemigoState.EstadoEnemigo.IDLE_LEFT;
                 }
-                continue; // Saltamos al siguiente enemigo.
+                continue; // La lógica para el jefe termina aquí.
             }
 
             // --- Lógica para Robots Normales ---
-            PlayerState jugadorMasCercano = null;
-            float distanciaMinima = Float.MAX_VALUE;
-
-            for (PlayerState jugador : jugadores.values()) {
-                float d = (float) Math.sqrt(Math.pow(jugador.x - enemigo.x, 2) + Math.pow(jugador.y - enemigo.y, 2));
-                if (d < distanciaMinima) {
-                    distanciaMinima = d;
-                    jugadorMasCercano = jugador;
-                }
-            }
-
-            if (jugadorMasCercano == null) continue;
-
             float dx = jugadorMasCercano.x - enemigo.x;
-            float dy = jugadorMasCercano.y - enemigo.y;
             float distance = distanciaMinima;
 
+            // Si el enemigo ya está en su animación de ataque, no hacemos nada hasta que termine.
             if (enemigo.estadoAnimacion == EnemigoState.EstadoEnemigo.HIT_RIGHT || enemigo.estadoAnimacion == EnemigoState.EstadoEnemigo.HIT_LEFT) {
                 continue;
             }
@@ -542,45 +596,61 @@ public class GameServer implements IGameServer {
             EnemigoState.EstadoEnemigo estadoAnterior = enemigo.estadoAnimacion;
 
             if (distance <= ROBOT_ATTACK_RANGE) {
+                // Si está en rango, ataca.
                 if (Math.abs(dx) > 1.0f) {
                     enemigo.mirandoDerecha = dx > 0;
                 }
                 enemigo.estadoAnimacion = enemigo.mirandoDerecha ? EnemigoState.EstadoEnemigo.HIT_RIGHT : EnemigoState.EstadoEnemigo.HIT_LEFT;
 
+                if (enemigo.puedeAtacar()) {
+                    enemigo.reiniciarCooldownAtaque();
+                    jugadorMasCercano.vida -= 1;
+                    System.out.println("[SERVER] Robot atacó a Jugador ID " + jugadorMasCercano.id + ". Vida restante: " + jugadorMasCercano.vida);
+
+                    Network.PaqueteActualizacionVida paqueteVida = new Network.PaqueteActualizacionVida();
+                    paqueteVida.idJugador = jugadorMasCercano.id;
+                    paqueteVida.nuevaVida = jugadorMasCercano.vida;
+                    servidor.sendToTCP(jugadorMasCercano.id, paqueteVida);
+
+                    if (jugadorMasCercano.vida <= 0) {
+                        jugadores.remove(jugadorMasCercano.id);
+                        Network.PaqueteEntidadEliminada notificacionMuerte = new Network.PaqueteEntidadEliminada();
+                        notificacionMuerte.idEntidad = jugadorMasCercano.id;
+                        notificacionMuerte.esJugador = true;
+                        servidor.sendToAllTCP(notificacionMuerte);
+                    }
+                }
+
             } else if (distance <= ROBOT_DETECTION_RANGE) {
-                if (Math.abs(dx) > 1.0f) { // Usamos un umbral para evitar "temblores" de sprite.
+                // Si está en rango de persecución, corre.
+                if (Math.abs(dx) > 1.0f) {
                     enemigo.mirandoDerecha = dx > 0;
                 }
-                // La animación de correr siempre se basará en la dirección actual (que puede ser la anterior).
                 enemigo.estadoAnimacion = enemigo.mirandoDerecha ? EnemigoState.EstadoEnemigo.RUN_RIGHT : EnemigoState.EstadoEnemigo.RUN_LEFT;
-
             } else {
-                // Si está quieto (idle), no debería cambiar de dirección espontáneamente.
-                // Mantenemos la dirección que ya tenía.
+                // Si está lejos, se queda quieto.
                 enemigo.estadoAnimacion = enemigo.mirandoDerecha ? EnemigoState.EstadoEnemigo.IDLE_RIGHT : EnemigoState.EstadoEnemigo.IDLE_LEFT;
             }
 
+            // Si el estado ha cambiado, reinicia el temporizador de la animación.
             if (estadoAnterior != enemigo.estadoAnimacion) {
                 enemigo.tiempoEnEstado = 0;
             }
 
-            // Lógica de Movimiento
+            // Lógica de Movimiento (se ejecuta solo si el estado es RUN).
             if (enemigo.estadoAnimacion == EnemigoState.EstadoEnemigo.RUN_RIGHT || enemigo.estadoAnimacion == EnemigoState.EstadoEnemigo.RUN_LEFT) {
                 float nextX = enemigo.x;
                 float nextY = enemigo.y;
                 if (dx > 0) nextX += ROBOT_SPEED; else if (dx < 0) nextX -= ROBOT_SPEED;
+                float dy = jugadorMasCercano.y - enemigo.y; // Recalculamos dy aquí para el movimiento vertical.
                 if (dy > 0) nextY += ROBOT_SPEED; else if (dy < 0) nextY -= ROBOT_SPEED;
 
-                com.badlogic.gdx.math.Rectangle robotBounds = new com.badlogic.gdx.math.Rectangle(enemigo.x, enemigo.y, 48, 48);
-
-                // Comprobar colisión en X usando el método centralizado
+                Rectangle robotBounds = new Rectangle(enemigo.x, enemigo.y, 48, 48);
                 robotBounds.setX(nextX);
                 if (!hayColision(robotBounds)) {
                     enemigo.x = nextX;
                 }
-
-                // Comprobar colisión en Y usando el método centralizado
-                robotBounds.setX(enemigo.x); // Volver a la X actual
+                robotBounds.setX(enemigo.x);
                 robotBounds.setY(nextY);
                 if (!hayColision(robotBounds)) {
                     enemigo.y = nextY;
@@ -630,11 +700,11 @@ public class GameServer implements IGameServer {
 
             this.teleportGenerado = true; // Marcamos como generado
         }
-
-        actualizarDrones(deltaTime);
-        actualizarEnemigosAI(deltaTime);
-        actualizarEstadoAnimalesPorContaminacion(deltaTime);
-
+        if (alMenosUnJugadorHaEnviadoPosicion) {
+            actualizarDrones(deltaTime);
+            actualizarEnemigosAI(deltaTime);
+            actualizarEstadoAnimalesPorContaminacion(deltaTime);
+        }
         generarNuevosItems(deltaTime);
         generarNuevosEnemigos(deltaTime);
 
@@ -766,7 +836,7 @@ public class GameServer implements IGameServer {
             }
 
             if (!hayColision) {
-                EnemigoState nuevoEstado = new EnemigoState(proximoIdEnemigo++, bounds.x, bounds.y, 100, EnemigoState.EnemigoType.ROBOT);
+                EnemigoState nuevoEstado = new EnemigoState(proximoIdEnemigo++, bounds.x, bounds.y, 3, EnemigoState.EnemigoType.ROBOT);
                 enemigosActivos.put(nuevoEstado.id, nuevoEstado);
                 Network.PaqueteEnemigoNuevo paquete = new Network.PaqueteEnemigoNuevo();
                 paquete.estadoEnemigo = nuevoEstado;

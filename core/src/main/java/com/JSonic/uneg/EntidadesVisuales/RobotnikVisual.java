@@ -17,6 +17,7 @@ public class RobotnikVisual extends Enemy {
     private LevelManager levelManager;
     private IGameClient gameClient;
 
+
     public RobotnikVisual(EnemigoState estadoInicial, LevelManager levelManager) {
         this.estado = estadoInicial;
         this.levelManager = levelManager;
@@ -136,7 +137,9 @@ public class RobotnikVisual extends Enemy {
 
     public void update(float deltaTime) {
         tiempoXFrame += deltaTime;
-
+        if (tiempoDesdeUltimoGolpe > 0) {
+            tiempoDesdeUltimoGolpe -= deltaTime;
+        }
         // Si tienes lógica de ataque para Robotnik, descomenta y ajusta
         /*
         boolean estaAtacando = estado.estadoAnimacion == EstadoEnemigo.HIT_LEFT || estado.estadoAnimacion == EstadoEnemigo.HIT_RIGHT;

@@ -6,6 +6,8 @@ public class EnemigoState extends EntityState {
     public EstadoEnemigo estadoAnimacion; // Nuevo: Para controlar la animación del enemigo
     public float tiempoEnEstado = 0f;
     public float tiempoDeEnfriamientoAtaque = 0f;
+    private transient float tiempoHastaProximoAtaque = 0f;
+    private static final float COOLDOWN_ATAQUE_ENEMIGO = 1.0f; // 1 ataque por segundo
 
     public enum EnemigoType {
         BOMBA,
@@ -42,5 +44,19 @@ public class EnemigoState extends EntityState {
         this.estadoAnimacion = EstadoEnemigo.IDLE_RIGHT; // Estado inicial por defecto
         this.tiempoEnEstado = 0f;
         this.tiempoDeEnfriamientoAtaque = 0f;
+    }
+
+    public void actualizar(float deltaTime) {
+        if (tiempoHastaProximoAtaque > 0) {
+            tiempoHastaProximoAtaque -= deltaTime;
+        }
+    }
+
+    public boolean puedeAtacar() {
+        return tiempoHastaProximoAtaque <= 0;
+    }
+
+    public void reiniciarCooldownAtaque() {
+        this.tiempoHastaProximoAtaque = COOLDOWN_ATAQUE_ENEMIGO;
     }
 }

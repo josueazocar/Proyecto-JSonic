@@ -17,6 +17,7 @@ public class RobotVisual extends Enemy {
 
     private LevelManager levelManager;
     private IGameClient gameClient;
+    private boolean animacionDeAtaqueTerminada = false;
 
     public RobotVisual(EnemigoState estadoInicial, LevelManager levelManager) {
         this.estado = estadoInicial;
@@ -34,7 +35,7 @@ public class RobotVisual extends Enemy {
         tiempoXFrame = 0.0f;
         CargarSprites();
         setEstadoActual(estado.estadoAnimacion);
-        setVida(100);
+       // setVida(3);
     }
     public RobotVisual(EnemigoState estadoInicial) {
         this.estado = estadoInicial;
@@ -118,6 +119,9 @@ public class RobotVisual extends Enemy {
     public void update(float deltaTime) {
         tiempoXFrame += deltaTime;
 
+        if (tiempoDesdeUltimoGolpe > 0) {
+            tiempoDesdeUltimoGolpe -= deltaTime;
+        }
         // 1. Revisa si una animación de ataque ha terminado.
         boolean estaAtacando = estado.estadoAnimacion == EstadoEnemigo.HIT_LEFT || estado.estadoAnimacion == EstadoEnemigo.HIT_RIGHT;
         if (estaAtacando) {
@@ -163,9 +167,18 @@ public class RobotVisual extends Enemy {
         }
     }
 
+    // --- FIN: CÓDIGO A AÑADIR (3/3) ---
     public void dispose() {
         if (spriteSheet != null) {
             spriteSheet.dispose();
         }
+    }
+    public boolean haTerminadoAnimacionDeAtaque() {
+        return animacionDeAtaqueTerminada;
+    }
+
+    // Llama a este método después de enviar el paquete para que no se envíe múltiples veces.
+    public void reiniciarBanderaDeAnimacion() {
+        this.animacionDeAtaqueTerminada = false;
     }
 }

@@ -470,6 +470,73 @@ public class PantallaDeJuego extends PantallaBase {
                     if(contaminationLabel != null) {
                         contaminationLabel.setText("TOXIC: 0%");
                     }
+                } else if (paquete instanceof Network.PaqueteActualizacionVida p) {
+                    // El servidor nos informa que la vida de un jugador ha cambiado.
+
+                    // Comprobamos si la actualización de vida es para NUESTRO jugador.
+                    if (personajeJugable != null && p.idJugador == personajeJugable.estado.id) {
+
+                        // Actualizamos el estado de vida de nuestro jugador.
+                        // Asumimos que tienes un método setVida que también actualiza la UI (la barra de vida).
+                        personajeJugable.setVida(p.nuevaVida);
+                        System.out.println("¡Recibido daño! Mi vida ahora es: " + p.nuevaVida);
+                    }
+                    // Nota: En este diseño, no actualizamos la vida de los otros jugadores,
+                    // pero si en el futuro quisieras mostrar sus barras de vida, la lógica iría aquí.
+                }
+                  else if (paquete instanceof Network.PaqueteEntidadEliminada p) {
+                    System.out.println("Recibida orden de eliminar entidad con ID: " + p.idEntidad);
+
+                    // Primero, determinamos si la entidad eliminada es un jugador o un enemigo.
+                    if (p.esJugador) {
+                        // --- LÓGICA PARA JUGADORES ---
+
+                        // Comprobamos si el jugador eliminado somos nosotros.
+                        if (personajeJugable != null && p.idEntidad == personajeJugable.estado.id) {
+                            System.out.println("¡He sido derrotado! -- GAME OVER --");
+
+                            // Aquí va tu lógica de Game Over.
+                            // Por ejemplo, podrías mostrar un mensaje y cambiar de pantalla.
+                            // Una forma segura de desactivar al jugador es la siguiente:
+                            personajeJugable.setVida(0); // Aseguramos que la vida esté en 0.
+                            // Para evitar NullPointerExceptions, en lugar de hacer 'personajeJugable = null',
+                            // es mejor tener una bandera. En tu método update, podrías tener:
+                            // if (personajeJugable.estaMuerto()) return;
+
+                            // Por ahora, una simple desactivación puede ser suficiente:
+                            // this.juegoPrincipal.setScreen(new GameOverScreen(this.juegoPrincipal));
+
+                        } else {
+                            // Si es OTRO jugador, lo eliminamos del mapa de 'otrosJugadores'.
+                            System.out.println("El jugador " + p.idEntidad + " ha sido derrotado.");
+                            Player otroJugador = otrosJugadores.remove(p.idEntidad);
+
+                            // Es buena práctica comprobar si existía y liberar sus recursos.
+                            if (otroJugador != null) {
+                                otroJugador.dispose();
+                            }
+                        }
+
+                    } else {
+                        // --- LÓGICA PARA ENEMIGOS ---
+
+                        // Primero, comprobamos si es el jefe (que es una variable separada).
+                        if (eggman != null && p.idEntidad == eggman.estado.id) {
+                            System.out.println("¡El jefe Robotnik ha sido derrotado!");
+                            eggman.dispose(); // Liberamos sus recursos.
+                            eggman = null;    // Lo eliminamos.
+
+                        } else {
+                            // Si no es el jefe, es un robot normal. Lo eliminamos del mapa de 'enemigosEnPantalla'.
+                            System.out.println("El enemigo " + p.idEntidad + " ha sido derrotado.");
+                            RobotVisual enemigo = enemigosEnPantalla.remove(p.idEntidad);
+
+                            // Liberamos sus recursos para evitar fugas de memoria.
+                            if (enemigo != null) {
+                                enemigo.dispose();
+                            }
+                        }
+                    }
                 }
             }
         }
@@ -618,50 +685,57 @@ public class PantallaDeJuego extends PantallaBase {
             otro.update(deltat);
         }
 
-        for (RobotVisual enemigo : enemigosEnPantalla.values()){
+        for (RobotVisual enemigo : enemigosEnPantalla.values()) {
+            // La detección de colisión de bounds sigue ocurriendo en el cliente.
             if (personajeJugable.getBounds().overlaps(enemigo.getBounds())) {
-                boolean jugadorEstaAtacando = personajeJugable.estado.estadoAnimacion == EstadoPlayer.HIT_RIGHT ||
-                    personajeJugable.estado.estadoAnimacion == EstadoPlayer.HIT_LEFT ||
-                    personajeJugable.estado.estadoAnimacion == EstadoPlayer.KICK_RIGHT ||
-                    personajeJugable.estado.estadoAnimacion == EstadoPlayer.KICK_LEFT ||
-                    personajeJugable.estado.estadoAnimacion == EstadoPlayer.SPECIAL_LEFT ||
-                    personajeJugable.estado.estadoAnimacion == EstadoPlayer.SPECIAL_RIGHT;
 
-                if (jugadorEstaAtacando && enemigo.estado.estadoAnimacion != EnemigoState.EstadoEnemigo.HIT_LEFT && enemigo.estado.estadoAnimacion != EnemigoState.EstadoEnemigo.HIT_RIGHT) {
-                    enemigo.setVida(enemigo.getVida() - 1);
-                } else if (!jugadorEstaAtacando && (enemigo.estado.estadoAnimacion == EnemigoState.EstadoEnemigo.HIT_LEFT || enemigo.estado.estadoAnimacion == EnemigoState.EstadoEnemigo.HIT_RIGHT)) {
-                    personajeJugable.setVida(personajeJugable.getVida() - 1);
-                } else if (jugadorEstaAtacando && (enemigo.estado.estadoAnimacion == EnemigoState.EstadoEnemigo.HIT_LEFT || enemigo.estado.estadoAnimacion == EnemigoState.EstadoEnemigo.HIT_RIGHT)) {
-                    Random random = new Random();
-                    if (random.nextBoolean()) {
-                        personajeJugable.setVida(personajeJugable.getVida() - 1);
-                    } else {
-                        enemigo.setVida(enemigo.getVida() - 1);
+                // Usamos los nuevos métodos que acabamos de crear.
+                boolean jugadorAtaca = personajeJugable.estaAtacando();
+                boolean enemigoEnCooldown = enemigo.haSidoGolpeadoRecientemente();
+
+                // Si el jugador está atacando y el enemigo no está en cooldown...
+                if (jugadorAtaca && !enemigoEnCooldown) {
+
+                    // a) Marcamos al enemigo para que no reciba más golpes por un momento.
+                    enemigo.marcarComoGolpeado();
+
+                    // b) Informamos al servidor del ataque.
+                    Gdx.app.log("Cliente->Servidor", "Reportando golpe al enemigo ID: " + enemigo.estado.id);
+                    if (gameClient != null) {
+                        Network.PaqueteAtaqueJugadorAEnemigo paquete = new Network.PaqueteAtaqueJugadorAEnemigo();
+                        paquete.idEnemigo = enemigo.estado.id;
+                        // paquete.danio = 1; // Podrías añadir daño variable aquí
+                        gameClient.send(paquete);
                     }
                 }
             }
+            // El update del enemigo se mantiene para que actualice su animación y cooldown.
             enemigo.update(deltat);
         }
-        Iterator<RobotVisual> iterator = enemigosEnPantalla.values().iterator();
-        while (iterator.hasNext()) {
-            RobotVisual enemigo = iterator.next();
-            if(enemigo.getVida() <= 0){
-                enemigo.dispose();
-                iterator.remove();
-            }
-        }
 
-        if (eggman != null){
+//        Iterator<RobotVisual> iterator = enemigosEnPantalla.values().iterator();
+//        while (iterator.hasNext()) {
+//            RobotVisual enemigo = iterator.next();
+//            if(enemigo.getVida() <= 0){
+//                enemigo.dispose();
+//                iterator.remove();
+//            }
+//        }
+
+        if (eggman != null) {
             if (personajeJugable.getBounds().overlaps(eggman.getBounds())) {
-                boolean jugadorEstaAtacando = personajeJugable.estado.estadoAnimacion == EstadoPlayer.HIT_RIGHT ||
-                    personajeJugable.estado.estadoAnimacion == EstadoPlayer.HIT_LEFT ||
-                    personajeJugable.estado.estadoAnimacion == EstadoPlayer.KICK_RIGHT ||
-                    personajeJugable.estado.estadoAnimacion == EstadoPlayer.KICK_LEFT ||
-                    personajeJugable.estado.estadoAnimacion == EstadoPlayer.SPECIAL_LEFT ||
-                    personajeJugable.estado.estadoAnimacion == EstadoPlayer.SPECIAL_RIGHT;
+                boolean jugadorAtaca = personajeJugable.estaAtacando();
+                boolean jefeEnCooldown = eggman.haSidoGolpeadoRecientemente(); // Asumiendo que le añadiste los métodos
 
-                if (jugadorEstaAtacando) {
-                    eggman.setVida(eggman.getVida() - 3);
+                if (jugadorAtaca && !jefeEnCooldown) {
+                    eggman.marcarComoGolpeado();
+                    Gdx.app.log("Cliente->Servidor", "Reportando golpe al JEFE ID: " + eggman.estado.id);
+                    if (gameClient != null) {
+                        Network.PaqueteAtaqueJugadorAEnemigo paquete = new Network.PaqueteAtaqueJugadorAEnemigo();
+                        paquete.idEnemigo = eggman.estado.id;
+                        // paquete.danio = 3; // El jefe podría recibir más daño, por ejemplo.
+                        gameClient.send(paquete);
+                    }
                 }
             }
             eggman.update(deltat);

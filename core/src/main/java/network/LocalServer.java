@@ -64,7 +64,7 @@ public class LocalServer implements IGameServer {
 
     // Cola para paquetes que vienen "desde el cliente" hacia el servidor
     private final Queue<Object> paquetesEntrantes = new ConcurrentLinkedQueue<>();
-
+    private boolean alMenosUnJugadorHaEnviadoPosicion = false;
     // Referencia directa al único cliente que existirá en este modo
     private float cooldownHabilidadLimpieza = 0f;
     private static final float COOLDOWN_HABILIDAD_SONIC = 40.0f;
@@ -296,6 +296,10 @@ public class LocalServer implements IGameServer {
                     // Siempre actualizamos la animación, incluso si el movimiento fue bloqueado.
                     estadoJugador.estadoAnimacion = paquete.estadoAnimacion;
                     // No necesitamos retransmitir porque solo hay un jugador.
+                    if (!alMenosUnJugadorHaEnviadoPosicion) {
+                        System.out.println("[LOCAL SERVER] Primera posición real recibida. ¡La IA puede comenzar!");
+                        alMenosUnJugadorHaEnviadoPosicion = true;
+                    }
                 }
             }
             // --- INICIO DE LA SOLUCIÓN CORRECTA ---
@@ -332,6 +336,8 @@ public class LocalServer implements IGameServer {
                         com.badlogic.gdx.math.Vector2 llegada = manejadorNivel.obtenerPosicionLlegada();
                         float llegadaX = llegada.x;
                         float llegadaY = llegada.y; // Valor por defecto
+
+
 
                         // Creamos la ORDEN de cambio de mapa
                         Network.PaqueteOrdenCambiarMapa orden = new Network.PaqueteOrdenCambiarMapa();
@@ -470,6 +476,28 @@ public class LocalServer implements IGameServer {
                     // Si el jugador lo intenta antes de tiempo, el servidor local lo ignora.
                     System.out.println("[LOCAL SERVER] Habilidad en cooldown. Solicitud ignorada.");
                 }
+            } else if (objeto instanceof Network.PaqueteAtaqueJugadorAEnemigo paquete) {
+                EnemigoState enemigo = enemigosActivos.get(paquete.idEnemigo);
+
+                if (enemigo != null && enemigo.vida > 0) {
+                    // --- INICIO: CÓDIGO DE DEPURACIÓN ---
+                    System.out.println("[DEBUG] Vida del enemigo " + enemigo.id + " ANTES del golpe: " + enemigo.vida);
+                    // --- FIN: CÓDIGO DE DEPURACIÓN ---
+                    enemigo.vida -= paquete.danio;
+                    System.out.println("[LOCAL SERVER] Enemigo ID " + enemigo.id + " recibió daño. Vida: " + enemigo.vida);
+
+                    if (enemigo.vida <= 0) {
+                        System.out.println("[LOCAL SERVER] ¡Enemigo ID " + enemigo.id + " derrotado!");
+                        enemigosActivos.remove(enemigo.id);
+
+                        Network.PaqueteEntidadEliminada notificacionMuerte = new Network.PaqueteEntidadEliminada();
+                        notificacionMuerte.idEntidad = enemigo.id;
+                        notificacionMuerte.esJugador = false;
+
+                        // Enviamos la orden al cliente local.
+                        clienteLocal.recibirPaqueteDelServidor(notificacionMuerte);
+                    }
+                }
             }
 
 
@@ -503,6 +531,7 @@ public class LocalServer implements IGameServer {
             animalesActivos.clear(); //para los animales
             bloquesRompibles.clear();
 
+
             // 2. Reiniciar temporizadores de generación
             teleportGenerado = false;
             tiempoGeneracionTeleport = 0f;
@@ -523,11 +552,13 @@ public class LocalServer implements IGameServer {
             // 4. Volver a crear a Robotnik en el nuevo mapa (si es necesario)
             // Nota: Esto es opcional si quieres que Robotnik aparezca en todos los mapas.
             // Si no, puedes eliminar estas líneas.
-            EnemigoState estadoRobotnik = new EnemigoState(999, 300, 100, 100, EnemigoState.EnemigoType.ROBOTNIK);
-            this.enemigosActivos.put(estadoRobotnik.id, estadoRobotnik);
-            Network.PaqueteEnemigoNuevo paqueteRobotnik = new Network.PaqueteEnemigoNuevo();
-            paqueteRobotnik.estadoEnemigo = estadoRobotnik;
-            this.clienteLocal.recibirPaqueteDelServidor(paqueteRobotnik);
+            if (mapaActual.contains("ZonaJefe")) {
+                EnemigoState estadoRobotnik = new EnemigoState(999, 300, 100, 100, EnemigoState.EnemigoType.ROBOTNIK);
+                this.enemigosActivos.put(estadoRobotnik.id, estadoRobotnik);
+                Network.PaqueteEnemigoNuevo paqueteRobotnik = new Network.PaqueteEnemigoNuevo();
+                paqueteRobotnik.estadoEnemigo = estadoRobotnik;
+                this.clienteLocal.recibirPaqueteDelServidor(paqueteRobotnik);
+            }
 
 
         }
@@ -546,8 +577,10 @@ public class LocalServer implements IGameServer {
             this.teleportGenerado = true;
         }
 
-        actualizarEstadoAnimalesPorContaminacion(deltaTime);
-        actualizarEnemigosAI(deltaTime, manejadorNivel,personajeJugable);
+        if (alMenosUnJugadorHaEnviadoPosicion) {
+            actualizarEstadoAnimalesPorContaminacion(deltaTime);
+            actualizarEnemigosAI(deltaTime, manejadorNivel, personajeJugable);
+        }
         generarNuevosItems(deltaTime, manejadorNivel);
         generarNuevosEnemigos(deltaTime, manejadorNivel);
 //para que los animales se puedan generar varias veces en el mapa
@@ -588,65 +621,98 @@ public class LocalServer implements IGameServer {
         clienteLocal.recibirPaqueteDelServidor(paqueteEliminado);
     }
 
-     private void actualizarEnemigosAI(float deltaTime, LevelManager manejadorNivel, Player personajeJugable)  {
+    private void actualizarEnemigosAI(float deltaTime, LevelManager manejadorNivel, Player personajeJugable) {
+        System.out.println("[LOCAL SERVER] SE esta iniciando la IA de los enemigos");
         PlayerState jugador = jugadores.get(1);
         if (jugador == null)
             return;
 
-        if( personajeJugable.getVida() == 100){
-            for (EnemigoState enemigo : enemigosActivos.values()) {
-                enemigo.estadoAnimacion = EnemigoState.EstadoEnemigo.IDLE_RIGHT;
-            }
-            return;
-        }
-
         for (EnemigoState enemigo : enemigosActivos.values()) {
-
+            // --- AÑADIDO: Actualización del Cooldown ---
+            // Actualiza el temporizador de ataque de cada enemigo.
+            enemigo.actualizar(deltaTime);
+            if (jugador == null) {
+                enemigo.estadoAnimacion = enemigo.mirandoDerecha ? EnemigoState.EstadoEnemigo.IDLE_RIGHT : EnemigoState.EstadoEnemigo.IDLE_LEFT;
+                continue; // Pasa al siguiente enemigo.
+            }
+            // --- Lógica para Robotnik (Jefe) ---
             if (enemigo.tipo == EnemigoState.EnemigoType.ROBOTNIK) {
                 float distanciaX = jugador.x - enemigo.x;
                 float distanciaY = jugador.y - enemigo.y;
-                // Usamos la clase Vector2 de LibGDX para calcular la distancia y la dirección fácilmente.
                 float distancia = new com.badlogic.gdx.math.Vector2(distanciaX, distanciaY).len();
 
-                // Usamos las constantes que ya definimos en este archivo
                 if (distancia > RANGO_DETENERSE_ROBOTNIK) {
+                    // Lógica de movimiento (sin cambios).
                     float velocidadMovimiento = VELOCIDAD_ROBOTNIK * deltaTime;
-
-                    // Normalizamos el vector para obtener solo la dirección (un vector de longitud 1)
                     com.badlogic.gdx.math.Vector2 direccionDeseada = new com.badlogic.gdx.math.Vector2(distanciaX, distanciaY).nor();
-
                     enemigo.x += direccionDeseada.x * velocidadMovimiento;
                     enemigo.y += direccionDeseada.y * velocidadMovimiento;
-
                     enemigo.mirandoDerecha = (direccionDeseada.x > 0);
                     enemigo.estadoAnimacion = enemigo.mirandoDerecha ? EnemigoState.EstadoEnemigo.RUN_RIGHT : EnemigoState.EstadoEnemigo.RUN_LEFT;
                 } else {
+                    // El jefe está en rango de ataque.
                     enemigo.estadoAnimacion = enemigo.mirandoDerecha ? EnemigoState.EstadoEnemigo.IDLE_RIGHT : EnemigoState.EstadoEnemigo.IDLE_LEFT;
-                }
 
-                // Ya procesamos a Robotnik, así que saltamos al siguiente enemigo en el bucle
-                // para evitar que se le aplique la lógica de los robots normales.
-                continue;
+                    // --- AÑADIDO: Lógica de Ataque y Daño para Robotnik ---
+                    if (enemigo.puedeAtacar()) {
+                        enemigo.reiniciarCooldownAtaque();
+                        jugador.vida -= 5; // Daño del jefe
+                        System.out.println("[LOCAL SERVER] JEFE atacó al jugador. Vida restante: " + jugador.vida);
+
+                        // Notifica al cliente de su nueva vida.
+                        Network.PaqueteActualizacionVida paqueteVida = new Network.PaqueteActualizacionVida();
+                        paqueteVida.idJugador = jugador.id;
+                        paqueteVida.nuevaVida = jugador.vida;
+                        clienteLocal.recibirPaqueteDelServidor(paqueteVida);
+
+                        // Comprueba si el jugador ha sido derrotado.
+                        if (jugador.vida <= 0) {
+                            jugadores.remove(jugador.id);
+                            Network.PaqueteEntidadEliminada notificacionMuerte = new Network.PaqueteEntidadEliminada();
+                            notificacionMuerte.idEntidad = jugador.id;
+                            notificacionMuerte.esJugador = true;
+                            clienteLocal.recibirPaqueteDelServidor(notificacionMuerte);
+                        }
+                    }
+                }
+                continue; // Finaliza la lógica para Robotnik.
             }
 
+            // --- Lógica para Robots Normales ---
             int dx = (int) (jugador.x - enemigo.x);
             int dy = (int) (jugador.y - enemigo.y);
             int distance = (int) Math.sqrt(dx * dx + dy * dy);
 
-            // Si el robot está en medio de la animación de GOLPE, el servidor no hace NADA.
-            // Simplemente espera a que el cliente le notifique que la animación ha terminado.
             if (enemigo.estadoAnimacion == EnemigoState.EstadoEnemigo.HIT_RIGHT || enemigo.estadoAnimacion == EnemigoState.EstadoEnemigo.HIT_LEFT) {
-                continue; // Saltar al siguiente enemigo
+                continue;
             }
-
-            // Si el robot NO está golpeando (está en IDLE, RUN, o acaba de terminar un golpe),
-            // decidimos cuál debe ser su siguiente acción.
 
             EnemigoState.EstadoEnemigo estadoAnterior = enemigo.estadoAnimacion;
 
-            // Decisión de IA
             if (distance <= ROBOT_ATTACK_RANGE) {
                 enemigo.estadoAnimacion = dx > 0 ? EnemigoState.EstadoEnemigo.HIT_RIGHT : EnemigoState.EstadoEnemigo.HIT_LEFT;
+
+                // --- AÑADIDO: Lógica de Ataque y Daño para Robots ---
+                if (enemigo.puedeAtacar()) {
+                    enemigo.reiniciarCooldownAtaque();
+                    jugador.vida -= 1;
+                    System.out.println("[LOCAL SERVER] Robot atacó al jugador. Vida restante: " + jugador.vida);
+
+                    // Notifica al cliente de su nueva vida.
+                    Network.PaqueteActualizacionVida paqueteVida = new Network.PaqueteActualizacionVida();
+                    paqueteVida.idJugador = jugador.id;
+                    paqueteVida.nuevaVida = jugador.vida;
+                    clienteLocal.recibirPaqueteDelServidor(paqueteVida);
+
+                    // Comprueba si el jugador ha sido derrotado.
+                    if (jugador.vida <= 0) {
+                        jugadores.remove(jugador.id);
+                        Network.PaqueteEntidadEliminada notificacionMuerte = new Network.PaqueteEntidadEliminada();
+                        notificacionMuerte.idEntidad = jugador.id;
+                        notificacionMuerte.esJugador = true;
+                        clienteLocal.recibirPaqueteDelServidor(notificacionMuerte);
+                    }
+                }
             } else if (distance <= ROBOT_DETECTION_RANGE) {
                 enemigo.mirandoDerecha = dx > 0;
                 enemigo.estadoAnimacion = enemigo.mirandoDerecha ? EnemigoState.EstadoEnemigo.RUN_RIGHT : EnemigoState.EstadoEnemigo.RUN_LEFT;
@@ -655,12 +721,11 @@ public class LocalServer implements IGameServer {
                 enemigo.estadoAnimacion = enemigo.mirandoDerecha ? EnemigoState.EstadoEnemigo.IDLE_RIGHT : EnemigoState.EstadoEnemigo.IDLE_LEFT;
             }
 
-            // Si el estado ha cambiado, reiniciamos el temporizador.
             if (estadoAnterior != enemigo.estadoAnimacion) {
                 enemigo.tiempoEnEstado = 0;
             }
 
-            // Lógica de Movimiento (solo se ejecuta si el estado es RUN)
+            // Tu lógica de movimiento original se mantiene sin cambios.
             if (enemigo.estadoAnimacion == EnemigoState.EstadoEnemigo.RUN_RIGHT || enemigo.estadoAnimacion == EnemigoState.EstadoEnemigo.RUN_LEFT) {
                 float targetX = enemigo.x;
                 float targetY = enemigo.y;
@@ -673,13 +738,11 @@ public class LocalServer implements IGameServer {
                 if (manejadorNivel != null) {
                     Rectangle robotBounds = new Rectangle(enemigo.x, enemigo.y, 48, 48);
 
-                    // Comprobar movimiento en X
                     robotBounds.setX(targetX);
                     if (!manejadorNivel.colisionaConMapa(robotBounds)) {
                         enemigo.x = targetX;
                     }
 
-                    // Comprobar movimiento en Y
                     robotBounds.setX(enemigo.x);
                     robotBounds.setY(targetY);
                     if (!manejadorNivel.colisionaConMapa(robotBounds)) {
@@ -733,7 +796,7 @@ public class LocalServer implements IGameServer {
             Rectangle bounds = new Rectangle(x, y, 48, 48);
 
             if (!manejadorNivel.colisionaConMapa(bounds)) {
-                EnemigoState nuevoEstado = new EnemigoState(proximoIdEnemigo++, bounds.x, bounds.y, 100, EnemigoState.EnemigoType.ROBOT);
+                EnemigoState nuevoEstado = new EnemigoState(proximoIdEnemigo++, bounds.x, bounds.y, 3, EnemigoState.EnemigoType.ROBOT);
                 enemigosActivos.put(nuevoEstado.id, nuevoEstado);
                 Network.PaqueteEnemigoNuevo paquete = new Network.PaqueteEnemigoNuevo();
                 paquete.estadoEnemigo = nuevoEstado;
