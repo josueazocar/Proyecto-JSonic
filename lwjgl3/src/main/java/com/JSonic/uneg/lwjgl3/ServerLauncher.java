@@ -1,5 +1,4 @@
 package com.JSonic.uneg.lwjgl3;
-import com.JSonic.uneg.PantallaDeJuego;
 
 import network.GameServer; // Importamos tu clase GameServer
 /**

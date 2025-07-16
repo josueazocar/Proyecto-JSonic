@@ -1,6 +1,7 @@
 package network;
 
-import com.JSonic.uneg.*;
+import com.JSonic.uneg.EntidadesVisuales.Player;
+import com.JSonic.uneg.State.*;
 import com.badlogic.gdx.math.Rectangle;
 import com.esotericsoftware.kryo.Kryo;
 import com.esotericsoftware.kryonet.EndPoint;
@@ -69,6 +70,9 @@ public class Network {
         kryo.register(PaqueteSincronizarBloques.class);
         kryo.register(PaqueteSolicitudHabilidadLimpieza.class);
         kryo.register(PaqueteHabilidadLimpiezaSonic.class);
+        kryo.register(PaqueteAtaqueJugadorAEnemigo.class);
+        kryo.register(PaqueteEntidadEliminada.class);
+        kryo.register(PaqueteActualizacionVida.class);
     }
 
     // --- Definición de los Paquetes ---
@@ -213,6 +217,23 @@ public class Network {
     public static class PaqueteSincronizarBloques {
         // Enviamos el mismo tipo de mapa que usa el servidor para que sea fácil.
         public HashMap<Integer, Rectangle> todosLosBloques;
+    }
+    // El cliente envía esto cuando su ataque colisiona con un enemigo.
+    public static class PaqueteAtaqueJugadorAEnemigo {
+        public int idEnemigo;
+        public int danio = 1; // Puedes variar el daño por ataque
+    }
+
+    // El servidor envía esto cuando una entidad (jugador o enemigo) muere.
+    public static class PaqueteEntidadEliminada {
+        public int idEntidad;
+        public boolean esJugador; // Para distinguir si el ID es de un jugador o un enemigo
+    }
+
+    // El servidor envía esto para actualizar la vida de los jugadores en la UI.
+    public static class PaqueteActualizacionVida {
+        public int idJugador;
+        public int nuevaVida;
     }
 
 }

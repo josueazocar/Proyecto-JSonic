@@ -1,4 +1,7 @@
 package com.JSonic.uneg;
+import com.JSonic.uneg.Pantallas.PantallaDeJuego;
+import com.JSonic.uneg.Pantallas.PantallaMenu;
+import com.JSonic.uneg.State.PlayerState;
 import network.LocalServer;
 import network.GameClient;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;

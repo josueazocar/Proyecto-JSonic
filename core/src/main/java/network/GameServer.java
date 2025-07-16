@@ -1,6 +1,8 @@
 package network;
 
 import com.JSonic.uneg.*;
+import com.JSonic.uneg.EntidadesVisuales.Player;
+import com.JSonic.uneg.State.*;
 import com.badlogic.gdx.math.Rectangle;
 import com.badlogic.gdx.math.Vector2;
 import com.esotericsoftware.kryonet.Connection;

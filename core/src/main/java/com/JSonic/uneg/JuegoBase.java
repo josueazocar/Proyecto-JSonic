@@ -1,5 +1,6 @@
 package com.JSonic.uneg;
 
+import com.JSonic.uneg.Pantallas.PantallaBase;
 import com.badlogic.gdx.Game;
 
 

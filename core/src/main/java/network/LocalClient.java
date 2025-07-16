@@ -1,6 +1,5 @@
 package network;
 
-import com.JSonic.uneg.PlayerState;
 import network.interfaces.IGameClient;
 
 import java.util.Queue;

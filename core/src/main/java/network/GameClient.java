@@ -1,7 +1,7 @@
 // paquete/network/GameClient.java
 package network;
 
-import com.JSonic.uneg.PantallaDeJuego;
+import com.JSonic.uneg.Pantallas.PantallaDeJuego;
 import com.esotericsoftware.kryonet.Client;
 import com.esotericsoftware.kryonet.Connection;
 import com.esotericsoftware.kryonet.Listener;
@@ -10,7 +10,6 @@ import network.interfaces.IGameClient;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.io.IOException;
 import java.util.Queue;
-import java.util.concurrent.ConcurrentLinkedQueue;
 
 public class GameClient implements IGameClient {
 

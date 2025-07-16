@@ -1,7 +1,7 @@
 package network.interfaces;
 
 import com.JSonic.uneg.LevelManager;
-import com.JSonic.uneg.Player;
+import com.JSonic.uneg.EntidadesVisuales.Player;
 
 public interface IGameServer {
 

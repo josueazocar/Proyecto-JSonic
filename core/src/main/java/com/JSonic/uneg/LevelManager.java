@@ -1,10 +1,16 @@
 package com.JSonic.uneg;
 
+import com.JSonic.uneg.EntidadesVisuales.AnimalVisual;
+import com.JSonic.uneg.EntidadesVisuales.Player;
+import com.JSonic.uneg.ObjetosDelEntorno.Arbol_Tails;
+import com.JSonic.uneg.ObjetosDelEntorno.ObjetoRomperVisual;
+import com.JSonic.uneg.ObjetosDelEntorno.TeletransporteVisual;
+import com.JSonic.uneg.State.AnimalState;
+import com.JSonic.uneg.State.ItemState;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.graphics.OrthographicCamera;
 import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.maps.tiled.TiledMap;
-import com.badlogic.gdx.maps.tiled.TiledMapTileLayer;
 import com.badlogic.gdx.maps.tiled.TmxMapLoader;
 import com.badlogic.gdx.maps.MapObjects;
 import com.badlogic.gdx.maps.tiled.renderers.OrthogonalTiledMapRenderer;
