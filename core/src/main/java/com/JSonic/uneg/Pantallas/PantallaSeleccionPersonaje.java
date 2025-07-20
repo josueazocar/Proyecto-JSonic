@@ -11,12 +11,14 @@ import com.badlogic.gdx.scenes.scene2d.InputEvent;
 import com.badlogic.gdx.scenes.scene2d.ui.*;
 import com.badlogic.gdx.scenes.scene2d.utils.ClickListener;
 import com.badlogic.gdx.scenes.scene2d.utils.TextureRegionDrawable;
+import network.Network;
 
 public class PantallaSeleccionPersonaje extends PantallaBase {
 
     private final JSonicJuego juegoApp;
     private TextureAtlas characterAtlas;
     private final Boolean esAnfitrion;
+    private int miID = -1;
 
     private Button sonicButton, tailsButton, knucklesButton;
     private Button seguirBoton;
@@ -24,15 +26,18 @@ public class PantallaSeleccionPersonaje extends PantallaBase {
     private PlayerState.CharacterType personajeSeleccionado;
 
     public PantallaSeleccionPersonaje(JSonicJuego juegoApp) {
-        super();
+        super("");
         this.juegoApp = juegoApp;
         this.esAnfitrion = null; // No aplica en modo un jugador
+        inicializar();
     }
 
     public PantallaSeleccionPersonaje(JSonicJuego juegoApp, boolean esAnfitrion) {
-        super();
+        super("");
         this.juegoApp = juegoApp;
         this.esAnfitrion = esAnfitrion;
+        juegoApp.conectarAlServidor();
+        inicializar();
     }
 
     @Override
@@ -45,7 +50,6 @@ public class PantallaSeleccionPersonaje extends PantallaBase {
         mainStage.addActor(tabla);
 
         tabla.add(new Image(new Texture(Gdx.files.internal("Fondos/Titulo_seleccion_personaje.png")))).size(396,110).colspan(3).padBottom(10).row();
-
 
         sonicButton = crearBotonPersonaje("sonic_seleccion", "sonic_seleccion_oscuro",  "sonic_seleccionado", "sonic_disabled");
         tailsButton = crearBotonPersonaje("tails_seleccion", "tails_seleccion_oscuro",  "tails_seleccionado", "tails_disabled");
@@ -82,19 +86,25 @@ public class PantallaSeleccionPersonaje extends PantallaBase {
                         // --- FLUJO MULTIJUGADOR ---
                         if (esAnfitrion) {
                             // Si es el ANFITRIÓN, el siguiente paso es ELEGIR EL NIVEL.
+                            Network.SolicitudAccesoPaquete solicitud = new Network.SolicitudAccesoPaquete();
+                            solicitud.nombreJugador = "jugador"; // Asumimos que guardaste el nombre aquí
+                            solicitud.characterType = personajeSeleccionado;
+                            juegoApp.getGameClient().send(solicitud);
+
                             System.out.println("Flujo Anfitrión: -> PantallaSeleccionNivel");
                             juegoApp.setPantallaActiva(new PantallaSeleccionNivel(juegoApp, true)); // true para modo multijugador
 
                         } else {
+                            Network.SolicitudAccesoPaquete solicitud = new Network.SolicitudAccesoPaquete();
+                            solicitud.nombreJugador = "jugador"; // Asumimos que guardaste el nombre aquí
+                            solicitud.characterType = personajeSeleccionado;
+                            juegoApp.getGameClient().send(solicitud);
                             // Si es un CLIENTE, el siguiente paso es ir al LOBBY a esperar.
                             System.out.println("Flujo Cliente: -> PantallaLobby");
                             juegoApp.setPantallaActiva(new PantallaLobby(juegoApp, false)); // false porque no es anfitrión
                         }
                     }
-
-
                 }
-
             }
         });
 
@@ -103,9 +113,19 @@ public class PantallaSeleccionPersonaje extends PantallaBase {
         tabla.add(knucklesButton).size(200, 355).pad(20).row();
         tabla.add(seguirBoton).colspan(3).padTop(40).width(250).height(80);
 
-        // La lógica de habilitar/deshabilitar botones aplica a ambos modos,
-        // pero la lista de `personajesYaSeleccionados` solo se llenará en online.
+
+        if (juegoApp.getGameClient() != null)  {
+            sonicButton.setDisabled(true);
+            tailsButton.setDisabled(true);
+            knucklesButton.setDisabled(true);
+            seguirBoton.setDisabled(true);
+            characterGroup.uncheckAll();
+            personajeSeleccionado = null;
+        }
+
+        if (juegoApp.getGameClient() == null) {
         actualizarEstadoBotones();
+        }
     }
 
     private void actualizarEstadoBotones() {
@@ -135,9 +155,63 @@ public class PantallaSeleccionPersonaje extends PantallaBase {
     @Override
     public void actualizar(float delta) {
         mainStage.act(delta);
+
+        // Si no estamos en modo multijugador o no tenemos cliente de red, no hacemos nada.
+        if (esAnfitrion == null || juegoApp.getGameClient() == null) {
+            return;
+        }
+
+        // Procesamos la cola de paquetes del servidor.
+        java.util.Queue<Object> paquetes = juegoApp.getGameClient().getPaquetesRecibidos();
+        while (!paquetes.isEmpty()) {
+            Object paquete = paquetes.poll();
+
+            // Si el servidor nos envía nuestro ID...
+            if (paquete instanceof Network.PaqueteTuID) {
+                Network.PaqueteTuID p = (Network.PaqueteTuID) paquete;
+                System.out.println("DEBUG: Recibido mi ID del servidor: " + p.id);
+                this.miID = p.id;
+                // Llamamos al método que configura la UI según nuestro ID.
+                configurarBotonesPorID();
+            }
+        }
     }
 
+    private void configurarBotonesPorID() {
+        // Si todavía no sabemos nuestro ID, no hacemos nada.
+        if (miID == -1) return;
 
+        // Deshabilitamos todos los botones primero.
+        sonicButton.setDisabled(true);
+        tailsButton.setDisabled(true);
+        knucklesButton.setDisabled(true);
+
+        // Limpiamos la selección visual y lógica.
+        characterGroup.uncheckAll();
+        personajeSeleccionado = null;
+
+        // Habilitamos y seleccionamos el que nos corresponde según nuestro ID.
+        if (miID == 1) {
+            sonicButton.setDisabled(false);
+            sonicButton.setChecked(true); // Lo marcamos como seleccionado visualmente.
+            personajeSeleccionado = PlayerState.CharacterType.SONIC;
+        } else if (miID == 2) {
+            tailsButton.setDisabled(false);
+            tailsButton.setChecked(true);
+            personajeSeleccionado = PlayerState.CharacterType.TAILS;
+        } else if (miID == 3) {
+            knucklesButton.setDisabled(false);
+            knucklesButton.setChecked(true);
+            personajeSeleccionado = PlayerState.CharacterType.KNUCKLES;
+        } else {
+            // Para más de 3 jugadores, se podría asignar un personaje por defecto o un ciclo.
+            // Por ahora, si el ID es otro, no se podrá seleccionar nada.
+        }
+
+        System.out.println("DEBUG: Personaje asignado por servidor: " + personajeSeleccionado);
+        // El botón "Seguir" solo se activa si se nos ha asignado un personaje válido.
+        seguirBoton.setDisabled(personajeSeleccionado == null);
+    }
     private Button crearBotonPersonaje(String up, String down, String checked, String disabled) {
         Button.ButtonStyle estilo = new Button.ButtonStyle();
         estilo.up = new TextureRegionDrawable(characterAtlas.findRegion(up));

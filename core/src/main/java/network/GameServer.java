@@ -90,48 +90,67 @@ public class GameServer implements IGameServer {
                 nuevoEstado.id = conexion.getID();
                 nuevoEstado.x = 100;
                 nuevoEstado.y = 100;
-                nuevoEstado.estadoAnimacion = Player.EstadoPlayer.IDLE_RIGHT;
+
+                // --- LÓGICA DE ASIGNACIÓN AUTOMÁTICA ---
+                // El servidor asigna el personaje de forma autoritaria.
+                int totalJugadores = jugadores.size();
+                if (totalJugadores == 0) {
+                    nuevoEstado.characterType = PlayerState.CharacterType.SONIC;
+                } else if (totalJugadores == 1) {
+                    nuevoEstado.characterType = PlayerState.CharacterType.TAILS;
+                } else {
+                    nuevoEstado.characterType = PlayerState.CharacterType.KNUCKLES;
+                }
+                System.out.println("[SERVER] Asignado " + nuevoEstado.characterType + " al jugador " + nuevoEstado.id);
+
+                // Guardamos el estado base, pero NO anunciamos al jugador todavía.
                 jugadores.put(conexion.getID(), nuevoEstado);
                 puntajesAnillosIndividuales.put(conexion.getID(), 0);
                 puntajesBasuraIndividuales.put(conexion.getID(), 0);
                 cooldownsHabilidadLimpieza.put(conexion.getID(), 0f);
 
-                Network.PaqueteJugadorConectado packetNuevoJugador = new Network.PaqueteJugadorConectado();
-                packetNuevoJugador.nuevoJugador = nuevoEstado;
-                servidor.sendToAllExceptTCP(conexion.getID(), packetNuevoJugador);
-
-                for (PlayerState jugadorExistente : jugadores.values()) {
-                    if (jugadorExistente.id != conexion.getID()) {
-                        Network.PaqueteJugadorConectado packetJugadorExistente = new Network.PaqueteJugadorConectado();
-                        packetJugadorExistente.nuevoJugador = jugadorExistente;
-                        conexion.sendTCP(packetJugadorExistente);
-                    }
-                }
-
-                // Sincronizar ítems y enemigos existentes al nuevo cliente
-                for (ItemState itemExistente : itemsActivos.values()) {
-                    Network.PaqueteItemNuevo paqueteItem = new Network.PaqueteItemNuevo();
-                    paqueteItem.estadoItem = itemExistente;
-                    conexion.sendTCP(paqueteItem);
-                }
-                for (EnemigoState enemigoExistente : enemigosActivos.values()) {
-                    Network.PaqueteEnemigoNuevo paqueteEnemigo = new Network.PaqueteEnemigoNuevo();
-                    paqueteEnemigo.estadoEnemigo = enemigoExistente;
-                    conexion.sendTCP(paqueteEnemigo);
-                }
-
-                // Sincronizamos el estado de la contaminación para el nuevo jugador.
-                Network.PaqueteActualizacionContaminacion paqueteContaminacion = new Network.PaqueteActualizacionContaminacion();
-                paqueteContaminacion.contaminationPercentage = contaminationState.getPercentage();
-                conexion.sendTCP(paqueteContaminacion);
-                sincronizarBloquesConClientes();
+                Network.PaqueteTuID paqueteID = new Network.PaqueteTuID();
+                paqueteID.id = conexion.getID();
+                conexion.sendTCP(paqueteID);
             }
 
             public void received(Connection conexion, Object objeto) {
+                if (objeto instanceof Network.SolicitudAccesoPaquete) {
+                    Network.SolicitudAccesoPaquete solicitud = (Network.SolicitudAccesoPaquete) objeto;
+                    System.out.println("[SERVER] Recibida solicitud de acceso del jugador: " + solicitud.nombreJugador);
+
+                    // Obtenemos el estado del jugador que ya fue creado en connected().
+                    PlayerState estadoAsignado = jugadores.get(conexion.getID());
+                    if (estadoAsignado == null) return;
+
+                    // Le asignamos el nombre que viene en el paquete.
+                    estadoAsignado.nombreJugador = solicitud.nombreJugador;
+
+                    // Enviamos la respuesta de bienvenida al cliente.
+                    Network.RespuestaAccesoPaquete respuesta = new Network.RespuestaAccesoPaquete();
+                    respuesta.mensajeRespuesta = "¡Bienvenido, " + solicitud.nombreJugador + "!";
+                    respuesta.tuEstado = estadoAsignado; // Le enviamos su estado completo, incluyendo el personaje que le asignamos.
+                    conexion.sendTCP(respuesta);
+
+                    // --- AHORA SÍ: ANUNCIAMOS AL JUGADOR AL RESTO DEL MUNDO ---
+                    // La información está completa (ID, Personaje, Nombre).
+                    Network.PaqueteJugadorConectado packetNuevoJugador = new Network.PaqueteJugadorConectado();
+                    packetNuevoJugador.nuevoJugador = estadoAsignado;
+                    servidor.sendToAllExceptTCP(conexion.getID(), packetNuevoJugador);
+
+                    // Y le informamos al nuevo jugador de los que ya estaban.
+                    for (PlayerState jugadorExistente : jugadores.values()) {
+                        if (jugadorExistente.id != conexion.getID() && jugadorExistente.characterType != null) {
+                            Network.PaqueteJugadorConectado packetJugadorExistente = new Network.PaqueteJugadorConectado();
+                            packetJugadorExistente.nuevoJugador = jugadorExistente;
+                            conexion.sendTCP(packetJugadorExistente);
+                        }
+                    }
+                }
                 if (objeto instanceof Network.PaquetePosicionJugador paquete) {
                     PlayerState estadoJugador = jugadores.get(paquete.id);
 
-                    System.out.println("-----> [DEBUGGER 4 - RECEPTOR SERVIDOR] Recibida posición del jugador " + paquete.id + ": (" + paquete.x + ", " + paquete.y + ")");
+                  //  System.out.println("-----> [DEBUGGER 4 - RECEPTOR SERVIDOR] Recibida posición del jugador " + paquete.id + ": (" + paquete.x + ", " + paquete.y + ")");
                     if (estadoJugador != null) {
                         estadoJugador.x = paquete.x;
                         estadoJugador.y = paquete.y;
@@ -143,17 +162,6 @@ public class GameServer implements IGameServer {
                             alMenosUnJugadorHaEnviadoPosicion = true;
                         }
                     }
-                }
-                if (objeto instanceof Network.SolicitudAccesoPaquete solicitud) {
-                    System.out.println("[SERVER] Peticion de login recibida de: " + solicitud.nombreJugador);
-                    Network.RespuestaAccesoPaquete respuesta = new Network.RespuestaAccesoPaquete();
-                    respuesta.mensajeRespuesta = "Bienvenido al servidor, " + solicitud.nombreJugador + "!";
-                    PlayerState estadoAsignado = jugadores.get(conexion.getID());
-
-                    estadoAsignado.characterType = solicitud.characterType;
-
-                    respuesta.tuEstado = estadoAsignado;
-                    conexion.sendTCP(respuesta);
                 }
                 if (objeto instanceof Network.PaqueteSolicitudRecogerItem paquete) {
                     // Usamos 'synchronized' para evitar que dos jugadores interactúen con el mismo ítem a la vez.
@@ -275,6 +283,7 @@ public class GameServer implements IGameServer {
                 if (objeto instanceof Network.PaqueteInformacionMapa paquete) {
                     // El primer cliente que se conecta nos envía el plano del mapa.
                     // Solo lo guardamos si aún no lo tenemos.
+                    System.out.println("[SERVER] <== PAQUETE DE MAPA RECIBIDO!");
                     if (paredesDelMapa == null) {
                         paredesDelMapa = paquete.paredes;
                         System.out.println("[SERVER] Plano del mapa recibido con " + paredesDelMapa.size() + " paredes.");
@@ -475,6 +484,8 @@ public class GameServer implements IGameServer {
             public void disconnected(Connection conexion) {
                 System.out.println("[SERVER] Un cliente se ha desconectado.");
                 jugadores.remove(conexion.getID());
+                puntajesAnillosIndividuales.remove(conexion.getID());
+                puntajesBasuraIndividuales.remove(conexion.getID());
                 cooldownsHabilidadLimpieza.remove(conexion.getID());
             }
         });
@@ -493,6 +504,7 @@ public class GameServer implements IGameServer {
             // Este bucle se ejecutará hasta que la variable 'paredesDelMapa' sea llenada
             // por el paquete que envía el primer cliente.
             while (paredesDelMapa == null) {
+
                 try {
                     // Esperamos un corto tiempo para no consumir 100% de la CPU mientras esperamos.
                     Thread.sleep(100);
@@ -502,6 +514,7 @@ public class GameServer implements IGameServer {
                     return; // Salimos del hilo si es interrumpido.
                 }
             }
+
             System.out.println("[SERVER] ¡Plano del mapa detectado! Iniciando bucle de juego principal.");
 
             final float FIXED_DELTA_TIME = 1 / 60f;

@@ -13,6 +13,7 @@ public class JSonicJuego extends JuegoBase {
     public SpriteBatch batch;
     public static String direccionIp = "localhost"; // Dirección IP del servidor al que se conecta el cliente.
     public static ArrayList<PlayerState.CharacterType> personajesYaSeleccionados = new ArrayList<>();
+    private IGameClient client;
 
     // true  -> Inicia en modo multijugador online.
     // false -> Inicia en modo de un jugador offline.
@@ -41,10 +42,10 @@ public class JSonicJuego extends JuegoBase {
         server.start();
 
         // Obtener el cliente asociado a ese servidor local.
-        IGameClient client = server.getClient();
+         client = server.getClient();
 
         // Crear la pantalla de juego, inyectando el cliente y servidor locales.
-        setPantallaActiva(new PantallaDeJuego(this, client, server));
+        setPantallaActiva(new PantallaDeJuego(this, server));
     }
 
     /**
@@ -53,16 +54,14 @@ public class JSonicJuego extends JuegoBase {
      */
     public void iniciarJuegoOnline() {
         System.out.println(">>> INICIANDO EN MODO ONLINE (MULTIJUGADOR)");
-        // Crear el cliente de red real.
-        //Le pasamos 'null' a PantallaDeJuego, así que la referencia interna no se usará.
-        GameClient client = new GameClient(null);
-        client.connect(direccionIp); // Conecta al servidor en la misma máquina. Cambia "localhost" por una IP si es necesario.
-
         // Crear la pantalla de juego, inyectando el cliente online y NINGÚN servidor local.
-        setPantallaActiva(new PantallaDeJuego(this, client, null));
+        setPantallaActiva(new PantallaDeJuego(this, null));
     }
 
-
+    public void conectarAlServidor(){
+    this.client = new GameClient();
+    this.client.connect(direccionIp);
+    }
 
     @Override
     public void dispose() {
@@ -71,5 +70,17 @@ public class JSonicJuego extends JuegoBase {
         }
         batch.dispose();
         super.dispose();
+    }
+
+    public IGameClient getGameClient() {
+        if (client instanceof GameClient) {
+            // Si es un GameClient, lo devolvemos directamente.
+            return client;
+        }
+        return null; // Si no es un GameClient, devolvemos null.
+    }
+
+    public IGameClient getClient() {
+        return client;
     }
 }

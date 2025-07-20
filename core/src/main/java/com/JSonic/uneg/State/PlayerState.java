@@ -6,6 +6,7 @@ public class PlayerState extends EntityState {
     // Esta clase NO tiene importaciones de LibGDX. Es Java puro.
         public CharacterType characterType;
         public Player.EstadoPlayer estadoAnimacion;
+        public String nombreJugador;
 
     public enum CharacterType {
         SONIC, TAILS, KNUCKLES

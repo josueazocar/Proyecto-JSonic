@@ -84,7 +84,7 @@ public class PantallaDeJuego extends PantallaBase {
     private Vector3 screenCoords = new Vector3();
 
     //Para la seleccion de personaje
-    public static PlayerState.CharacterType miPersonaje = SONIC;
+    public static PlayerState.CharacterType miPersonaje;
     private float tiempoTranscurrido = 0f;
     private boolean teletransporteCreado = false;
     private RobotnikVisual eggman;
@@ -96,17 +96,15 @@ public class PantallaDeJuego extends PantallaBase {
 
     private Texture animalMuertoIcono;
 
-    public PantallaDeJuego(JSonicJuego juego, IGameClient client, IGameServer server) {
-        super();
+    public PantallaDeJuego(JSonicJuego juego, IGameServer server) {
+        super("");
         this.juegoPrincipal = juego;
         this.batch = juego.batch;
-        this.gameClient = client;
+        this.gameClient = juego.getClient();
         this.localServer = server;
+        inicializar();
     }
 
-    public PantallaDeJuego(JSonicJuego juego) {
-        this(juego, null, null);
-    }
 
     @Override
     public void inicializar() {
@@ -143,6 +141,7 @@ public class PantallaDeJuego extends PantallaBase {
                 break;
         }
 
+
         manejadorNivel.setPlayer(personajeJugable);
         assetManager = new AssetManager();
         soundManager = new SoundManager(assetManager);
@@ -152,6 +151,11 @@ public class PantallaDeJuego extends PantallaBase {
         shapeRenderer = new ShapeRenderer();
 
         uiCamera = new OrthographicCamera();
+
+        if (this.gameClient != null && this.localServer == null) {
+            System.out.println("[CLIENT] PantallaDeJuego inicializada. Enviando información del mapa al servidor...");
+            enviarInformacionDelMapaActualAlServidor();
+        }
 
         ShaderProgram.pedantic = false;
         shaderNeblina = new ShaderProgram(
@@ -867,7 +871,7 @@ public class PantallaDeJuego extends PantallaBase {
         Network.PaqueteInformacionMapa paqueteMapa = new Network.PaqueteInformacionMapa();
         paqueteMapa.paredes = paredes;
         paqueteMapa.portales = portalesDelMapa;
-
+        System.out.println("[CLIENT] ==> INTENTANDO ENVIAR MAPA con " + paqueteMapa.paredes.size() + " paredes.");
         gameClient.send(paqueteMapa);
 
         System.out.println("[CLIENT] Plano del mapa con " + paredes.size() + " paredes y " + portalesDelMapa.size() + " portales enviado.");
@@ -992,8 +996,11 @@ public class PantallaDeJuego extends PantallaBase {
     public void agregarOActualizarOtroJugador(PlayerState estadoRecibido) {
         Player jugadorVisual = otrosJugadores.get(estadoRecibido.id);
         if (jugadorVisual == null) {
-            System.out.println("Creando nuevo jugador gráfico con ID: " + estadoRecibido.id);
-            switch (personajeJugableEstado.characterType) {
+            System.out.println("Creando nuevo jugador gráfico con ID: " + estadoRecibido.id + " y personaje: " + estadoRecibido.characterType);
+
+            // --- LA CORRECCIÓN CLAVE ---
+            // El 'switch' ahora usa el 'characterType' del estado que RECIBIMOS del servidor.
+            switch (estadoRecibido.characterType) {
                 case SONIC:
                     jugadorVisual = new Sonic(estadoRecibido, manejadorNivel);
                     break;
@@ -1001,10 +1008,11 @@ public class PantallaDeJuego extends PantallaBase {
                     jugadorVisual = new Tails(estadoRecibido, manejadorNivel);
                     break;
                 case KNUCKLES:
-                    // *** CORRECCIÓN: Se cambió "uneg.Knuckles" por "new Knuckles" ***
                     jugadorVisual = new Knuckles(estadoRecibido, manejadorNivel);
                     break;
                 default:
+                    // Si por alguna razón el personaje es nulo, creamos un Sonic por defecto para evitar que el juego se rompa.
+                    System.err.println("[CLIENT] ADVERTENCIA: Se recibió un tipo de personaje nulo o desconocido.");
                     jugadorVisual = new Sonic(estadoRecibido, manejadorNivel);
                     break;
             }
@@ -1013,7 +1021,9 @@ public class PantallaDeJuego extends PantallaBase {
                 ((Tails) jugadorVisual).setOnlineMode(true);
             }
             otrosJugadores.put(estadoRecibido.id, jugadorVisual);
+
         } else {
+            // La lógica de actualización de posición se mantiene igual.
             jugadorVisual.estado.x = estadoRecibido.x;
             jugadorVisual.estado.y = estadoRecibido.y;
             jugadorVisual.setEstadoActual(estadoRecibido.estadoAnimacion);

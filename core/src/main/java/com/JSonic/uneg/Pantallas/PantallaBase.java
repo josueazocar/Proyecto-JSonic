@@ -32,6 +32,17 @@ public abstract class PantallaBase implements Screen {
         inicializar();
     }
 
+    public PantallaBase(String args){
+        viewport = new FitViewport(1280, 720, new OrthographicCamera());
+        mainStage = new Stage(viewport);
+        uiStage = new Stage(viewport);
+
+        uiTable = new Table();
+        uiTable.setFillParent(true);
+        uiStage.addActor(uiTable);
+        skin = new Skin(Gdx.files.internal("Skin/ui.json"));
+    }
+
     public abstract void inicializar();
 
     public abstract void actualizar(float deltat);

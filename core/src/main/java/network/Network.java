@@ -75,10 +75,14 @@ public class Network {
         kryo.register(PaqueteEntidadEliminada.class);
         kryo.register(PaqueteActualizacionVida.class);
         kryo.register(PortalInfo.class);
+        kryo.register(PaqueteTuID.class);
     }
 
     // --- Definición de los Paquetes ---
     // Son clases simples que solo contienen los datos que queremos enviar.
+    public static class PaqueteTuID {
+        public int id;
+    }
 
     // Paquete enviado por el cliente al servidor para solicitar unirse
     public static class SolicitudAccesoPaquete {
@@ -96,7 +100,6 @@ public class Network {
         public int id;
         public float x;
         public float y;
-
         public Player.EstadoPlayer estadoAnimacion;
     }
 

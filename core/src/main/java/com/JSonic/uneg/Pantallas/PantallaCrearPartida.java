@@ -8,6 +8,7 @@ import com.badlogic.gdx.scenes.scene2d.InputEvent;
 import com.badlogic.gdx.scenes.scene2d.Stage;
 import com.badlogic.gdx.scenes.scene2d.ui.*;
 import com.badlogic.gdx.scenes.scene2d.utils.ClickListener;
+import network.GameClient;
 
 public class PantallaCrearPartida extends PantallaBase {
     private Texture texturaFondo;
@@ -68,6 +69,8 @@ public class PantallaCrearPartida extends PantallaBase {
                 /// --- SIMULACIÓN ---
                 // Al crear una partida, la lista de personajes ocupados está vacía.
                 JSonicJuego.personajesYaSeleccionados.clear();
+                juegoApp.setPantallaActiva(new PantallaSeleccionNivel(juegoApp, true)); // true para modo multijugador
+
 
                 juegoApp.setPantallaActiva(new PantallaSeleccionPersonaje(juegoApp,true));
             }

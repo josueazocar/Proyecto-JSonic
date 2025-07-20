@@ -14,11 +14,11 @@ import java.util.Queue;
 public class GameClient implements IGameClient {
 
     public Client cliente;
-    private final PantallaDeJuego juego;
+    private PantallaDeJuego juego;
     public ConcurrentLinkedQueue<Object> paquetesRecibidos = new ConcurrentLinkedQueue<>();
 
-    public GameClient(PantallaDeJuego juego) {
-        this.juego = juego;
+
+    public GameClient() {
         cliente = new Client();
 
         Network.registrar(cliente);
@@ -30,7 +30,7 @@ public class GameClient implements IGameClient {
 
                 // Una vez conectados, enviamos una petición de login
                 Network.SolicitudAccesoPaquete solicitud = new Network.SolicitudAccesoPaquete();
-                solicitud.nombreJugador = "Sonic";
+                solicitud.nombreJugador = "JUGADOR" + cliente.getID(); // Usamos el ID del cliente como nombre único
                 cliente.sendTCP(solicitud);
             }
 
