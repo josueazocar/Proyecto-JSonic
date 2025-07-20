@@ -37,8 +37,6 @@ import com.badlogic.gdx.scenes.scene2d.ui.Table;
 import com.badlogic.gdx.scenes.scene2d.ui.Image;
 import com.badlogic.gdx.math.Vector2;
 
-import static com.JSonic.uneg.State.PlayerState.CharacterType.SONIC;
-
 public class PantallaDeJuego extends PantallaBase {
 
     // --- TUS VARIABLES SE MANTIENEN IGUAL ---
@@ -243,7 +241,6 @@ public class PantallaDeJuego extends PantallaBase {
         tablaInferiorIzquierda.add(animalCountLabel);
 
         mainStage.addActor(tablaInferiorIzquierda);
-        //---------------------------------------------
 
     }
 
@@ -264,11 +261,19 @@ public class PantallaDeJuego extends PantallaBase {
         }
 
         if (Gdx.input.isKeyJustPressed(Input.Keys.ESCAPE)) {
+            System.out.println("[CLIENT] El jugador ha decidido salir de la partida. Notificando al servidor...");
+
+            if (gameClient != null) {
+                gameClient.send(new Network.PaqueteSalidaDePartida());
+                gameClient.disconnect();
+            }
+
             this.pause();
             PantallaMenu pantallaMenu = new PantallaMenu(juegoPrincipal, true);
             pantallaMenu.setEstadoMenu(PantallaMenu.EstadoMenu.JUGAR);
             juegoPrincipal.setPantallaActiva(pantallaMenu);
             LocalServer.decreaseContamination(100);
+
             return;
         }
 
@@ -298,6 +303,14 @@ public class PantallaDeJuego extends PantallaBase {
                     if (personajeJugableEstado != null && p.id != personajeJugableEstado.id) {
                         actualizarPosicionOtroJugador(p.id, p.x, p.y, p.estadoAnimacion);
                     }
+                }  else if (paquete instanceof Network.PaqueteJugadorDesconectado p) {
+                    // El servidor nos ha enviado una orden para eliminar un jugador.
+                    // Usamos Gdx.app.postRunnable para asegurarnos de que el código que modifica
+                    // los elementos visuales se ejecute en el hilo de renderizado principal,
+                    // evitando así errores de concurrencia.
+                    Gdx.app.postRunnable(() -> {
+                        eliminarOtroJugador(p.idJugador);
+                    });
                 } else if (paquete instanceof Network.PaqueteEnemigoNuevo p) {
                     crearEnemigoVisual(p.estadoEnemigo);
                 } else if (paquete instanceof Network.PaqueteItemNuevo p) {
@@ -561,7 +574,6 @@ public class PantallaDeJuego extends PantallaBase {
                 Network.PaqueteSolicitudRecogerItem paquete = new Network.PaqueteSolicitudRecogerItem();
                 paquete.idItem = item.estado.id;
 
-                // --- CAMBIO CLAVE AQUÍ ---
                 // Se envía el paquete a través del cliente, que gestionará si es local o remoto.
                 if (gameClient != null) {
                     gameClient.send(paquete);
@@ -603,7 +615,7 @@ public class PantallaDeJuego extends PantallaBase {
                 }
             }
         }
-        //para actualiza los bloques
+
         manejadorNivel.actualizar(deltat);
         //--------------------------------
         personajeJugable.KeyHandler();
@@ -611,7 +623,6 @@ public class PantallaDeJuego extends PantallaBase {
 
         gestionarHabilidadDeLimpiezaDeSonic();
 
-        // --- INICIO DEL CÓDIGO A AÑADIR ---
         // Este bloque hace de intermediario entre Knuckles y los bloques rompibles
         if (personajeJugable instanceof Knuckles) {
             Knuckles knuckles = (Knuckles) personajeJugable;
@@ -659,7 +670,6 @@ public class PantallaDeJuego extends PantallaBase {
                 }
             }
         }
-        // --- FIN DEL CÓDIGO A AÑADIR ---
 
         for (Player otro : otrosJugadores.values()) {
             otro.update(deltat);
@@ -693,15 +703,6 @@ public class PantallaDeJuego extends PantallaBase {
             enemigo.update(deltat);
         }
 
-//        Iterator<RobotVisual> iterator = enemigosEnPantalla.values().iterator();
-//        while (iterator.hasNext()) {
-//            RobotVisual enemigo = iterator.next();
-//            if(enemigo.getVida() <= 0){
-//                enemigo.dispose();
-//                iterator.remove();
-//            }
-//        }
-
         if (eggman != null) {
             if (personajeJugable.getBounds().overlaps(eggman.getBounds())) {
                 boolean jugadorAtaca = personajeJugable.estaAtacando();
@@ -732,7 +733,6 @@ public class PantallaDeJuego extends PantallaBase {
         // Solo nos interesa esta lógica si el jugador es una instancia de Sonic.
         if (personajeJugable instanceof Sonic) {
 
-            // --- INICIO DE LA CORRECCIÓN ---
             // Se elimina la dependencia del temporizador de destello.
             // Ahora, detectamos la pulsación de la tecla directamente aquí.
             if (Gdx.input.isKeyJustPressed(Input.Keys.SPACE)) {
@@ -746,7 +746,6 @@ public class PantallaDeJuego extends PantallaBase {
                     gameClient.send(paqueteSolicitud);
                 }
             }
-            // --- FIN DE LA CORRECCIÓN ---
         }
     }
 
@@ -1084,4 +1083,28 @@ public class PantallaDeJuego extends PantallaBase {
     public SoundManager getSoundManager() {
         return soundManager;
     }
+
+    /**
+     * Busca a un jugador en el mapa de 'otrosJugadores' por su ID,
+     * libera sus recursos (dispose) y lo elimina de la pantalla.
+     * @param id El ID del jugador a eliminar.
+     */
+    private void eliminarOtroJugador(int id) {
+        // 1. Buscamos al jugador visual en nuestro HashMap.
+        Player jugadorParaEliminar = otrosJugadores.get(id);
+
+        // 2. Si lo encontramos...
+        if (jugadorParaEliminar != null) {
+            System.out.println("[CLIENT] Eliminando al jugador " + id + " de la pantalla.");
+
+            // 3. Liberamos sus recursos para evitar fugas de memoria (muy importante).
+            jugadorParaEliminar.dispose();
+
+            // 4. Lo quitamos del HashMap para que no se siga actualizando ni dibujando.
+            otrosJugadores.remove(id);
+        } else {
+            System.err.println("[CLIENT] Se intentó eliminar al jugador " + id + " pero no se encontró en la lista.");
+        }
+    }
+
 }

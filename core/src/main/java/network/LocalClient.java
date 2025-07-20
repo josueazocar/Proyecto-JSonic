@@ -58,7 +58,7 @@ public class LocalClient implements IGameClient {
      * No hay una conexión de red que cerrar, por lo que este método está vacío.
      */
     @Override
-    public void dispose() {
+    public void disconnect() {
         System.out.println("[LOCAL CLIENT] Cliente local detenido.");
         // No hay recursos de red que liberar.
     }

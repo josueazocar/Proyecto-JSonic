@@ -76,6 +76,8 @@ public class Network {
         kryo.register(PaqueteActualizacionVida.class);
         kryo.register(PortalInfo.class);
         kryo.register(PaqueteTuID.class);
+        kryo.register(PaqueteJugadorDesconectado.class);
+        kryo.register(PaqueteSalidaDePartida.class);
     }
 
     // --- Definición de los Paquetes ---
@@ -248,5 +250,12 @@ public class Network {
         public PortalInfo() {} // Constructor vacío para KryoNet
     }
 
+    public static class PaqueteJugadorDesconectado {
+        public int idJugador; // El ID del jugador que se ha ido.
+    }
+
+    public static class PaqueteSalidaDePartida {
+        // No necesita campos. Su simple llegada es la notificación.
+    }
 }
 

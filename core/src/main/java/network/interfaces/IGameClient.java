@@ -11,6 +11,8 @@ public interface IGameClient {
      */
     void connect(String host);
 
+    void disconnect();
+
 /**
      * Envía un paquete de datos al servidor.
      * @param packet El objeto que representa los datos a enviar. */
@@ -22,6 +24,5 @@ public interface IGameClient {
      */
     Queue<Object> getPaquetesRecibidos();
 
-    void dispose();
 
 }

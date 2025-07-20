@@ -62,6 +62,12 @@ public class GameClient implements IGameClient {
     }
 
     @Override
+    public void disconnect() {
+        if (cliente != null) {
+            cliente.close(); // Cierra la conexión del cliente
+        }
+    }
+    @Override
     public void send(Object packet) {
         if (cliente != null && cliente.isConnected()) {
             cliente.sendTCP(packet);
@@ -71,13 +77,6 @@ public class GameClient implements IGameClient {
     @Override
     public Queue<Object> getPaquetesRecibidos() {
         return this.paquetesRecibidos;
-    }
-
-    @Override
-    public void dispose() {
-        if (cliente != null) {
-            cliente.close();
-        }
     }
 
 }

@@ -11,6 +11,7 @@ import com.esotericsoftware.kryonet.Server;
 import network.interfaces.IGameServer;
 
 import java.io.IOException;
+import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.ArrayList;
 import java.util.Random;
@@ -20,6 +21,8 @@ public class GameServer implements IGameServer {
     private final Server servidor;
     // --- ALMACENES DE ESTADO ---
     private final HashMap<Integer, PlayerState> jugadores = new HashMap<>();
+    // --- [CAMBIO PROFESOR] --- Añadimos un conjunto para llevar un registro de los personajes que ya están en uso.
+    private final EnumSet<PlayerState.CharacterType> personajesEnUso = EnumSet.noneOf(PlayerState.CharacterType.class);
     private final HashMap<Integer, EnemigoState> enemigosActivos = new HashMap<>();
     private final HashMap<Integer, ItemState> itemsActivos = new HashMap<>();
     private volatile ArrayList<com.badlogic.gdx.math.Rectangle> paredesDelMapa = null;
@@ -91,19 +94,26 @@ public class GameServer implements IGameServer {
                 nuevoEstado.x = 100;
                 nuevoEstado.y = 100;
 
-                // --- LÓGICA DE ASIGNACIÓN AUTOMÁTICA ---
-                // El servidor asigna el personaje de forma autoritaria.
-                int totalJugadores = jugadores.size();
-                if (totalJugadores == 0) {
+                // --- [CAMBIO PROFESOR] --- Lógica de asignación de personajes mejorada.
+                // Ahora es dinámica y no depende del número de jugadores, sino de qué personaje está libre.
+                if (!personajesEnUso.contains(PlayerState.CharacterType.SONIC)) {
                     nuevoEstado.characterType = PlayerState.CharacterType.SONIC;
-                } else if (totalJugadores == 1) {
+                } else if (!personajesEnUso.contains(PlayerState.CharacterType.TAILS)) {
                     nuevoEstado.characterType = PlayerState.CharacterType.TAILS;
-                } else {
+                } else if (!personajesEnUso.contains(PlayerState.CharacterType.KNUCKLES)) {
                     nuevoEstado.characterType = PlayerState.CharacterType.KNUCKLES;
+                } else {
+                    // --- [CAMBIO PROFESOR] --- Lógica para cuando el servidor está lleno.
+                    // Aquí podrías enviar un paquete de "ServidorLleno" y cerrar la conexión.
+                    // Por ahora, simplemente lo logueamos y no asignamos personaje.
+                    System.out.println("[SERVER] Intento de conexión rechazado: No hay personajes disponibles.");
+                    conexion.close();
+                    return; // Salimos del método para no procesar a este jugador.
                 }
+
+                personajesEnUso.add(nuevoEstado.characterType); // Marcamos el personaje como "en uso".
                 System.out.println("[SERVER] Asignado " + nuevoEstado.characterType + " al jugador " + nuevoEstado.id);
 
-                // Guardamos el estado base, pero NO anunciamos al jugador todavía.
                 jugadores.put(conexion.getID(), nuevoEstado);
                 puntajesAnillosIndividuales.put(conexion.getID(), 0);
                 puntajesBasuraIndividuales.put(conexion.getID(), 0);
@@ -115,6 +125,12 @@ public class GameServer implements IGameServer {
             }
 
             public void received(Connection conexion, Object objeto) {
+                if (objeto instanceof Network.PaqueteSalidaDePartida) {
+                    System.out.println("[SERVER] Recibida notificación de salida voluntaria del jugador ID: " + conexion.getID());
+                    // Llamamos a nuestro nuevo método centralizado de desconexión.
+                    desconectarJugador(conexion);
+                    return; // Importante para no seguir procesando más paquetes de este jugador.
+                }
                 if (objeto instanceof Network.SolicitudAccesoPaquete) {
                     Network.SolicitudAccesoPaquete solicitud = (Network.SolicitudAccesoPaquete) objeto;
                     System.out.println("[SERVER] Recibida solicitud de acceso del jugador: " + solicitud.nombreJugador);
@@ -482,13 +498,11 @@ public class GameServer implements IGameServer {
             }
 
             public void disconnected(Connection conexion) {
-                System.out.println("[SERVER] Un cliente se ha desconectado.");
-                jugadores.remove(conexion.getID());
-                puntajesAnillosIndividuales.remove(conexion.getID());
-                puntajesBasuraIndividuales.remove(conexion.getID());
-                cooldownsHabilidadLimpieza.remove(conexion.getID());
+                System.out.println("[SERVER] Conexión física perdida con el cliente ID: " + conexion.getID());
+                desconectarJugador(conexion);
             }
         });
+
 
         try {
             servidor.bind(Network.PORT);
@@ -1122,6 +1136,44 @@ public class GameServer implements IGameServer {
                 tiempoParaProximaMuerteAnimal = 20f;
             }
         }
+    }
+
+// --- [CAMBIO PROFESOR] --- Nuevo método privado para centralizar la lógica
+    /**
+     * Centraliza toda la lógica de limpieza y notificación cuando un jugador
+     * se desconecta, ya sea voluntariamente o por pérdida de conexión.
+     * @param conexion La conexión del jugador que se va.
+     */
+    private void desconectarJugador(Connection conexion) {
+        int jugadorId = conexion.getID();
+
+        // 1. OBTENEMOS EL ESTADO DEL JUGADOR ANTES DE BORRARLO.
+        PlayerState jugadorDesconectado = jugadores.get(jugadorId);
+
+        // 2. SI EL JUGADOR REALMENTE EXISTÍA EN NUESTRA LISTA...
+        if (jugadorDesconectado != null) {
+            // 3. LIBERAMOS SU PERSONAJE.
+            personajesEnUso.remove(jugadorDesconectado.characterType);
+            System.out.println("[SERVER] El personaje " + jugadorDesconectado.characterType + " ha sido liberado.");
+
+            // 4. CREAMOS EL PAQUETE DE NOTIFICACIÓN PARA LOS DEMÁS.
+            Network.PaqueteJugadorDesconectado paqueteNotificacion = new Network.PaqueteJugadorDesconectado();
+            paqueteNotificacion.idJugador = jugadorId;
+
+            // 5. ENVIAMOS LA NOTIFICACIÓN A TODOS LOS DEMÁS JUGADORES.
+            servidor.sendToAllExceptTCP(jugadorId, paqueteNotificacion); // Usamos sendToAllExcept para no enviárselo a sí mismo.
+            System.out.println("[SERVER] Notificando a los clientes restantes sobre la desconexión del jugador " + jugadorId);
+        }
+
+        // 6. FINALMENTE, LIMPIAMOS TODOS LOS DATOS DEL JUGADOR DEL SERVIDOR.
+        jugadores.remove(jugadorId);
+        puntajesAnillosIndividuales.remove(jugadorId);
+        puntajesBasuraIndividuales.remove(jugadorId);
+        cooldownsHabilidadLimpieza.remove(jugadorId);
+
+        // 7. CERRAMOS LA CONEXIÓN (si no estuviera ya cerrada).
+        // Esto asegura que el servidor no mantenga conexiones inactivas.
+        conexion.close();
     }
 
     @Override
