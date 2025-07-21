@@ -15,6 +15,7 @@ import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Input;
 import com.badlogic.gdx.graphics.*;
 import com.badlogic.gdx.graphics.g2d.BitmapFont;
+import com.badlogic.gdx.graphics.g2d.TextureAtlas;
 import com.badlogic.gdx.graphics.glutils.ShaderProgram;
 import com.badlogic.gdx.maps.MapObjects;
 import com.badlogic.gdx.math.Intersector;
@@ -91,6 +92,11 @@ public class PantallaDeJuego extends PantallaBase {
     private static final float CADENCIA_BOMBA = 4.0f;
 
     private boolean sonicFlashActivoEnFrameAnterior = false;
+
+    //Para las barras de vida
+    private BarraDeVida hudVidaJugador;
+    private BarraDeVida hudVidaVillano;
+    private TextureAtlas vidaAtlas;
 
     private Texture animalMuertoIcono;
 
@@ -241,6 +247,21 @@ public class PantallaDeJuego extends PantallaBase {
         tablaInferiorIzquierda.add(animalCountLabel);
 
         mainStage.addActor(tablaInferiorIzquierda);
+
+        // --- INICIALIZACIÓN DE HUDS DE VIDA ---
+        vidaAtlas = new TextureAtlas(Gdx.files.internal("Atlas/vida.atlas")); // Asegúrate de que la ruta sea correcta
+        hudVidaJugador = new BarraDeVida(vidaAtlas);
+        hudVidaVillano = new BarraDeVida(vidaAtlas);
+
+        Table tablaHUDJugador = new Table();
+        tablaHUDJugador.setFillParent(true);
+        tablaHUDJugador.top().left(); // Alinear la tabla arriba a la izquierda
+        tablaHUDJugador.pad(20);
+        tablaHUDJugador.add(hudVidaJugador);
+        mainStage.addActor(tablaHUDJugador);
+
+       // mainStage.addActor(hudVidaVillano);
+        hudVidaVillano.setVisible(false);
 
     }
 
@@ -722,6 +743,11 @@ public class PantallaDeJuego extends PantallaBase {
             eggman.update(deltat);
         }
 
+        if (personajeJugable != null && hudVidaJugador != null) {
+            hudVidaJugador.actualizar(personajeJugable.estado.vida, Player.MAX_VIDA);
+        }
+
+
         camaraJuego.position.x = personajeJugable.estado.x;
         camaraJuego.position.y = personajeJugable.estado.y;
         manejadorNivel.limitarCamaraAMapa(camaraJuego);
@@ -785,6 +811,7 @@ public class PantallaDeJuego extends PantallaBase {
         if (eggman != null){
             if(manejadorNivel.getNombreMapaActual().equals("maps/ZonaJefeN1.tmx") || manejadorNivel.getNombreMapaActual().equals("maps/ZonaJefeN2.tmx") || manejadorNivel.getNombreMapaActual().equals("maps/ZonaJefeN3.tmx"))
                 eggman.draw(batch);
+
         }
 
         for (Bomba bomba : listaDeBombas) {
@@ -1078,6 +1105,8 @@ public class PantallaDeJuego extends PantallaBase {
         if (animalCountLabel != null) {
             animalCountLabel.remove();
         }
+        if (vidaAtlas != null) vidaAtlas.dispose();
+
     }
 
     public SoundManager getSoundManager() {

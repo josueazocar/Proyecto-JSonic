@@ -19,6 +19,7 @@ import network.interfaces.IGameClient;
 import java.util.EnumMap;
 
 public abstract class Player extends Entity implements Disposable {
+    public static final int MAX_VIDA = 100;
     protected EstadoPlayer lastDirection = EstadoPlayer.IDLE_RIGHT;
     protected float lastPosX, lastPosY;
     protected LevelManager levelManager;
@@ -41,6 +42,7 @@ public abstract class Player extends Entity implements Disposable {
     protected static final float DURACION_MENSAJE = 3.0f; // Mensaje visible por 3 segundos
     protected transient IGameClient gameClient;
     protected  boolean clean = false;
+
 // Mapa para almacenar diferentes animaciones por estado
 protected EnumMap<EstadoPlayer, Animation<TextureRegion>> animations;
 

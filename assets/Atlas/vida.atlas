@@ -1,0 +1,13 @@
+vida.png
+size:2048,128
+repeat:none
+vida0
+bounds:1170,15,284,89
+vida100
+bounds:2,2,288,102
+vida25
+bounds:878,15,290,89
+vida50
+bounds:586,15,290,89
+vida75
+bounds:292,16,292,88

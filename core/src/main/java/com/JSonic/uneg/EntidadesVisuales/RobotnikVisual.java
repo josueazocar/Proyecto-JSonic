@@ -14,6 +14,7 @@ import java.util.EnumMap; // Se eliminó 'java.awt.*' ya que no se usaba.
 
 public class RobotnikVisual extends Enemy {
 
+    public static final float MAX_VIDA = 100;
     private LevelManager levelManager;
     private IGameClient gameClient;
 
