@@ -15,6 +15,7 @@ import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Input;
 import com.badlogic.gdx.graphics.*;
 import com.badlogic.gdx.graphics.g2d.BitmapFont;
+import com.badlogic.gdx.graphics.g2d.TextureAtlas;
 import com.badlogic.gdx.graphics.glutils.ShaderProgram;
 import com.badlogic.gdx.maps.MapObjects;
 import com.badlogic.gdx.math.Intersector;
@@ -97,7 +98,15 @@ public class PantallaDeJuego extends PantallaBase {
 
     private boolean sonicFlashActivoEnFrameAnterior = false;
 
+    //Para las barras de vida
+    private BarraDeVida hudVidaJugador;
+    private BarraDeVidaVillanos hudVidaVillano;
+    private Table tablaHUDVillano;
+    private TextureAtlas vidaAtlas;
     private Texture animalMuertoIcono;
+    private final HashMap<Integer, BarraDeVidaVillanos> barrasVidaEnemigos = new HashMap<>();
+    private static final float ANCHO_BARRA_ROBOT = 40f; // Ancho de la barra para robots
+    private static final float ALTO_BARRA_ROBOT = 5f;
 
     public PantallaDeJuego(JSonicJuego juego, IGameServer server) {
         super("");
@@ -253,6 +262,18 @@ public class PantallaDeJuego extends PantallaBase {
 
         mainStage.addActor(tablaInferiorIzquierda);
 
+        // --- INICIALIZACIÓN DE HUDS DE VIDA ---
+        vidaAtlas = new TextureAtlas(Gdx.files.internal("Atlas/vida.atlas")); // Asegúrate de que la ruta sea correcta
+        hudVidaJugador = new BarraDeVida(vidaAtlas);
+        hudVidaVillano = new BarraDeVidaVillanos(RobotnikVisual.MAX_VIDA, 80f, 10f);
+
+        Table tablaHUDJugador = new Table();
+        tablaHUDJugador.setFillParent(true);
+        tablaHUDJugador.top().left(); // Alinear la tabla arriba a la izquierda
+        tablaHUDJugador.pad(20);
+        tablaHUDJugador.add(hudVidaJugador);
+        mainStage.addActor(tablaHUDJugador);
+
     }
 
     @Override
@@ -392,6 +413,7 @@ public class PantallaDeJuego extends PantallaBase {
                         personajeJugable.setVida(personajeJugable.getVida() - 7);
                     } else if (porcentajeContaminacionActual >= 70 && porcentajeContaminacionActual <= 99) {
                         personajeJugable.setVida(personajeJugable.getVida() - 10);
+                        hudVidaJugador.mostrarPerdidaDeVida();
                     } else if (porcentajeContaminacionActual == 100) {
                         personajeJugable.setVida(0);
                         personajeJugable = null;
@@ -490,6 +512,9 @@ public class PantallaDeJuego extends PantallaBase {
 
                         // Actualizamos el estado de vida de nuestro jugador.
                         // Asumimos que tienes un método setVida que también actualiza la UI (la barra de vida).
+                        if (p.nuevaVida <= personajeJugable.estado.vida) {
+                            hudVidaJugador.mostrarPerdidaDeVida();
+                        }
                         personajeJugable.setVida(p.nuevaVida);
                         System.out.println("¡Recibido daño! Mi vida ahora es: " + p.nuevaVida);
                     }
@@ -547,6 +572,8 @@ public class PantallaDeJuego extends PantallaBase {
                             if (enemigo != null) {
                                 enemigo.dispose();
                             }
+                            BarraDeVidaVillanos barra = barrasVidaEnemigos.remove(p.idEntidad);
+                            if (barra != null) barra.dispose();
                         }
                     }
                 }
@@ -572,6 +599,7 @@ public class PantallaDeJuego extends PantallaBase {
                 if (bomba.getBounds().overlaps(personajeJugable.getBounds())) {
                     personajeJugable.setVida(personajeJugable.getVida() - 20);
                     bomba.marcarComoDanioHecho();
+                    hudVidaJugador.mostrarPerdidaDeVida();
                 }
             }
             if (bomba.isParaEliminar()) {
@@ -741,6 +769,44 @@ public class PantallaDeJuego extends PantallaBase {
             eggman.update(deltat);
         }
 
+        if (personajeJugable != null && hudVidaJugador != null) {
+            hudVidaJugador.actualizar(personajeJugable.estado.vida, Player.MAX_VIDA);
+        }
+
+        if (hudVidaVillano != null) {
+            if (eggman != null) {
+                // Calculamos la posición centrada sobre su cabeza
+                float anchoVillano = eggman.getTileSize();
+                float altoVillano = eggman.getTileSize();
+                float anchoBarra = 80f; // El mismo ancho que definimos al crearla
+
+                float offsetY = 60f;
+                float offsetX = 20f;
+                float hudX = eggman.estado.x + (anchoVillano / 2) - (anchoBarra / 2) + offsetX;
+                float hudY = eggman.estado.y + altoVillano + offsetY;
+                // Actualizamos el estado de la barra con la vida y posición de Eggman
+                hudVidaVillano.actualizar(eggman.estado.vida, hudX, hudY);
+            }
+        }
+
+        for (RobotVisual enemigo : enemigosEnPantalla.values()) {
+            BarraDeVidaVillanos barra = barrasVidaEnemigos.get(enemigo.estado.id);
+            if (barra != null) {
+                // Calculamos la posición sobre la cabeza del enemigo
+                float anchoEnemigo = enemigo.getTileSize();
+                float altoEnemigo = enemigo.getTileSize();
+                // Obtenemos el ancho que le dimos al crearlo para centrarlo
+                float anchoBarra = ANCHO_BARRA_ROBOT;
+                float offsetY = 55f;
+                float offsetX = 20f;
+
+                float hudX = enemigo.estado.x + (anchoEnemigo / 2) - (anchoBarra / 2) + offsetX;
+                float hudY = enemigo.estado.y + altoEnemigo + offsetY;
+
+                barra.actualizar(enemigo.estado.vida, hudX, hudY);
+            }
+        }
+
         camaraJuego.position.x = personajeJugable.estado.x;
         camaraJuego.position.y = personajeJugable.estado.y;
         manejadorNivel.limitarCamaraAMapa(camaraJuego);
@@ -804,6 +870,7 @@ public class PantallaDeJuego extends PantallaBase {
         if (eggman != null){
             if(manejadorNivel.getNombreMapaActual().equals("maps/ZonaJefeN1.tmx") || manejadorNivel.getNombreMapaActual().equals("maps/ZonaJefeN2.tmx") || manejadorNivel.getNombreMapaActual().equals("maps/ZonaJefeN3.tmx"))
                 eggman.draw(batch);
+
         }
 
         for (Bomba bomba : listaDeBombas) {
@@ -813,6 +880,14 @@ public class PantallaDeJuego extends PantallaBase {
 
         for (ItemVisual item : itemsEnPantalla.values()) item.draw(batch);
         batch.end();
+
+        if (eggman != null && hudVidaVillano != null) {
+            hudVidaVillano.dibujar(camaraJuego);
+        }
+
+        for (BarraDeVidaVillanos barra : barrasVidaEnemigos.values()) {
+            barra.dibujar(camaraJuego);
+        }
 
         renderizarNeblinaConShader();
 
@@ -940,6 +1015,9 @@ public class PantallaDeJuego extends PantallaBase {
         if (!enemigosEnPantalla.containsKey(estadoEnemigo.id)) {
             RobotVisual nuevoRobot = new RobotVisual(estadoEnemigo, manejadorNivel, this.gameClient);
             enemigosEnPantalla.put(estadoEnemigo.id, nuevoRobot);
+
+            BarraDeVidaVillanos nuevaBarra = new BarraDeVidaVillanos(nuevoRobot.estado.vida, ANCHO_BARRA_ROBOT, ALTO_BARRA_ROBOT );
+            barrasVidaEnemigos.put(estadoEnemigo.id, nuevaBarra);
         }
     }
     //para actualizar el label de los animales
@@ -962,6 +1040,12 @@ public class PantallaDeJuego extends PantallaBase {
             enemigo.dispose();
         }
         enemigosEnPantalla.clear();
+
+        for (BarraDeVidaVillanos barra : barrasVidaEnemigos.values()) {
+            barra.dispose();
+        }
+        barrasVidaEnemigos.clear();
+
         for (ItemVisual item : itemsEnPantalla.values()) {
             item.dispose();
         }
@@ -1099,6 +1183,9 @@ public class PantallaDeJuego extends PantallaBase {
         if (animalCountLabel != null) {
             animalCountLabel.remove();
         }
+        if (vidaAtlas != null) vidaAtlas.dispose();
+        if (hudVidaVillano != null) hudVidaVillano.dispose();
+
     }
 
     public SoundManager getSoundManager() {
