@@ -18,6 +18,7 @@ public class JSonicJuego extends JuegoBase {
     // true  -> Inicia en modo multijugador online.
     // false -> Inicia en modo de un jugador offline.
     public static boolean modoOnline = false;
+    public static boolean modoMultijugador = false;
 
     public JSonicJuego() {
         super();

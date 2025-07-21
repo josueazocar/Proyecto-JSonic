@@ -108,6 +108,10 @@ public class PantallaDeJuego extends PantallaBase {
     private static final float ANCHO_BARRA_ROBOT = 40f; // Ancho de la barra para robots
     private static final float ALTO_BARRA_ROBOT = 5f;
 
+    //Para la interfaz Game Over
+    private GameOverInterfaz interfazGameOver;
+    private boolean isGameOver = false;
+
     public PantallaDeJuego(JSonicJuego juego, IGameServer server) {
         super("");
         this.juegoPrincipal = juego;
@@ -274,10 +278,16 @@ public class PantallaDeJuego extends PantallaBase {
         tablaHUDJugador.add(hudVidaJugador);
         mainStage.addActor(tablaHUDJugador);
 
+        interfazGameOver = new GameOverInterfaz(juegoPrincipal, getSkin());
+        mainStage.addActor(interfazGameOver);
+
     }
 
     @Override
     public void actualizar(float deltat) {
+        if(isGameOver){
+            return;
+        }
         if (personajeJugable != null && this.gameClient != null) {
             // Como ya sabemos que el cliente no es nulo, lo asignamos.
             personajeJugable.setGameClient(this.gameClient);
@@ -515,6 +525,11 @@ public class PantallaDeJuego extends PantallaBase {
                         if (p.nuevaVida <= personajeJugable.estado.vida) {
                             hudVidaJugador.mostrarPerdidaDeVida();
                         }
+
+                        if (personajeJugable.estado.vida <= 0) {
+                            activarGameOver();
+                        }
+
                         personajeJugable.setVida(p.nuevaVida);
                         System.out.println("¡Recibido daño! Mi vida ahora es: " + p.nuevaVida);
                     }
@@ -532,17 +547,8 @@ public class PantallaDeJuego extends PantallaBase {
                         if (personajeJugable != null && p.idEntidad == personajeJugable.estado.id) {
                             System.out.println("¡He sido derrotado! -- GAME OVER --");
 
-                            // Aquí va tu lógica de Game Over.
-                            // Por ejemplo, podrías mostrar un mensaje y cambiar de pantalla.
-                            // Una forma segura de desactivar al jugador es la siguiente:
                             personajeJugable.setVida(0); // Aseguramos que la vida esté en 0.
-                            // Para evitar NullPointerExceptions, en lugar de hacer 'personajeJugable = null',
-                            // es mejor tener una bandera. En tu método update, podrías tener:
-                            // if (personajeJugable.estaMuerto()) return;
-
-                            // Por ahora, una simple desactivación puede ser suficiente:
-                            // this.juegoPrincipal.setScreen(new GameOverScreen(this.juegoPrincipal));
-
+                            activarGameOver();
                         } else {
                             // Si es OTRO jugador, lo eliminamos del mapa de 'otrosJugadores'.
                             System.out.println("El jugador " + p.idEntidad + " ha sido derrotado.");
@@ -1158,6 +1164,29 @@ public class PantallaDeJuego extends PantallaBase {
             mapaActual.equals("maps/ZonaJefeN3.tmx");
     }
 
+
+    private void activarGameOver() {
+        // Si ya estamos en Game Over, no hacemos nada más para evitar errores.
+        if (isGameOver) {
+            return;
+        }
+
+        System.out.println("¡JUGADOR DERROTADO! Mostrando Game Over...");
+
+        // 1. Activamos la bandera para congelar el juego.
+        this.isGameOver = true;
+
+        // 2. Hacemos visible nuestra interfaz de Game Over.
+        this.interfazGameOver.setVisible(true);
+
+        // 3. Le damos el "foco" al menú para que los botones funcionen.
+        Gdx.input.setInputProcessor(mainStage);
+
+        // 4. Detenemos la música de fondo.
+        if (soundManager != null) {
+            soundManager.stopBackgroundMusic();
+        }
+    }
     @Override
     public void pause() {
         if (soundManager != null) soundManager.pauseBackgroundMusic();

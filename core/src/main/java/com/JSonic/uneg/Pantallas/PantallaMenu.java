@@ -186,6 +186,7 @@ public class PantallaMenu extends PantallaBase {
             @Override
             public void clicked(InputEvent event, float x, float y) {
                 JSonicJuego.personajesYaSeleccionados.clear();
+                JSonicJuego.modoMultijugador = false;
                 juegoApp.setPantallaActiva(new PantallaSeleccionPersonaje(juegoApp));
             }
         });
@@ -200,6 +201,7 @@ public class PantallaMenu extends PantallaBase {
             public void clicked(InputEvent event, float x, float y) {
 
                 juegoApp.direccionIp = "20.112.50.29";
+                JSonicJuego.modoMultijugador = true;
                 mostrarMenuCrearUnirse();
             }
         });
@@ -207,6 +209,7 @@ public class PantallaMenu extends PantallaBase {
         botonLocal.addListener(new ClickListener() {
             @Override
             public void clicked(InputEvent event, float x, float y) {
+                JSonicJuego.modoMultijugador = true;
                 juegoApp.direccionIp = "localhost";
                 mostrarMenuCrearUnirse();
             }
