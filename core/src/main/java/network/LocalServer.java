@@ -610,7 +610,7 @@ public class LocalServer implements IGameServer {
         //----------------------------------------------------
         //aqui se cambio para que la logica donde se llamaba al servidor, fuera una funcion
 
-        this.tiempoGeneracionTeleport += deltaTime;
+        /*this.tiempoGeneracionTeleport += deltaTime;
         if (!this.teleportGenerado && this.tiempoGeneracionTeleport >= 20f) {
 
             System.out.println("[LOCAL SERVER] Generando teletransportador...");
@@ -618,7 +618,7 @@ public class LocalServer implements IGameServer {
             //llamamos a la funcion generar portales
             generarPortales(manejadorNivel);
             this.teleportGenerado = true;
-        }
+        }*/
 
         if (alMenosUnJugadorHaEnviadoPosicion) {
             actualizarEstadoAnimalesPorContaminacion(deltaTime);
@@ -855,22 +855,19 @@ public class LocalServer implements IGameServer {
      * Si es así, genera el portal de salida.
      */
     private void comprobarYGenerarPortalSiCorresponde(LevelManager manejadorNivel) {
+        if (teleportGenerado) {
+            return;
+        }
         // La condición es simple: si la lista de enemigos activos está vacía, es hora.
         if (enemigosActivos.isEmpty()) {
             System.out.println("[LOCAL SERVER] ¡Todos los enemigos derrotados! Generando portal de salida.");
-            generarPortales(manejadorNivel); // Usamos el método que ya tenías.
+            generarPortales(manejadorNivel);
+            // 3. ¡Activamos el seguro para no volver a generar el portal en este nivel!
+            teleportGenerado = true;
         }
     }
     //-------------------------------------------------------------------
-
-
-    /*private void generarNuevosEnemigos(float deltaTime, LevelManager manejadorNivel) {
-        tiempoGeneracionEnemigo += deltaTime;
-        if (tiempoGeneracionEnemigo >= INTERVALO_GENERACION_ENEMIGO) {
-            spawnNuevoEnemigo(manejadorNivel);
-            tiempoGeneracionEnemigo = 0f;
-        }
-    }*/
+    
 
     private boolean spawnNuevoEnemigo(LevelManager manejadorNivel) {
         int intentos = 0;
