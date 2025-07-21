@@ -1,27 +1,62 @@
+// Archivo: src/com/JSonic/uneg/ObjetosDelEntorno/BarraDeVida.java
 package com.JSonic.uneg.ObjetosDelEntorno;
+
 import com.badlogic.gdx.graphics.g2d.TextureAtlas;
 import com.badlogic.gdx.scenes.scene2d.ui.Image;
 import com.badlogic.gdx.scenes.scene2d.ui.Table;
 import com.badlogic.gdx.scenes.scene2d.utils.TextureRegionDrawable;
 
-public class BarraDeVida extends Table{
+public class BarraDeVida extends Table {
     private Image imagenVida;
     private TextureAtlas vidaAtlas;
 
+    private float tiempoFlash = 0f; // El temporizador para el efecto de daño
+    private final float DURACION_FLASH = 0.3f; // Duración del flash en segundos. ¡Puedes ajustar esto!
+
     public BarraDeVida(TextureAtlas atlas) {
-        super(); // Llama al constructor de la clase Table (importante)
+        super();
         this.vidaAtlas = atlas;
-
-        // Al empezar, siempre mostramos la vida al 100%
         this.imagenVida = new Image(vidaAtlas.findRegion("vida100"));
-
-        // Como nuestra clase es una Tabla, podemos añadirle la imagen directamente.
         this.add(imagenVida);
     }
 
+    /**
+     * El método act se llama automáticamente en cada fotograma por el Stage.
+     * Lo usamos para manejar la lógica del temporizador.
+     */
+    @Override
+    public void act(float delta) {
+        super.act(delta); // Llama al método del padre (importante)
+        if (tiempoFlash > 0) {
+            tiempoFlash -= delta;
+        }
+    }
+
+    /**
+     * Este es el método que llamaremos desde fuera para activar el efecto visual.
+     */
+    public void mostrarPerdidaDeVida() {
+        this.tiempoFlash = DURACION_FLASH;
+    }
+
+    /**
+     * Actualiza la imagen de la barra de vida. Ahora también considera
+     * si el efecto de "daño" está activo.
+     */
     public void actualizar(float vidaActual, float vidaMaxima) {
-        String nombreRegion = getNombreRegionVida(vidaActual, vidaMaxima);
-        ((TextureRegionDrawable) imagenVida.getDrawable()).setRegion(vidaAtlas.findRegion(nombreRegion));
+        String nombreRegionBase = getNombreRegionVida(vidaActual, vidaMaxima);
+        String nombreRegionFinal = nombreRegionBase;
+
+        // Si el temporizador de flash está activo, buscamos la imagen de "pérdida"
+        if (tiempoFlash > 0) {
+            // Comprobamos si existe una región de pérdida para este nivel de vida
+            if (vidaAtlas.findRegion(nombreRegionBase + "_perdida") != null) {
+                nombreRegionFinal += "_perdida";
+            }
+        }
+
+        // Actualizamos la imagen que se muestra
+        ((TextureRegionDrawable) imagenVida.getDrawable()).setRegion(vidaAtlas.findRegion(nombreRegionFinal));
     }
 
     private String getNombreRegionVida(float vidaActual, float vidaMaxima) {
@@ -40,5 +75,4 @@ public class BarraDeVida extends Table{
             return "vida0";
         }
     }
-
 }

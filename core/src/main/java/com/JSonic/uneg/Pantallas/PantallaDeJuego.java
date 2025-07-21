@@ -394,6 +394,7 @@ public class PantallaDeJuego extends PantallaBase {
                         personajeJugable.setVida(personajeJugable.getVida() - 7);
                     } else if (porcentajeContaminacionActual >= 70 && porcentajeContaminacionActual <= 99) {
                         personajeJugable.setVida(personajeJugable.getVida() - 10);
+                        hudVidaJugador.mostrarPerdidaDeVida();
                     } else if (porcentajeContaminacionActual == 100) {
                         personajeJugable.setVida(0);
                         personajeJugable = null;
@@ -492,6 +493,9 @@ public class PantallaDeJuego extends PantallaBase {
 
                         // Actualizamos el estado de vida de nuestro jugador.
                         // Asumimos que tienes un método setVida que también actualiza la UI (la barra de vida).
+                        if (p.nuevaVida <= personajeJugable.estado.vida) {
+                            hudVidaJugador.mostrarPerdidaDeVida();
+                        }
                         personajeJugable.setVida(p.nuevaVida);
                         System.out.println("¡Recibido daño! Mi vida ahora es: " + p.nuevaVida);
                     }
@@ -576,6 +580,7 @@ public class PantallaDeJuego extends PantallaBase {
                 if (bomba.getBounds().overlaps(personajeJugable.getBounds())) {
                     personajeJugable.setVida(personajeJugable.getVida() - 20);
                     bomba.marcarComoDanioHecho();
+                    hudVidaJugador.mostrarPerdidaDeVida();
                 }
             }
             if (bomba.isParaEliminar()) {
