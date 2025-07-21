@@ -35,6 +35,7 @@ public class LocalServer implements IGameServer {
     private static final float RANGO_DETENERSE_ROBOTNIK = 30f;
     private float tiempoGeneracionEnemigo = 0f;
     private final float INTERVALO_GENERACION_ENEMIGO = 5.0f;
+    private int enemigosGeneradosEnNivelActual = 0;
     private int proximoIdEnemigo = 0;
     private float tiempoGeneracionTeleport = 0f;
     private boolean teleportGenerado = false;
@@ -54,6 +55,8 @@ public class LocalServer implements IGameServer {
     private float tiempoDesdeUltimaContaminacion = 0f;
     private static final float INTERVALO_ACTUALIZACION_CONTAMINACION = 1.0f; // 1 segundo
     private int esmeraldasRecogidasGlobal = 0;
+    //para colocarle limite a los enemigos por mapa
+    private final HashMap<String, Integer> enemigosPorMapa = new HashMap<>();
 
     //declaraciones de HashMap
     private final HashMap<Integer, AnimalState> animalesActivos = new HashMap<>();
@@ -79,6 +82,15 @@ public class LocalServer implements IGameServer {
 
     public LocalServer() {
         // El constructor está vacío, la magia ocurre en start() y update()
+
+        // Poblamos el mapa con la cantidad de enemigos por nivel.
+        enemigosPorMapa.put("maps/Zona1N1.tmx", 8);
+        enemigosPorMapa.put("maps/ZonaJefeN1.tmx", 3);
+        enemigosPorMapa.put("maps/Zona1N2.tmx", 15);
+        enemigosPorMapa.put("maps/ZonaJefeN2.tmx", 5);
+        enemigosPorMapa.put("maps/Zona1N3.tmx", 25);
+        enemigosPorMapa.put("maps/Zona2N3.tmx", 35);
+        enemigosPorMapa.put("maps/ZonaJefeN3.tmx", 7);
     }
 
     public static void decreaseContamination(float porcentaje) {
@@ -521,6 +533,9 @@ public class LocalServer implements IGameServer {
 
                         // Enviamos la orden al cliente local.
                         clienteLocal.recibirPaqueteDelServidor(notificacionMuerte);
+
+                        //para saber comprobar si se ha derrotado al jefe final
+                        comprobarYGenerarPortalSiCorresponde(manejadorNivel);
                     }
                 }
             }
@@ -561,6 +576,7 @@ public class LocalServer implements IGameServer {
             teleportGenerado = false;
             tiempoGeneracionTeleport = 0f;
             tiempoGeneracionEnemigo = 0f;
+            enemigosGeneradosEnNivelActual = 0;
             tiempoSpawnAnillo = 0f;
             tiempoSpawnBasura = 0f;
             tiempoSpawnPlastico = 0f;
@@ -609,7 +625,8 @@ public class LocalServer implements IGameServer {
             actualizarEnemigosAI(deltaTime, manejadorNivel, personajeJugable);
         }
         generarNuevosItems(deltaTime, manejadorNivel);
-        generarNuevosEnemigos(deltaTime, manejadorNivel);
+        generarEnemigosControlados(deltaTime, manejadorNivel);
+        //generarNuevosEnemigos(deltaTime, manejadorNivel);
 //para que los animales se puedan generar varias veces en el mapa
         if (!animalesActivos.isEmpty()) {
             Network.PaqueteActualizacionAnimales paqueteUpdateAnimales = new Network.PaqueteActualizacionAnimales();
@@ -805,15 +822,57 @@ public class LocalServer implements IGameServer {
         }
     }
 
-    private void generarNuevosEnemigos(float deltaTime, LevelManager manejadorNivel) {
+    //para enemigospor mapa
+    private void generarEnemigosControlados(float deltaTime, LevelManager manejadorNivel) {
+        String mapaActual = manejadorNivel.getNombreMapaActual();
+        int limiteEnemigos = enemigosPorMapa.getOrDefault(mapaActual, 0);
+
+        // Si ya hemos generado todos los enemigos para este nivel, no hacemos nada más.
+        if (enemigosGeneradosEnNivelActual >= limiteEnemigos) {
+            return;
+        }
+
+        // Si todavía no hemos alcanzado el límite, aplicamos el temporizador.
+        tiempoGeneracionEnemigo += deltaTime;
+        if (tiempoGeneracionEnemigo >= INTERVALO_GENERACION_ENEMIGO) {
+
+            // Intentamos generar un nuevo enemigo.
+            boolean enemigoGenerado = spawnNuevoEnemigo(manejadorNivel);
+
+            // Si se pudo generar con éxito...
+            if (enemigoGenerado) {
+                enemigosGeneradosEnNivelActual++; // Incrementamos el contador de este nivel.
+                System.out.println("[LOCAL SERVER] Enemigo generado (" + enemigosGeneradosEnNivelActual + "/" + limiteEnemigos + ")");
+            }
+
+            // Reiniciamos el temporizador en cualquier caso, para no intentarlo en cada frame.
+            tiempoGeneracionEnemigo = 0f;
+        }
+    }
+
+    /**
+     * Comprueba si todos los enemigos del nivel han sido derrotados.
+     * Si es así, genera el portal de salida.
+     */
+    private void comprobarYGenerarPortalSiCorresponde(LevelManager manejadorNivel) {
+        // La condición es simple: si la lista de enemigos activos está vacía, es hora.
+        if (enemigosActivos.isEmpty()) {
+            System.out.println("[LOCAL SERVER] ¡Todos los enemigos derrotados! Generando portal de salida.");
+            generarPortales(manejadorNivel); // Usamos el método que ya tenías.
+        }
+    }
+    //-------------------------------------------------------------------
+
+
+    /*private void generarNuevosEnemigos(float deltaTime, LevelManager manejadorNivel) {
         tiempoGeneracionEnemigo += deltaTime;
         if (tiempoGeneracionEnemigo >= INTERVALO_GENERACION_ENEMIGO) {
             spawnNuevoEnemigo(manejadorNivel);
             tiempoGeneracionEnemigo = 0f;
         }
-    }
+    }*/
 
-    private void spawnNuevoEnemigo(LevelManager manejadorNivel) {
+    private boolean spawnNuevoEnemigo(LevelManager manejadorNivel) {
         int intentos = 0;
         boolean colocado = false;
         while (!colocado && intentos < 20) {
@@ -831,6 +890,7 @@ public class LocalServer implements IGameServer {
             }
             intentos++;
         }
+        return colocado;
     }
 
     private void spawnNuevoItem(ItemState.ItemType tipo, LevelManager manejadorNivel) {
