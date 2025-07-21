@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<map version="1.10" tiledversion="1.11.2" orientation="orthogonal" renderorder="right-down" width="60" height="40" tilewidth="32" tileheight="32" infinite="0" nextlayerid="10" nextobjectid="95">
+<map version="1.10" tiledversion="1.11.2" orientation="orthogonal" renderorder="right-down" width="60" height="40" tilewidth="32" tileheight="32" infinite="0" nextlayerid="11" nextobjectid="96">
  <tileset firstgid="1" source="Escenario.tsx"/>
  <tileset firstgid="1289" source="DecoracionesDesierto.tsx"/>
  <tileset firstgid="1993" source="Infraestructuras2(grama).tsx"/>
@@ -365,7 +365,7 @@
   <object id="94" x="1500" y="1102" width="34" height="16"/>
  </objectgroup>
  <objectgroup id="2" name="destinox">
-  <object id="3" name="Portal" type="Portal" x="1738" y="136" width="126" height="144">
+  <object id="3" name="Portal" type="Portal" x="1770" y="136" width="98" height="92">
    <properties>
     <property name="destinoMapa" value="maps/ZonaJefeN2.tmx"/>
     <property name="destinoX" type="float" value="98"/>
@@ -373,5 +373,8 @@
    </properties>
   </object>
   <object id="4" name="Llegada" type="Llegada" x="22" y="296" width="124" height="130"/>
+ </objectgroup>
+ <objectgroup id="10" name="Esmeraldas">
+  <object id="95" name="Esmeraldas" type="Esmeraldas" x="1638" y="1056" width="118" height="92"/>
  </objectgroup>
 </map>

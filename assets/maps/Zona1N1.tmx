@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<map version="1.10" tiledversion="1.11.2" orientation="orthogonal" renderorder="right-down" width="60" height="40" tilewidth="32" tileheight="32" infinite="0" nextlayerid="10" nextobjectid="108">
+<map version="1.10" tiledversion="1.11.2" orientation="orthogonal" renderorder="right-down" width="60" height="40" tilewidth="32" tileheight="32" infinite="0" nextlayerid="11" nextobjectid="110">
  <tileset firstgid="1" source="Escenario.tsx"/>
  <tileset firstgid="1289" source="Arbol1.tsx"/>
  <tileset firstgid="1305" source="Arbol2.tsx"/>
@@ -422,5 +422,9 @@
    </properties>
   </object>
   <object id="107" name="Llegada" type="Llegada" x="56" y="1128" width="152" height="94"/>
+ </objectgroup>
+ <objectgroup id="10" name="Esmeraldas">
+  <object id="108" name="Esmeraldas" type="Esmeraldas" x="734" y="60" width="128" height="104"/>
+  <object id="109" x="522" y="420"/>
  </objectgroup>
 </map>

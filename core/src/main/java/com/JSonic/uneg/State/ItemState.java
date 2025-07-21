@@ -12,7 +12,8 @@ public class ItemState extends EntityState {
         ANILLO,
         BASURA,
         PIEZA_PLASTICO,
-        TELETRANSPORTE
+        TELETRANSPORTE,
+        ESMERALDA
     }
 
     public ItemType tipo;

@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<map version="1.10" tiledversion="1.11.2" orientation="orthogonal" renderorder="right-down" width="60" height="40" tilewidth="32" tileheight="32" infinite="0" nextlayerid="8" nextobjectid="51">
+<map version="1.10" tiledversion="1.11.2" orientation="orthogonal" renderorder="right-down" width="60" height="40" tilewidth="32" tileheight="32" infinite="0" nextlayerid="9" nextobjectid="52">
  <tileset firstgid="1" source="Escenario.tsx"/>
  <tileset firstgid="1289" source="minaDeCristal.tsx"/>
  <layer id="1" name="TerrenoMina" width="60" height="40">
@@ -234,5 +234,8 @@
     <property name="destinoY" type="float" value="1176"/>
    </properties>
   </object>
+ </objectgroup>
+ <objectgroup id="8" name="Esmeraldas">
+  <object id="51" name="Esmeraldas" type="Esmeraldas" x="1736" y="636" width="120" height="100"/>
  </objectgroup>
 </map>

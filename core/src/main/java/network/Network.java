@@ -78,6 +78,7 @@ public class Network {
         kryo.register(PaqueteTuID.class);
         kryo.register(PaqueteJugadorDesconectado.class);
         kryo.register(PaqueteSalidaDePartida.class);
+        kryo.register(PaqueteActualizacionEsmeraldas.class);
     }
 
     // --- Definición de los Paquetes ---
@@ -240,6 +241,10 @@ public class Network {
     public static class PaqueteActualizacionVida {
         public int idJugador;
         public int nuevaVida;
+    }
+
+    public static class PaqueteActualizacionEsmeraldas {
+        public int totalEsmeraldas;
     }
 
     public static class PortalInfo {

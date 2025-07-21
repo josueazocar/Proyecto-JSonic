@@ -27,6 +27,7 @@ import com.badlogic.gdx.utils.viewport.FitViewport;
 import com.badlogic.gdx.utils.viewport.Viewport;
 import network.LocalServer;
 import network.Network;
+import com.JSonic.uneg.ObjetosDelEntorno.EsmeraldaVisual;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 import com.badlogic.gdx.math.Rectangle;
 import network.interfaces.IGameClient;
@@ -72,6 +73,10 @@ public class PantallaDeJuego extends PantallaBase {
     private int animalesVivos = 0;
     private int animalesMuertos = 0;
     private int totalAnimalesMapa = 0;
+
+    //para el label de las esmeraldas
+    private ContadorUI contadorEsmeraldas;
+    private int esmeraldasTotal = 0;
 
     //private final HashMap<Integer, AnimalVisual> animalesEnPantalla = new HashMap<>(); // <-- AÑADIR ESTA LÍNEA
     private OrthographicCamera uiCamera;
@@ -195,6 +200,7 @@ public class PantallaDeJuego extends PantallaBase {
         String numerosTexturaPath = "Fondos/numerosContadorAnillos.png";
         contadorAnillos = new ContadorUI(numerosTexturaPath);
         contadorBasura = new ContadorUI(numerosTexturaPath);
+        contadorEsmeraldas = new ContadorUI(numerosTexturaPath);
 
         Table tablaUI = new Table();
         tablaUI.top().right();
@@ -205,10 +211,15 @@ public class PantallaDeJuego extends PantallaBase {
         Image anilloIcono = new Image(anilloVisual.getAnimacion().getKeyFrame(0));
         Texture basuraIcono = new Texture("Items/basura.png");
 
+        EsmeraldaVisual esmeraldaVisual = new EsmeraldaVisual(new ItemState(0, 0, 0, ItemState.ItemType.ESMERALDA));
+        Image esmeraldaIcono = new Image(esmeraldaVisual.getAnimacion().getKeyFrame(0));
+
         tablaUI.add(anilloIcono).size(45, 45);
         tablaUI.add(contadorAnillos.getTabla()).padLeft(5);
         tablaUI.add(new Image(basuraIcono)).size(55, 55).padLeft(20);
         tablaUI.add(contadorBasura.getTabla()).padLeft(5);
+        tablaUI.add(esmeraldaIcono).size(45, 45).padLeft(20);
+        tablaUI.add(contadorEsmeraldas.getTabla()).padLeft(5);
 
         mainStage.addActor(tablaUI);
 
@@ -342,7 +353,14 @@ public class PantallaDeJuego extends PantallaBase {
                         System.out.println("[CLIENT] Obedeciendo orden de eliminar ítem con ID: " + p.idItem);
                         itemEliminado.dispose();
                     }
-                } else if (paquete instanceof Network.PaqueteActualizacionEnemigos p) {
+                }
+                //para esmeraldas
+                else if (paquete instanceof Network.PaqueteActualizacionEsmeraldas p) {
+                    this.esmeraldasTotal = p.totalEsmeraldas;
+                    this.contadorEsmeraldas.setValor(this.esmeraldasTotal);
+                }
+
+                else if (paquete instanceof Network.PaqueteActualizacionEnemigos p) {
                     for (EnemigoState estadoServidor : p.estadosEnemigos.values()) {
                         if (estadoServidor.tipo == EnemigoType.ROBOTNIK) {
                             if (eggman != null) {
@@ -360,6 +378,7 @@ public class PantallaDeJuego extends PantallaBase {
                             }
                         }
                     }
+
                 } else if (paquete instanceof Network.PaqueteOrdenCambiarMapa p) {
                     System.out.println("[CLIENT] ¡Recibida orden del servidor para cambiar al mapa: " + p.nuevoMapa + "!");
                     manejadorNivel.cargarNivel(p.nuevoMapa);
@@ -1073,6 +1092,7 @@ public class PantallaDeJuego extends PantallaBase {
                 case BASURA: nuevoItem = new BasuraVisual(estadoItem); break;
                 case PIEZA_PLASTICO: nuevoItem = new PiezaDePlasticoVisual(estadoItem); break;
                 case TELETRANSPORTE: nuevoItem = new TeletransporteVisual(estadoItem); break;
+                case ESMERALDA: nuevoItem = new EsmeraldaVisual(estadoItem); break;
             }
             if (nuevoItem != null) {
                 itemsEnPantalla.put(estadoItem.id, nuevoItem);
@@ -1170,6 +1190,7 @@ public class PantallaDeJuego extends PantallaBase {
         }
         if (contadorAnillos != null) contadorAnillos.dispose();
         if (contadorBasura != null) contadorBasura.dispose();
+        if (contadorEsmeraldas != null) contadorEsmeraldas.dispose();
         if (shaderNeblina != null) shaderNeblina.dispose();
         if (quadMesh != null) quadMesh.dispose();
         if (font != null) font.dispose();
