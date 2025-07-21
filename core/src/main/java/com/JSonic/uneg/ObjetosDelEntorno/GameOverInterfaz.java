@@ -81,7 +81,7 @@ public class GameOverInterfaz extends Table {
     public void setVisible(boolean visible) {
         super.setVisible(visible);
         if (visible) {
-            if (!JSonicJuego.modoMultijugador) {
+            if (JSonicJuego.modoMultijugador) {
                 botonReiniciar.setVisible(false);
             } else {
                 botonReiniciar.setVisible(true);
