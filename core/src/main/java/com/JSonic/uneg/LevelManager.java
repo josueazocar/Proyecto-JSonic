@@ -590,7 +590,7 @@ public class LevelManager {
     }
 
 
-    public Vector2 encontrarPosicionValida() {
+   /* public Vector2 encontrarPosicionValida() {
         MapObjects objetosColision = getCollisionObjects();
         float mapWidth = getAnchoMapaPixels();
         float mapHeight = getAltoMapaPixels();
@@ -628,7 +628,29 @@ public class LevelManager {
 
         // Si después de 100 intentos no encuentra lugar, al menos devuelve la última posición intentada.
         return new Vector2(x, y);
+    }*/
+
+    /**
+     * Busca en la capa de objetos "Esmeraldas" y devuelve la posición del primer
+     * objeto que encuentre.
+     * @return Un Vector2 con las coordenadas (x, y) de la esmeralda, o null si no se encuentra.
+     */
+    public Vector2 obtenerPosicionEsmeralda() {
+        if (mapaActual == null) return null;
+
+        com.badlogic.gdx.maps.MapLayer capaEsmeraldas = mapaActual.getLayers().get("Esmeraldas");
+        if (capaEsmeraldas != null && capaEsmeraldas.getObjects().getCount() > 0) {
+            // Asumimos que solo hay un objeto esmeralda por mapa
+            com.badlogic.gdx.maps.MapObject obj = capaEsmeraldas.getObjects().get(0);
+            if (obj instanceof com.badlogic.gdx.maps.objects.RectangleMapObject) {
+                com.badlogic.gdx.math.Rectangle rect = ((com.badlogic.gdx.maps.objects.RectangleMapObject) obj).getRectangle();
+                return new Vector2(rect.x, rect.y);
+            }
+        }
+        // Si no se encuentra la capa o no hay objetos en ella, no hay esmeralda en este mapa.
+        return null;
     }
+
 
 
     // Método para liberar los recursos del nivel

@@ -7,6 +7,7 @@ import com.badlogic.gdx.math.MathUtils;
 import com.badlogic.gdx.math.Rectangle;
 import network.interfaces.IGameClient;
 import network.interfaces.IGameServer;
+import com.badlogic.gdx.math.Vector2;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -52,6 +53,7 @@ public class LocalServer implements IGameServer {
     private static final float TRASH_CLEANUP_VALUE = 3f; // Cada basura recogida reduce el % en 2 puntos
     private float tiempoDesdeUltimaContaminacion = 0f;
     private static final float INTERVALO_ACTUALIZACION_CONTAMINACION = 1.0f; // 1 segundo
+    private int esmeraldasRecogidasGlobal = 0;
 
     //declaraciones de HashMap
     private final HashMap<Integer, AnimalState> animalesActivos = new HashMap<>();
@@ -268,6 +270,25 @@ public class LocalServer implements IGameServer {
     }
     //-----------------------------------------------------------------------------------------------
 
+    //Generar esmeraldas(inicio)
+    private void generarEsmeralda(LevelManager manejadorNivel) {
+        Vector2 posEsmeralda = manejadorNivel.obtenerPosicionEsmeralda();
+
+        // Solo la generamos si el LevelManager encontró una posición en el mapa
+        if (posEsmeralda != null) {
+            System.out.println("[LOCAL SERVER] Generando Esmeralda en el mapa.");
+            ItemState estadoEsmeralda = new ItemState(proximoIdItem++, posEsmeralda.x, posEsmeralda.y, ItemState.ItemType.ESMERALDA);
+            itemsActivos.put(estadoEsmeralda.id, estadoEsmeralda);
+
+            // Notificamos al cliente para que la dibuje
+            Network.PaqueteItemNuevo paquete = new Network.PaqueteItemNuevo();
+            paquete.estadoItem = estadoEsmeralda;
+            clienteLocal.recibirPaqueteDelServidor(paquete);
+        } else {
+            System.out.println("[LOCAL SERVER] No hay esmeralda definida para este mapa.");
+        }
+    }
+    //-----------------------------------------------------------------------------------------
 
     /**
      * Este es el "game loop" del servidor. Se llamará desde PantallaDeJuego.
@@ -316,7 +337,24 @@ public class LocalServer implements IGameServer {
 
                 if (itemRecogido != null) {
 
-                    if (itemRecogido.tipo == ItemState.ItemType.TELETRANSPORTE) {
+                    if (itemRecogido.tipo == ItemState.ItemType.ESMERALDA) {
+                        itemsActivos.remove(paquete.idItem); // La quitamos del juego
+                        esmeraldasRecogidasGlobal++; // Incrementamos el contador global
+                        System.out.println("[LOCAL SERVER] ¡Esmeralda recogida! Total: " + esmeraldasRecogidasGlobal);
+
+                        // 1. Notificar a TODOS los clientes del nuevo total de esmeraldas
+                        Network.PaqueteActualizacionEsmeraldas paqueteEsmeraldas = new Network.PaqueteActualizacionEsmeraldas();
+                        paqueteEsmeraldas.totalEsmeraldas = esmeraldasRecogidasGlobal;
+                        clienteLocal.recibirPaqueteDelServidor(paqueteEsmeraldas);
+
+                        // 2. Notificar que el ítem específico fue eliminado
+                        Network.PaqueteItemEliminado paqueteEliminado = new Network.PaqueteItemEliminado();
+                        paqueteEliminado.idItem = paquete.idItem;
+                        clienteLocal.recibirPaqueteDelServidor(paqueteEliminado);
+
+                    }
+
+                    else if (itemRecogido.tipo == ItemState.ItemType.TELETRANSPORTE) {
                         System.out.println("[LOCAL SERVER] Jugador ha activado el teletransportador.");
                         String destinoMapa = destinosPortales.get(paquete.idItem);
                         if (destinoMapa == null) {
@@ -530,6 +568,8 @@ public class LocalServer implements IGameServer {
             // 3. Regenerar entidades para el nuevo mapa
             generarAnimales(manejadorNivel); // Esto ya lo tenías, y está bien
             generarBloquesParaElNivel(manejadorNivel);
+            generarNuevosItems(0f, manejadorNivel);
+            generarEsmeralda(manejadorNivel);
 
             Network.PaqueteSincronizarBloques paqueteSync = new Network.PaqueteSincronizarBloques();
             paqueteSync.todosLosBloques = new HashMap<>(this.bloquesRompibles);

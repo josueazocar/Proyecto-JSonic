@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<map version="1.10" tiledversion="1.11.2" orientation="orthogonal" renderorder="right-down" width="45" height="35" tilewidth="32" tileheight="32" infinite="0" nextlayerid="12" nextobjectid="58">
+<map version="1.10" tiledversion="1.11.2" orientation="orthogonal" renderorder="right-down" width="45" height="35" tilewidth="32" tileheight="32" infinite="0" nextlayerid="13" nextobjectid="59">
  <tileset firstgid="1" source="Escenario.tsx"/>
  <tileset firstgid="1289" source="Desierto2D.tsx"/>
  <tileset firstgid="7433" source="Desiertocontaminado.tsx"/>
@@ -346,5 +346,8 @@
     <property name="destinoY" type="float" value="88"/>
    </properties>
   </object>
+ </objectgroup>
+ <objectgroup id="12" name="Esmeraldas">
+  <object id="58" name="Esmeraldas" type="Esmeraldas" x="1280" y="832" width="100" height="92"/>
  </objectgroup>
 </map>
