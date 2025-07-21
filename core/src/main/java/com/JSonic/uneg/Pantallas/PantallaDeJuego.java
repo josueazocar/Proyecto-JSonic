@@ -95,10 +95,13 @@ public class PantallaDeJuego extends PantallaBase {
 
     //Para las barras de vida
     private BarraDeVida hudVidaJugador;
-    private BarraDeVida hudVidaVillano;
+    private BarraDeVidaVillanos hudVidaVillano;
+    private Table tablaHUDVillano;
     private TextureAtlas vidaAtlas;
-
     private Texture animalMuertoIcono;
+    private final HashMap<Integer, BarraDeVidaVillanos> barrasVidaEnemigos = new HashMap<>();
+    private static final float ANCHO_BARRA_ROBOT = 40f; // Ancho de la barra para robots
+    private static final float ALTO_BARRA_ROBOT = 5f;
 
     public PantallaDeJuego(JSonicJuego juego, IGameServer server) {
         super("");
@@ -251,7 +254,7 @@ public class PantallaDeJuego extends PantallaBase {
         // --- INICIALIZACIÓN DE HUDS DE VIDA ---
         vidaAtlas = new TextureAtlas(Gdx.files.internal("Atlas/vida.atlas")); // Asegúrate de que la ruta sea correcta
         hudVidaJugador = new BarraDeVida(vidaAtlas);
-        hudVidaVillano = new BarraDeVida(vidaAtlas);
+        hudVidaVillano = new BarraDeVidaVillanos(RobotnikVisual.MAX_VIDA, 80f, 10f);
 
         Table tablaHUDJugador = new Table();
         tablaHUDJugador.setFillParent(true);
@@ -259,9 +262,6 @@ public class PantallaDeJuego extends PantallaBase {
         tablaHUDJugador.pad(20);
         tablaHUDJugador.add(hudVidaJugador);
         mainStage.addActor(tablaHUDJugador);
-
-       // mainStage.addActor(hudVidaVillano);
-        hudVidaVillano.setVisible(false);
 
     }
 
@@ -549,6 +549,8 @@ public class PantallaDeJuego extends PantallaBase {
                             if (enemigo != null) {
                                 enemigo.dispose();
                             }
+                            BarraDeVidaVillanos barra = barrasVidaEnemigos.remove(p.idEntidad);
+                            if (barra != null) barra.dispose();
                         }
                     }
                 }
@@ -747,6 +749,39 @@ public class PantallaDeJuego extends PantallaBase {
             hudVidaJugador.actualizar(personajeJugable.estado.vida, Player.MAX_VIDA);
         }
 
+        if (hudVidaVillano != null) {
+            if (eggman != null) {
+                // Calculamos la posición centrada sobre su cabeza
+                float anchoVillano = eggman.getTileSize();
+                float altoVillano = eggman.getTileSize();
+                float anchoBarra = 80f; // El mismo ancho que definimos al crearla
+
+                float offsetY = 60f;
+                float offsetX = 20f;
+                float hudX = eggman.estado.x + (anchoVillano / 2) - (anchoBarra / 2) + offsetX;
+                float hudY = eggman.estado.y + altoVillano + offsetY;
+                // Actualizamos el estado de la barra con la vida y posición de Eggman
+                hudVidaVillano.actualizar(eggman.estado.vida, hudX, hudY);
+            }
+        }
+
+        for (RobotVisual enemigo : enemigosEnPantalla.values()) {
+            BarraDeVidaVillanos barra = barrasVidaEnemigos.get(enemigo.estado.id);
+            if (barra != null) {
+                // Calculamos la posición sobre la cabeza del enemigo
+                float anchoEnemigo = enemigo.getTileSize();
+                float altoEnemigo = enemigo.getTileSize();
+                // Obtenemos el ancho que le dimos al crearlo para centrarlo
+                float anchoBarra = ANCHO_BARRA_ROBOT;
+                float offsetY = 55f;
+                float offsetX = 20f;
+
+                float hudX = enemigo.estado.x + (anchoEnemigo / 2) - (anchoBarra / 2) + offsetX;
+                float hudY = enemigo.estado.y + altoEnemigo + offsetY;
+
+                barra.actualizar(enemigo.estado.vida, hudX, hudY);
+            }
+        }
 
         camaraJuego.position.x = personajeJugable.estado.x;
         camaraJuego.position.y = personajeJugable.estado.y;
@@ -821,6 +856,14 @@ public class PantallaDeJuego extends PantallaBase {
 
         for (ItemVisual item : itemsEnPantalla.values()) item.draw(batch);
         batch.end();
+
+        if (eggman != null && hudVidaVillano != null) {
+            hudVidaVillano.dibujar(camaraJuego);
+        }
+
+        for (BarraDeVidaVillanos barra : barrasVidaEnemigos.values()) {
+            barra.dibujar(camaraJuego);
+        }
 
         renderizarNeblinaConShader();
 
@@ -948,6 +991,9 @@ public class PantallaDeJuego extends PantallaBase {
         if (!enemigosEnPantalla.containsKey(estadoEnemigo.id)) {
             RobotVisual nuevoRobot = new RobotVisual(estadoEnemigo, manejadorNivel, this.gameClient);
             enemigosEnPantalla.put(estadoEnemigo.id, nuevoRobot);
+
+            BarraDeVidaVillanos nuevaBarra = new BarraDeVidaVillanos(nuevoRobot.estado.vida, ANCHO_BARRA_ROBOT, ALTO_BARRA_ROBOT );
+            barrasVidaEnemigos.put(estadoEnemigo.id, nuevaBarra);
         }
     }
     //para actualizar el label de los animales
@@ -970,6 +1016,12 @@ public class PantallaDeJuego extends PantallaBase {
             enemigo.dispose();
         }
         enemigosEnPantalla.clear();
+
+        for (BarraDeVidaVillanos barra : barrasVidaEnemigos.values()) {
+            barra.dispose();
+        }
+        barrasVidaEnemigos.clear();
+
         for (ItemVisual item : itemsEnPantalla.values()) {
             item.dispose();
         }
@@ -1106,6 +1158,7 @@ public class PantallaDeJuego extends PantallaBase {
             animalCountLabel.remove();
         }
         if (vidaAtlas != null) vidaAtlas.dispose();
+        if (hudVidaVillano != null) hudVidaVillano.dispose();
 
     }
 
