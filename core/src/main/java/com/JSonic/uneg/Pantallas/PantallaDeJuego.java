@@ -285,20 +285,6 @@ public class PantallaDeJuego extends PantallaBase {
 
     @Override
     public void actualizar(float deltat) {
-
-        if (Gdx.input.isKeyJustPressed(Input.Keys.E)) {
-            if (gameClient != null) {
-                System.out.println("[DEBUG] Enviando orden de FORZAR FIN DE JUEGO al servidor...");
-                gameClient.send(new Network.ForzarFinDeJuegoDebug());
-            }
-        }
-
-        if (Gdx.input.isKeyJustPressed(Input.Keys.G)) {
-            System.out.println("DEBUG: Forzando Game Over con la tecla G...");
-            activarGameOver();
-            return; // Detenemos la actualización para que el Game Over se active limpiamente
-        }
-
         if(isGameOver){
             return;
         }
@@ -597,22 +583,6 @@ public class PantallaDeJuego extends PantallaBase {
                         }
                     }
                 }
-                  else if (paquete instanceof Network.PaqueteResultadosFinales p) {
-                    System.out.println("[CLIENTE] ¡Orden recibida! Mostrando pantalla de estadísticas.");
-
-                    // Usamos Gdx.app.postRunnable para que el cambio de pantalla
-                    // se ejecute de forma segura en el hilo principal del juego.
-                    Gdx.app.postRunnable(() -> {
-                        // 1. Creamos la pantalla pasándole la lista de estadísticas del paquete.
-                        PantallaEstadisticas pantallaDeResultados = new PantallaEstadisticas(juegoPrincipal, p.estadisticasFinales);
-
-                        // 2. Le decimos al juego que cambie a esta nueva pantalla.
-                        juegoPrincipal.setScreen(pantallaDeResultados);
-                    });
-
-                    // 3. Salimos del bucle, ya no necesitamos procesar más paquetes.
-                    break;
-                  }
             }
         }
 
@@ -1217,15 +1187,6 @@ public class PantallaDeJuego extends PantallaBase {
             soundManager.stopBackgroundMusic();
         }
     }
-
-    @Override
-    public void hide() {
-        if (soundManager != null) {
-            soundManager.stopBackgroundMusic();
-        }
-    }
-
-
     @Override
     public void pause() {
         if (soundManager != null) soundManager.pauseBackgroundMusic();
