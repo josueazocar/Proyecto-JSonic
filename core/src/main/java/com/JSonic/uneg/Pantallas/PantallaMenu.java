@@ -33,6 +33,7 @@ public class PantallaMenu extends PantallaBase {
         this.juegoApp = juegoApp;
         this.mostrarMenuDirecto = mostrarMenuDirecto;
         this.estadoActual = EstadoMenu.PRINCIPAL;
+        inicializar();
     }
 
     public void setEstadoMenu(EstadoMenu estado) {
@@ -78,8 +79,13 @@ public class PantallaMenu extends PantallaBase {
         // Lógica de actualización continua
         if (imagenTextoInicio.isVisible() && Gdx.input.isKeyJustPressed(Input.Keys.ANY_KEY)) {
             imagenTextoInicio.setVisible(false);
-            juegoApp.setPantallaActiva(new PantallaHistoria(juegoApp));
-            mostrarMenuPrincipal();
+            // Primero detenemos cualquier música que pudiera estar sonando
+            juegoApp.getSoundManager().stopBackgroundMusic();
+
+            // Ahora sí, esta llamada funcionará porque el método ya existe en JSonicJuego
+            juegoApp.setPantallaActiva(new PantallaHistoria(juegoApp, juegoApp.getSoundManager()));
+
+            //mostrarMenuPrincipal();
         }
     }
 
