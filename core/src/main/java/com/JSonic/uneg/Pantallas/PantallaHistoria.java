@@ -26,7 +26,7 @@ public class PantallaHistoria extends PantallaBase {
     // --- AJUSTA ESTOS VALORES A TU GUSTO ---
     private static final float TIEMPO_POR_IMAGEN = 3.0f; // 3 segundos visible
     private static final float TIEMPO_FADE = 1.0f;       // 1 segundo para la transición
-    private static final int CANTIDAD_IMAGENES = 5;      // El número total de imágenes en tu carpeta /Historia
+    private static final int CANTIDAD_IMAGENES = 6;      // El número total de imágenes en tu carpeta /Historia
     // ------------------------------------
 
     public PantallaHistoria(JSonicJuego juegoApp, SoundManager soundManager) {
