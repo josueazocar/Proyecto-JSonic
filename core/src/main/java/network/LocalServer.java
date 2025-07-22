@@ -442,6 +442,26 @@ public class LocalServer implements IGameServer {
                         if (itemRecogido.tipo == ItemState.ItemType.ANILLO) {
                             int puntajeActual = puntajesAnillos.getOrDefault(idJugador, 0);
                             puntajesAnillos.put(idJugador, puntajeActual + 1);
+                            int anillosAhora = puntajesAnillos.get(idJugador);
+                            if (anillosAhora >= 100) {
+                                System.out.println("[LOCAL SERVER] ¡100 anillos! Canjeando por vida.");
+
+                                // 1. Restamos los anillos EN EL SERVIDOR.
+                                puntajesAnillos.put(idJugador, anillosAhora - 100);
+
+                                // 2. Aumentamos la vida del jugador EN EL SERVIDOR.
+                                PlayerState estadoJugador = jugadores.get(idJugador);
+                                if (estadoJugador != null) {
+                                    // Usamos Math.min para no superar la vida máxima. ¡Buena práctica!
+                                    estadoJugador.vida = Math.min(estadoJugador.vida + 100, Player.MAX_VIDA);
+
+                                    // 3. ENVIAMOS un paquete para notificar al cliente de su nueva vida.
+                                    Network.PaqueteActualizacionVida paqueteVida = new Network.PaqueteActualizacionVida();
+                                    paqueteVida.idJugador = idJugador;
+                                    paqueteVida.nuevaVida = estadoJugador.vida;
+                                    clienteLocal.recibirPaqueteDelServidor(paqueteVida);
+                                }
+                            }
                         } else if (itemRecogido.tipo == ItemState.ItemType.BASURA || itemRecogido.tipo == ItemState.ItemType.PIEZA_PLASTICO) {
                             int puntajeActual = puntajesBasura.getOrDefault(idJugador, 0);
                             puntajesBasura.put(idJugador, puntajeActual + 1);

@@ -491,12 +491,6 @@ public class PantallaDeJuego extends PantallaBase {
                     contadorAnillos.setValor(this.anillosTotal);
                     contadorBasura.setValor(this.basuraTotal);
 
-                    if (anillosTotal >= 100){
-                        personajeJugable.setVida(personajeJugable.getVida() + 100);
-                        anillosTotal -= 100; // Resta de 100 anillos
-                    }
-
-
                 } else if (paquete instanceof Network.PaqueteActualizacionContaminacion p) {
                     this.porcentajeContaminacionActual = p.contaminationPercentage;
                     if (porcentajeContaminacionActual >= 10 && porcentajeContaminacionActual < 30) {
