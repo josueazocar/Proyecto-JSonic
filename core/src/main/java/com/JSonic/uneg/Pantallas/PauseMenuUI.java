@@ -26,7 +26,7 @@ public class PauseMenuUI extends Table {
     // ¡IMPORTANTE! Esta es la clave para corregir el tamaño de la fuente.
     // Es una escala más pequeña para compensar el Viewport del juego.
     // Puede que necesites ajustar este valor (entre 0.3f y 0.5f) hasta que se vea perfecto.
-    private static final float PAUSE_FONT_SCALE = 0.35f;
+    private static final float PAUSE_FONT_SCALE = 0.5f;
 
     public PauseMenuUI(JSonicJuego juego, PantallaDeJuego pantalla, Skin skin) {
         super(skin);
@@ -43,7 +43,10 @@ public class PauseMenuUI extends Table {
 
     private void inicializarUI(Skin skin) {
         final Table panelDerecho = new Table();
-        panelDerecho.add(new Label("Juego en Pausa", skin)).expand().center();
+        Label.LabelStyle estiloInicial = new Label.LabelStyle(skin.getFont("body-font"), null);
+        estiloInicial.font = new BitmapFont(Gdx.files.internal("Fuentes/juego_fuente2.fnt"));
+        estiloInicial.font.getData().setScale(PAUSE_FONT_SCALE );
+        panelDerecho.add(new Label("Juego en Pausa", estiloInicial)).expand().center();
 
         Table panelIzquierdo = crearPanelIzquierdo(skin, panelDerecho);
 
@@ -112,15 +115,24 @@ public class PauseMenuUI extends Table {
         return new ClickListener() {
             @Override
             public void clicked(InputEvent event, float x, float y) {
+                // Obtenemos las estadísticas guardadas
                 List<EstadisticasJugador> stats = juegoApp.getEstadisticasUltimaPartida();
+
+                // Limpiamos el panel derecho para mostrar el nuevo contenido
+                panelDerecho.clear();
+
                 if (stats != null && !stats.isEmpty()) {
-                    juegoApp.setScreen(new PantallaEstadisticas(juegoApp, stats));
+                    // Si hay estadísticas, llamamos a un nuevo método que construye la tabla
+                    // y la añade al panel derecho.
+                    panelDerecho.add(construirPanelEstadisticas(stats)).expand().fill();
                 } else {
-                    panelDerecho.clear();
-                    Label.LabelStyle style = new Label.LabelStyle(skin.getFont("body-font"), null);
-                    style.font.getData().setScale(PAUSE_FONT_SCALE);
-                    Label noStatsLabel = new Label("No hay estadisticas disponibles.", style);
-                    panelDerecho.add(noStatsLabel).expand().center();
+                    Label.LabelStyle estiloMsg = new Label.LabelStyle();
+                    estiloMsg.font = new BitmapFont(Gdx.files.internal("Fuentes/juego_fuente2.fnt"));
+                    estiloMsg.font.getData().setScale(PAUSE_FONT_SCALE);
+                    Label noStatsLabel = new Label("No hay estadisticas de la ultima partida disponibles.", estiloMsg);
+                    noStatsLabel.setWrap(true);
+                    noStatsLabel.setAlignment(Align.center);
+                    panelDerecho.add(noStatsLabel).expand().fill().pad(20);
                 }
             }
         };
@@ -252,6 +264,54 @@ public class PauseMenuUI extends Table {
 
         return scrollPane;
     }
+
+    private ScrollPane construirPanelEstadisticas(List<EstadisticasJugador> stats) {
+
+        // 1. Ordenamos las estadísticas de mayor a menor puntuación
+        stats.sort(java.util.Comparator.comparingInt(EstadisticasJugador::getPuntuacionTotal).reversed());
+
+        Table tablaStats = new Table();
+
+        // 2. Creamos los estilos para las fuentes, similar a PantallaEstadisticas
+        //    Es importante crear nuevas instancias para no afectar otros estilos del skin.
+        BitmapFont fuenteTitulo = new BitmapFont(Gdx.files.internal("Fuentes/juego_fuente2.fnt"));
+        fuenteTitulo.getData().setScale(0.8f); // Un poco más pequeño para que quepa bien
+        Label.LabelStyle estiloTitulo = new Label.LabelStyle(fuenteTitulo, com.badlogic.gdx.graphics.Color.WHITE);
+
+        BitmapFont fuenteCuerpo = new BitmapFont(Gdx.files.internal("Fuentes/juego_fuente2.fnt"));
+        fuenteCuerpo.getData().setScale(0.7f);
+        Label.LabelStyle estiloEncabezado = new Label.LabelStyle(fuenteCuerpo, com.badlogic.gdx.graphics.Color.WHITE);
+        Label.LabelStyle estiloDatos = new Label.LabelStyle(fuenteCuerpo, com.badlogic.gdx.graphics.Color.LIGHT_GRAY);
+
+        // 3. Añadimos el Título
+        tablaStats.add(new Label("Resultados Ultima Partida", estiloTitulo)).colspan(2).center().padBottom(30);
+        tablaStats.row();
+
+        // 4. Añadimos los Encabezados
+        tablaStats.add(new Label("Jugador", estiloEncabezado)).padBottom(10).left();
+        tablaStats.add(new Label("Puntuacion", estiloEncabezado)).padBottom(10).right();
+        tablaStats.row();
+
+        // 5. Añadimos una línea separadora (opcional pero estético)
+        Image separador = new Image(getSkin().getDrawable("default-round-down")); // Usamos un drawable del skin
+        tablaStats.add(separador).colspan(2).height(2).fillX().padBottom(10);
+        tablaStats.row();
+
+        // 6. Recorremos las estadísticas y añadimos una fila por cada jugador
+        for (EstadisticasJugador stat : stats) {
+            tablaStats.add(new Label(stat.getNombreJugador(), estiloDatos)).pad(5).left();
+            tablaStats.add(new Label(String.valueOf(stat.getPuntuacionTotal()), estiloDatos)).pad(5).right();
+            tablaStats.row();
+        }
+
+        // 7. Envolvemos la tabla en un ScrollPane por si la lista es muy larga
+        ScrollPane scrollPane = new ScrollPane(tablaStats, getSkin());
+        scrollPane.setFadeScrollBars(false);
+        scrollPane.setScrollingDisabled(true, false);
+
+        return scrollPane;
+    }
+
 
     public void dispose() {
         textoComoJugarAtlas.dispose();
