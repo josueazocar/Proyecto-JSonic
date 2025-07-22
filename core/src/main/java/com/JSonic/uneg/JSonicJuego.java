@@ -1,4 +1,5 @@
 package com.JSonic.uneg;
+import com.JSonic.uneg.Pantallas.EstadisticasJugador;
 import com.JSonic.uneg.Pantallas.PantallaDeJuego;
 import com.JSonic.uneg.Pantallas.PantallaMenu;
 import com.JSonic.uneg.State.PlayerState;
@@ -8,6 +9,7 @@ import network.GameClient;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import network.interfaces.IGameClient;
 import java.util.ArrayList;
+import java.util.List;
 
 public class JSonicJuego extends JuegoBase {
 
@@ -18,6 +20,7 @@ public class JSonicJuego extends JuegoBase {
     public static String direccionIp = "localhost"; // Dirección IP del servidor al que se conecta el cliente.
     public static ArrayList<PlayerState.CharacterType> personajesYaSeleccionados = new ArrayList<>();
     private IGameClient client;
+    private List<EstadisticasJugador> estadisticasUltimaPartida = null;
 
     // true  -> Inicia en modo multijugador online.
     // false -> Inicia en modo de un jugador offline.
@@ -92,6 +95,14 @@ public class JSonicJuego extends JuegoBase {
             return client;
         }
         return null; // Si no es un GameClient, devolvemos null.
+    }
+
+    public void setEstadisticasUltimaPartida(List<EstadisticasJugador> estadisticas) {
+        this.estadisticasUltimaPartida = estadisticas;
+    }
+
+    public List<EstadisticasJugador> getEstadisticasUltimaPartida() {
+        return this.estadisticasUltimaPartida;
     }
 
     public IGameClient getClient() {

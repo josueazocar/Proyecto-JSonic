@@ -85,7 +85,7 @@ public class PantallaEstadisticas extends PantallaBase{
                     juegoApp.getClient().disconnect();
                 }
                 PantallaMenu pantallaMenu = new PantallaMenu(juegoApp, true);
-                pantallaMenu.setEstadoMenu(PantallaMenu.EstadoMenu.JUGAR);
+                pantallaMenu.setEstadoMenu(PantallaMenu.EstadoMenu.PRINCIPAL);
                 juegoApp.setPantallaActiva(pantallaMenu);
                 if (LocalServer.class != null) {
                     LocalServer.decreaseContamination(100);

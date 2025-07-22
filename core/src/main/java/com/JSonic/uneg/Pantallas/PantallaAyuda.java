@@ -14,6 +14,7 @@ import com.badlogic.gdx.utils.Align;
 import com.badlogic.gdx.utils.Scaling;
 import com.badlogic.gdx.utils.viewport.ScreenViewport;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
+import java.util.List;
 
 public class PantallaAyuda extends PantallaBase {
     private final JSonicJuego juegoApp;
@@ -58,13 +59,16 @@ public class PantallaAyuda extends PantallaBase {
 
         Table tablaOpciones = new Table();
         TextButton btnComoJugar = new TextButton("Como jugar", getSkin(), "small-text");
+        TextButton btnEstadisticas = new TextButton("Ver Ult. Stats", getSkin(), "small-text");
         TextButton btnReglas = new TextButton("Reglas", getSkin(), "small-text");
         TextButton btnSalir = new TextButton("Salir", getSkin(), "small-text");
 
         tablaOpciones.add(btnComoJugar).size(280,50).pad(10).row();
         tablaOpciones.add(btnReglas).size(280,50).pad(10).row();
+        tablaOpciones.add(btnEstadisticas).size(280, 50).pad(10).row();
         tablaOpciones.add(btnSalir).size(280,50).pad(10).row();
         tablaOpciones.center().right();
+
 
 
         final Table panelDerecho = new Table();
@@ -138,6 +142,27 @@ public class PantallaAyuda extends PantallaBase {
                 scrollPane.getStyle().vScroll.setMinWidth(50);
                 scrollPane.getStyle().vScrollKnob.setMinWidth(50);
                 panelDerecho.add(scrollPane).expand().fill();
+            }
+        });
+
+        btnEstadisticas.addListener(new ClickListener() {
+            @Override
+            public void clicked(InputEvent event, float x, float y) {
+                // Obtenemos las estadísticas guardadas desde la clase principal del juego
+                List<EstadisticasJugador> stats =  juegoApp.getEstadisticasUltimaPartida();
+
+                // Comprobamos si hay estadísticas guardadas
+                if (stats != null && !stats.isEmpty()) {
+                    // Si hay, creamos y mostramos la pantalla de estadísticas
+                    juegoApp.setScreen(new PantallaEstadisticas(juegoApp, stats));
+                } else {
+                    // Si no hay (porque no se ha jugado ninguna partida), mostramos un mensaje
+                    panelDerecho.clear();
+                    Label noStatsLabel = new Label("No hay estadisticas de la ultima partida disponibles.", getSkin());
+                    noStatsLabel.setWrap(true);
+                    noStatsLabel.setAlignment(Align.center);
+                    panelDerecho.add(noStatsLabel).expand().fill().pad(20);
+                }
             }
         });
 

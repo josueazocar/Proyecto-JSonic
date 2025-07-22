@@ -636,6 +636,7 @@ public class PantallaDeJuego extends PantallaBase {
                 }
                   else if (paquete instanceof Network.PaqueteResultadosFinales p) {
                     if (!isVictoria && !isGameOver) {
+                        juegoPrincipal.setEstadisticasUltimaPartida(p.estadisticasFinales);
                         activarVictoria();
                         this.resultadosGuardados = p.estadisticasFinales;
                         this.temporizadorVictoria = DURACION_PANTALLA_VICTORIA; // Inicia la cuenta atrás
