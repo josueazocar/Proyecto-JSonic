@@ -21,7 +21,6 @@ public class GameServer implements IGameServer {
     private final Server servidor;
     // --- ALMACENES DE ESTADO ---
     private final HashMap<Integer, PlayerState> jugadores = new HashMap<>();
-    // --- [CAMBIO PROFESOR] --- Añadimos un conjunto para llevar un registro de los personajes que ya están en uso.
     private final EnumSet<PlayerState.CharacterType> personajesEnUso = EnumSet.noneOf(PlayerState.CharacterType.class);
     private final HashMap<Integer, EnemigoState> enemigosActivos = new HashMap<>();
     private final HashMap<Integer, ItemState> itemsActivos = new HashMap<>();
@@ -79,8 +78,19 @@ public class GameServer implements IGameServer {
     private boolean muertesAnimalesActivas = false;
     private volatile boolean alMenosUnJugadorHaEnviadoPosicion = false;
 
+    private int enemigosGeneradosEnNivelActual = 0;
+    private final HashMap<String, Integer> enemigosPorMapa = new HashMap<>();
+    private String mapaActualServidor = ""; // Para saber en qué mapa estamos
+
     public GameServer() {
         servidor = new Server();
+        enemigosPorMapa.put("maps/Zona1N1.tmx", 8);
+        enemigosPorMapa.put("maps/ZonaJefeN1.tmx", 3);
+        enemigosPorMapa.put("maps/Zona1N2.tmx", 15);
+        enemigosPorMapa.put("maps/ZonaJefeN2.tmx", 5);
+        enemigosPorMapa.put("maps/Zona1N3.tmx", 25);
+        enemigosPorMapa.put("maps/Zona2N3.tmx", 35);
+        enemigosPorMapa.put("maps/ZonaJefeN3.tmx", 7);
     }
 
     @Override
@@ -205,6 +215,8 @@ public class GameServer implements IGameServer {
                                 // Creamos la ORDEN de cambio de mapa.
                                 Network.PaqueteOrdenCambiarMapa orden = new Network.PaqueteOrdenCambiarMapa();
                                 orden.nuevoMapa = infoDestino.destinoMapa;
+                                mapaActualServidor = orden.nuevoMapa;
+                                reiniciarContadoresDeNivel();
                                 // Enviamos la orden de cambio de mapa a TODOS los jugadores.
                                 servidor.sendToAllTCP(orden);
 
@@ -302,6 +314,12 @@ public class GameServer implements IGameServer {
                     System.out.println("[SERVER] <== PAQUETE DE MAPA RECIBIDO!");
                     if (paredesDelMapa == null) {
                         paredesDelMapa = paquete.paredes;
+
+                        if (mapaActualServidor == null || mapaActualServidor.isEmpty()) {
+                            mapaActualServidor = paquete.nombreMapa;
+                            System.out.println("[GAMESERVER] Establecido mapa inicial a: " + mapaActualServidor);
+                        }
+
                         System.out.println("[SERVER] Plano del mapa recibido con " + paredesDelMapa.size() + " paredes.");
 
                         // --- INICIO DE LA LÓGICA AÑADIDA ---
@@ -776,7 +794,7 @@ public class GameServer implements IGameServer {
             actualizarEstadoAnimalesPorContaminacion(deltaTime);
         }
         generarNuevosItems(deltaTime);
-        generarNuevosEnemigos(deltaTime);
+        generarEnemigosControlados(deltaTime);
 
         // Creamos un nuevo paquete y le metemos la lista completa de enemigos.
         Network.PaqueteActualizacionEnemigos paqueteUpdate = new Network.PaqueteActualizacionEnemigos();
@@ -821,15 +839,33 @@ public class GameServer implements IGameServer {
         }
     }
 
-    private void generarNuevosEnemigos(float deltaTime) {
-        tiempoGeneracionEnemigo += deltaTime;
-        if (tiempoGeneracionEnemigo >= INTERVALO_GENERACION_ENEMIGO) {
-            spawnNuevoEnemigo();
-            tiempoGeneracionEnemigo = 0f;
+    private void generarEnemigosControlados(float deltaTime) {
+        // Si no sabemos en qué mapa estamos, no generamos nada.
+        if (mapaActualServidor == null || mapaActualServidor.isEmpty()) {
+            return;
         }
 
+        int limiteEnemigos = enemigosPorMapa.getOrDefault(mapaActualServidor, 0);
+
+        // Si ya hemos generado todos los enemigos para este nivel, no hacemos nada más.
+        if (enemigosGeneradosEnNivelActual >= limiteEnemigos) {
+            return;
+        }
+
+        // Si todavía no hemos alcanzado el límite, aplicamos el temporizador.
+        tiempoGeneracionEnemigo += deltaTime;
         if (tiempoGeneracionEnemigo >= INTERVALO_GENERACION_ENEMIGO) {
-            spawnNuevoEnemigo();
+
+            // Intentamos generar un nuevo enemigo usando el método que ahora devuelve boolean.
+            boolean enemigoGenerado = spawnNuevoEnemigo();
+
+            // Si se pudo generar con éxito...
+            if (enemigoGenerado) {
+                enemigosGeneradosEnNivelActual++; // Incrementamos el contador de este nivel.
+                System.out.println("[GAMESERVER] Enemigo generado (" + enemigosGeneradosEnNivelActual + "/" + limiteEnemigos + ")");
+            }
+
+            // Reiniciamos el temporizador en cualquier caso, para no intentarlo en cada frame.
             tiempoGeneracionEnemigo = 0f;
         }
     }
@@ -882,11 +918,12 @@ public class GameServer implements IGameServer {
         servidor.sendToAllTCP(paqueteSync);
         System.out.println("[SERVER] Enviando estado de bloques a todos los clientes.");
     }
-    private void spawnNuevoEnemigo() {
+
+    private boolean spawnNuevoEnemigo() {
         // Si todavía no hemos recibido el plano del mapa, no generamos nada.
         if (paredesDelMapa == null) {
             System.out.println("[SERVER] Aún no tengo el plano del mapa, no puedo generar enemigos.");
-            return;
+            return false;
         }
 
         int intentos = 0;
@@ -915,6 +952,7 @@ public class GameServer implements IGameServer {
             }
             intentos++;
         }
+        return colocado;
     }
 
 
@@ -1174,6 +1212,29 @@ public class GameServer implements IGameServer {
         // 7. CERRAMOS LA CONEXIÓN (si no estuviera ya cerrada).
         // Esto asegura que el servidor no mantenga conexiones inactivas.
         conexion.close();
+    }
+
+    private void reiniciarContadoresDeNivel() {
+        System.out.println("[GAMESERVER] Reiniciando contadores para el nuevo mapa: " + this.mapaActualServidor);
+
+        // Limpiamos todas las listas de entidades del mapa anterior
+        this.enemigosActivos.clear();
+        this.itemsActivos.clear();
+        this.infoPortales.clear();
+        this.animalesActivos.clear();
+        this.bloquesRompibles.clear();
+
+        // Reiniciamos contadores y temporizadores
+        this.teleportGenerado = false;
+        this.tiempoGeneracionTeleport = 0f;
+        this.tiempoGeneracionEnemigo = 0f;
+        this.enemigosGeneradosEnNivelActual = 0;
+        this.tiempoSpawnAnillo = 0f;
+        this.tiempoSpawnBasura = 0f;
+        this.tiempoSpawnPlastico = 0f;
+
+        // MUY IMPORTANTE: Forzamos a que el primer cliente del nuevo mapa envíe su plano.
+        this.paredesDelMapa = null;
     }
 
     @Override

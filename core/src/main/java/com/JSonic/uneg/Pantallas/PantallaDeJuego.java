@@ -1079,6 +1079,7 @@ public class PantallaDeJuego extends PantallaBase {
         Network.PaqueteInformacionMapa paqueteMapa = new Network.PaqueteInformacionMapa();
         paqueteMapa.paredes = paredes;
         paqueteMapa.portales = portalesDelMapa;
+        paqueteMapa.nombreMapa = manejadorNivel.getNombreMapaActual();
         System.out.println("[CLIENT] ==> INTENTANDO ENVIAR MAPA con " + paqueteMapa.paredes.size() + " paredes.");
         gameClient.send(paqueteMapa);
 

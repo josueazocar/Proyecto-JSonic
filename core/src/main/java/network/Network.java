@@ -4,6 +4,7 @@ import com.JSonic.uneg.EntidadesVisuales.Player;
 import com.JSonic.uneg.Pantallas.EstadisticasJugador;
 import com.JSonic.uneg.State.*;
 import com.badlogic.gdx.math.Rectangle;
+import com.badlogic.gdx.math.Vector2;
 import com.esotericsoftware.kryo.Kryo;
 import com.esotericsoftware.kryonet.EndPoint;
 
@@ -144,6 +145,8 @@ public class Network {
     public static class PaqueteInformacionMapa {
         public java.util.ArrayList<com.badlogic.gdx.math.Rectangle> paredes;
         public ArrayList<PortalInfo> portales;
+        public String nombreMapa;
+        public Vector2 posEsmeralda;
     }
 
     public static class PaqueteOrdenCambiarMapa {
