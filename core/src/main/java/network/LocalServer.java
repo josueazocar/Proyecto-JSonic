@@ -2,6 +2,7 @@ package network;
 
 import com.JSonic.uneg.*;
 import com.JSonic.uneg.EntidadesVisuales.Player;
+import com.JSonic.uneg.EntidadesVisuales.Sonic;
 import com.JSonic.uneg.Pantallas.EstadisticasJugador;
 import com.JSonic.uneg.Pantallas.PantallaDeJuego;
 import com.JSonic.uneg.State.*;
@@ -372,6 +373,26 @@ public class LocalServer implements IGameServer {
                         itemsActivos.remove(paquete.idItem); // La quitamos del juego
                         esmeraldasRecogidasGlobal++; // Incrementamos el contador global
                         System.out.println("[LOCAL SERVER] ¡Esmeralda recogida! Total: " + esmeraldasRecogidasGlobal);
+
+                        if (esmeraldasRecogidasGlobal >= 7) {
+                            // Obtenemos el estado del único jugador en modo local (su ID es 1).
+                            PlayerState estadoJugador = jugadores.get(1);
+
+                            // Comprobamos si el personaje es Sonic y si no está ya transformado.
+                            if (estadoJugador != null  && !estadoJugador.isSuper) {
+                                System.out.println("[LOCAL SERVER] ¡7 Esmeraldas! Activando Super Sonic en modo local.");
+
+                                // 1. Actualizamos el estado del jugador en el servidor.
+                                estadoJugador.isSuper = true;
+
+                                // 2. Como tenemos una referencia directa al objeto del jugador,
+                                //    le ordenamos que se transforme llamando a su método.
+                                //    `personajeJugable` viene como parámetro del método update().
+                                if (personajeJugable instanceof Sonic) {
+                                    personajeJugable.setSuper(true);
+                                }
+                            }
+                        }
 
                         // 1. Notificar a TODOS los clientes del nuevo total de esmeraldas
                         Network.PaqueteActualizacionEsmeraldas paqueteEsmeraldas = new Network.PaqueteActualizacionEsmeraldas();

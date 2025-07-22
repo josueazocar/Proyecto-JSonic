@@ -114,6 +114,10 @@ protected EnumMap<EstadoPlayer, Animation<TextureRegion>> animations;
         return estado;
     }
 
+    public void setSuper(boolean esSuper) {
+        // Por defecto, no hace nada. Las subclases como Sonic lo sobreescribirán.
+    }
+
     public void setEstado(PlayerState estado) {
         this.estado = estado;
     }

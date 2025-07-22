@@ -10,6 +10,7 @@ import com.esotericsoftware.kryonet.Listener;
 import com.esotericsoftware.kryonet.Server;
 import network.interfaces.IGameServer;
 
+
 import java.io.IOException;
 import java.util.EnumSet;
 import java.util.HashMap;
@@ -81,6 +82,7 @@ public class GameServer implements IGameServer {
     private int enemigosGeneradosEnNivelActual = 0;
     private final HashMap<String, Integer> enemigosPorMapa = new HashMap<>();
     private String mapaActualServidor = ""; // Para saber en qué mapa estamos
+    public int esmeraldasRecogidasGlobal = 0;
 
     public GameServer() {
         servidor = new Server();
@@ -198,9 +200,49 @@ public class GameServer implements IGameServer {
                         // Si el ítem realmente existe...
                         if (itemRecogido != null) {
 
+                            if (itemRecogido.tipo == ItemState.ItemType.ESMERALDA) {
+
+                                itemsActivos.remove(paquete.idItem); // 1. La quitamos del juego.
+                                esmeraldasRecogidasGlobal++; // 2. Incrementamos el contador global.
+                                System.out.println("[GAMESERVER] ¡Esmeralda recogida! Total global: " + esmeraldasRecogidasGlobal);
+
+                                // 3. Notificamos a TODOS los clientes del nuevo total de esmeraldas.
+                                Network.PaqueteActualizacionEsmeraldas paqueteEsmeraldas = new Network.PaqueteActualizacionEsmeraldas();
+                                paqueteEsmeraldas.totalEsmeraldas = esmeraldasRecogidasGlobal;
+                                servidor.sendToAllTCP(paqueteEsmeraldas);
+
+                                // 4. Notificamos a TODOS que el ítem específico fue eliminado del mapa.
+                                Network.PaqueteItemEliminado paqueteEliminado = new Network.PaqueteItemEliminado();
+                                paqueteEliminado.idItem = paquete.idItem;
+                                servidor.sendToAllTCP(paqueteEliminado);
+
+                                if (esmeraldasRecogidasGlobal >= 7) {
+                                    System.out.println("[GAMESERVER] ¡LAS 7 ESMERALDAS REUNIDAS! Activando Super Sonic...");
+
+                                    // Buscamos a todos los jugadores que son Sonic.
+                                    for (PlayerState jugador : jugadores.values()) {
+                                        if (jugador.characterType == PlayerState.CharacterType.SONIC) {
+
+                                            // 1. Actualizamos el estado del jugador EN EL SERVIDOR.
+                                            jugador.isSuper = true;
+
+                                            // 2. Creamos el "anuncio oficial".
+                                            Network.PaqueteTransformacionSuper paqueteSuper = new Network.PaqueteTransformacionSuper();
+                                            paqueteSuper.idJugador = jugador.id;
+                                            paqueteSuper.esSuper = true;
+
+                                            // 3. Lo enviamos a TODOS los jugadores.
+                                            servidor.sendToAllTCP(paqueteSuper);
+                                            System.out.println("[GAMESERVER] Notificando a todos que el jugador " + jugador.id + " es ahora Super Sonic.");
+                                        }
+                                    }
+                                }
+
+                            }
+
                             // 2. AHORA DECIDIMOS QUÉ HACER BASADO EN SU TIPO.
                             // CASO ESPECIAL: Es un teletransportador.
-                            if (itemRecogido.tipo == ItemState.ItemType.TELETRANSPORTE) {
+                           else if (itemRecogido.tipo == ItemState.ItemType.TELETRANSPORTE) {
 
                                 System.out.println("[SERVER] Jugador " + conexion.getID() + " ha activado el teletransportador.");
 
@@ -330,8 +372,20 @@ public class GameServer implements IGameServer {
                             mapaActualServidor = paquete.nombreMapa;
                             System.out.println("[GAMESERVER] Establecido mapa inicial a: " + mapaActualServidor);
                         }
-
                         System.out.println("[SERVER] Plano del mapa recibido con " + paredesDelMapa.size() + " paredes.");
+
+                        if (paquete.posEsmeralda != null) {
+                            System.out.println("[GAMESERVER] Posición de esmeralda recibida. Generando ítem en el mapa.");
+
+                            // Creamos el estado del ítem para la esmeralda.
+                            ItemState estadoEsmeralda = new ItemState(proximoIdItem++, paquete.posEsmeralda.x, paquete.posEsmeralda.y, ItemState.ItemType.ESMERALDA);
+                            itemsActivos.put(estadoEsmeralda.id, estadoEsmeralda);
+
+                            // Notificamos a TODOS los clientes para que la dibujen en sus pantallas.
+                            Network.PaqueteItemNuevo paqueteItem = new Network.PaqueteItemNuevo();
+                            paqueteItem.estadoItem = estadoEsmeralda;
+                            servidor.sendToAllTCP(paqueteItem);
+                        }
 
                         // --- INICIO DE LA LÓGICA AÑADIDA ---
                         if (paquete.portales != null && !paquete.portales.isEmpty()) {

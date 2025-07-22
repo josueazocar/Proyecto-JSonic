@@ -7,6 +7,7 @@ public class PlayerState extends EntityState {
         public CharacterType characterType;
         public Player.EstadoPlayer estadoAnimacion;
         public String nombreJugador;
+        public boolean isSuper = false;
 
     public enum CharacterType {
         SONIC, TAILS, KNUCKLES

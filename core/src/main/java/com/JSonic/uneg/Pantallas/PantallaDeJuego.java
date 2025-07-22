@@ -679,6 +679,20 @@ public class PantallaDeJuego extends PantallaBase {
                     }
                     // 3. Salimos del bucle, ya no necesitamos procesar más paquetes.
                     break;
+
+                  } else if (paquete instanceof Network.PaqueteTransformacionSuper p) {
+                    // El servidor nos ordena transformar a un jugador.
+
+                    // ¿La orden es para nuestro personaje?
+                    if (personajeJugable != null && personajeJugable.estado.id == p.idJugador) {
+                        personajeJugable.setSuper(p.esSuper);
+                    } else {
+                        // Si no, buscamos al jugador entre los otros clientes.
+                        Player otroJugador = otrosJugadores.get(p.idJugador);
+                        if (otroJugador != null) {
+                            otroJugador.setSuper(p.esSuper);
+                        }
+                    }
                   }
             }
         }
@@ -1081,6 +1095,7 @@ public class PantallaDeJuego extends PantallaBase {
         paqueteMapa.portales = portalesDelMapa;
         paqueteMapa.nombreMapa = manejadorNivel.getNombreMapaActual();
         System.out.println("[CLIENT] ==> INTENTANDO ENVIAR MAPA con " + paqueteMapa.paredes.size() + " paredes.");
+        paqueteMapa.posEsmeralda = manejadorNivel.obtenerPosicionEsmeralda();
         gameClient.send(paqueteMapa);
 
         System.out.println("[CLIENT] Plano del mapa con " + paredes.size() + " paredes y " + portalesDelMapa.size() + " portales enviado.");

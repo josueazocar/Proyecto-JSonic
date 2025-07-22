@@ -396,17 +396,17 @@ public class Sonic extends Player {
         Gdx.app.log("Sonic", "Offsets del hitbox: x=" + collisionOffsetX + ", y=" + collisionOffsetY);
     }
 
-    // [PROFESOR] Reemplazar todo el método update con esta versión
+    // Reemplazar todo el método update con esta versión
     @Override
     public void update(float deltaTime) {
-        // [PROFESOR] Leemos el contador de gemas desde el objeto 'estado' heredado de Player.
-        if (gemas >= 7 && !esSuperSonic) {
-            esSuperSonic = true;
-            Gdx.app.log("Sonic", "¡TRANSFORMACIÓN A SUPER SONIC ACTIVADA!");
-            estado.vida += MAX_VIDA; // O el valor máximo de vida que tengan definido
-        }
+        // Leemos el contador de gemas desde el objeto 'estado' heredado de Player.
+//        if (gemas >= 7 && !esSuperSonic) {
+//            esSuperSonic = true;
+//            Gdx.app.log("Sonic", "¡TRANSFORMACIÓN A SUPER SONIC ACTIVADA!");
+//            estado.vida += MAX_VIDA; // O el valor máximo de vida que tengan definido
+//        }
 
-        // [PROFESOR] Determinamos el mapa de animaciones correcto. Ahora no será nulo.
+        // Determinamos el mapa de animaciones correcto. Ahora no será nulo.
         EnumMap<EstadoPlayer, Animation<TextureRegion>> currentAnimations = esSuperSonic ? animationsSuper : animations;
 
         // --- LÓGICA DE TEMPORIZADORES ---
@@ -476,8 +476,6 @@ public class Sonic extends Player {
             Gdx.app.log("Sonic", "Advertencia: 'frameActual' es nulo en el método draw(). No se puede dibujar a Sonic.");
         }
 
-
-        // --- LÓGICA DE DESTELLO CORREGIDA ---
         if (flashDurationTimer > 0) {
             // 1. Dibuja todo lo que estaba pendiente (Sonic y el indicador) con la cámara del juego.
             batch.flush();
@@ -504,7 +502,6 @@ public class Sonic extends Player {
         }
     }
 
-    // ---[AÑADE ESTE MÉTODO]---
     public float getFlashDurationTimer() {
         return this.flashDurationTimer;
     }
@@ -525,6 +522,22 @@ public class Sonic extends Player {
             superSonicSpriteSheet.dispose();
             Gdx.app.log("Sonic", "Textura de Super Sonic liberada.");
         }
-        // [PROFESOR] <<< FIN: LIBERAR RECURSOS DE SUPER SONIC
     }
+
+    @Override
+    public void setSuper(boolean esSuper) {
+        // Comprobamos si hay un cambio de estado real para no loguear innecesariamente.
+        if (this.esSuperSonic != esSuper) {
+            this.esSuperSonic = esSuper;
+            this.estado.isSuper = esSuper; // Actualizamos también el estado local
+            if (esSuper) {
+                estado.vida += MAX_VIDA;
+                Gdx.app.log("Sonic", "¡ORDEN RECIBIDA! Transformando a Super Sonic.");
+                // Aquí podrías añadir un efecto de sonido o visual si quisieras
+            } else {
+                Gdx.app.log("Sonic", "¡ORDEN RECIBIDA! Revirtiendo a Sonic normal.");
+            }
+        }
+    }
+
 }

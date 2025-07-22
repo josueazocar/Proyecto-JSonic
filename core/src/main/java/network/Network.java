@@ -48,6 +48,7 @@ public class Network {
         kryo.register(PaqueteInformacionMapa.class);
         kryo.register(java.util.ArrayList.class);
         kryo.register(com.badlogic.gdx.math.Rectangle.class);
+        kryo.register(com.badlogic.gdx.math.Vector2.class);
         kryo.register(PaqueteOrdenCambiarMapa.class);
         kryo.register(PaqueteActualizacionPuntuacion.class);
         kryo.register(PlayerState.CharacterType.class);
@@ -85,6 +86,7 @@ public class Network {
 
         kryo.register(PaqueteResultadosFinales.class);
         kryo.register(EstadisticasJugador.class);
+        kryo.register(PaqueteTransformacionSuper.class);
 
         kryo.register(ForzarFinDeJuegoDebug.class);
     }
@@ -278,6 +280,11 @@ public class Network {
     }
 
     public static class ForzarFinDeJuegoDebug {
+    }
+
+    public static class PaqueteTransformacionSuper {
+        public int idJugador; // Para saber quién se transforma
+        public boolean esSuper; // Para saber si se activa o desactiva
     }
 }
 
