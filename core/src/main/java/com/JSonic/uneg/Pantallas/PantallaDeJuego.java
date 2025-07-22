@@ -119,6 +119,10 @@ public class PantallaDeJuego extends PantallaBase {
     private static final float DURACION_PANTALLA_VICTORIA = 5.0f;
     private List<EstadisticasJugador> resultadosGuardados = null;
 
+    private PauseMenuUI menuDePausaUI;
+    private boolean isPaused = false;
+    private ShapeRenderer shapeRendererPausa;
+    private Table pauseWrapper;
 
     public PantallaDeJuego(JSonicJuego juego, IGameServer server) {
         super("");
@@ -293,10 +297,40 @@ public class PantallaDeJuego extends PantallaBase {
 
         interfazVictoria = new VictoriaInterfaz(juegoPrincipal, getSkin());
         mainStage.addActor(interfazVictoria);
+
+        shapeRendererPausa = new ShapeRenderer();
+
+        // 1. Creamos una instancia de la nueva clase PauseMenuUI.
+        menuDePausaUI = new PauseMenuUI(juegoPrincipal, this, getSkin());
+
+        // 2. Creamos el wrapper que la contendrá.
+        this.pauseWrapper = new Table();
+        this.pauseWrapper.setFillParent(true);
+        mainStage.addActor(this.pauseWrapper);
+
+        // 3. Añadimos el menú al wrapper y le damos tamaño.
+        this.pauseWrapper.add(menuDePausaUI)
+                .width(Gdx.graphics.getWidth() * 0.8f)
+                .height(Gdx.graphics.getHeight() * 0.8f);
+
+        // 4. El wrapper (y por tanto el menú) empieza invisible.
+        this.pauseWrapper.setVisible(false);
     }
 
     @Override
     public void actualizar(float deltat) {
+
+        if (Gdx.input.isKeyJustPressed(Input.Keys.ESCAPE)) {
+            togglePause();
+        }
+
+        // Si el juego está en pausa, solo actualizamos el Stage (para los botones)
+        // y detenemos el resto de la lógica.
+        if (isPaused) {
+            mainStage.act(deltat);
+            return;
+        }
+
 
         if (Gdx.input.isKeyJustPressed(Input.Keys.V)) { // Usamos la tecla 'V' de Victoria
 
@@ -349,7 +383,7 @@ public class PantallaDeJuego extends PantallaBase {
             }
         }
 
-        if (Gdx.input.isKeyJustPressed(Input.Keys.ESCAPE)) {
+       /* if (Gdx.input.isKeyJustPressed(Input.Keys.ESCAPE)) {
             System.out.println("[CLIENT] El jugador ha decidido salir de la partida. Notificando al servidor...");
 
             if (gameClient != null) {
@@ -364,7 +398,7 @@ public class PantallaDeJuego extends PantallaBase {
             LocalServer.decreaseContamination(100);
 
             return;
-        }
+        }*/
 
         if (localServer != null) {
             localServer.update(deltat, this.manejadorNivel, personajeJugable);
@@ -934,8 +968,8 @@ public class PantallaDeJuego extends PantallaBase {
         for (Player otro : otrosJugadores.values()) otro.draw(batch);
         for (RobotVisual enemigo : enemigosEnPantalla.values()) enemigo.draw(batch);
 
-        if (eggman != null){
-            if(debeMostrarseElJefe())
+        if (eggman != null) {
+            if (debeMostrarseElJefe())
                 eggman.draw(batch);
         }
 
@@ -956,6 +990,19 @@ public class PantallaDeJuego extends PantallaBase {
         }
 
         renderizarNeblinaConShader();
+
+        if (isPaused) {
+            Gdx.gl.glEnable(GL20.GL_BLEND);
+            Gdx.gl.glBlendFunc(GL20.GL_SRC_ALPHA, GL20.GL_ONE_MINUS_SRC_ALPHA);
+
+            shapeRendererPausa.setProjectionMatrix(mainStage.getCamera().combined);
+            shapeRendererPausa.begin(ShapeRenderer.ShapeType.Filled);
+            shapeRendererPausa.setColor(0, 0, 0, 0.5f);
+            shapeRendererPausa.rect(0, 0, mainStage.getWidth(), mainStage.getHeight());
+            shapeRendererPausa.end();
+
+            Gdx.gl.glDisable(GL20.GL_BLEND);
+        }
 
         mainStage.getViewport().apply();
         mainStage.draw();
@@ -1258,6 +1305,24 @@ public class PantallaDeJuego extends PantallaBase {
 
         if (soundManager != null) {
             soundManager.stopBackgroundMusic();
+        }
+    }
+
+    public void togglePause() {
+        isPaused = !isPaused;
+        pauseWrapper.setVisible(isPaused);
+
+        if (isPaused) {
+            // Mueve el menú de pausa al frente para que se dibuje sobre todo lo demás.
+            pauseWrapper.toFront();
+
+            soundManager.pauseBackgroundMusic();
+            Gdx.input.setInputProcessor(mainStage);
+        } else {
+            soundManager.resumeBackgroundMusic();
+            // Al reanudar, puedes decidir si el Stage sigue controlando el input
+            // o si lo devuelves a null o a otro procesador.
+            // Para la mayoría de los juegos, dejarlo en el Stage está bien.
         }
     }
 
