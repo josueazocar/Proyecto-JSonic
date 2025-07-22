@@ -29,7 +29,7 @@ public class GameServer implements IGameServer {
     private final HashMap<Integer, Integer> puntajesBasuraIndividuales = new HashMap<>();
     private final HashMap<Integer, DronState> dronesActivos = new HashMap<>();
     private final ArrayList<Rectangle> colisionesDinamicas = new ArrayList<>();
-    private final HashMap<Integer, Network.PortalInfo> infoPortales = new HashMap<>();
+    private final HashMap<String, Network.PortalInfo> infoPortales = new HashMap<>();
     private int proximoIdDron = 20000; // Un rango de IDs para los drones
     private final HashMap<Integer, Rectangle> bloquesRompibles = new HashMap<>();
     private int proximoIdBloque = 30000; // Un rango de IDs para bloques
@@ -201,15 +201,26 @@ public class GameServer implements IGameServer {
                             // 2. AHORA DECIDIMOS QUÉ HACER BASADO EN SU TIPO.
                             // CASO ESPECIAL: Es un teletransportador.
                             if (itemRecogido.tipo == ItemState.ItemType.TELETRANSPORTE) {
+
                                 System.out.println("[SERVER] Jugador " + conexion.getID() + " ha activado el teletransportador.");
 
-                                Network.PortalInfo infoDestino = infoPortales.get(paquete.idItem);
+                                // --- INICIO DE LA MODIFICACIÓN ---
+                                // Construimos la clave a partir de las coordenadas del ítem que fue tocado.
+                                String claveCoordenadas = itemRecogido.x + "," + itemRecogido.y;
+                                Network.PortalInfo infoDestino = infoPortales.get(claveCoordenadas);
+
                                 if (infoDestino == null) {
-                                    System.err.println("[SERVER] Error: No se encontró información de destino para el portal ID: " + paquete.idItem);
+                                    // El mensaje de error ahora es más claro sobre qué está buscando.
+                                    System.err.println("[SERVER] Error: No se encontró información de destino para el portal en las coordenadas: " + claveCoordenadas);
                                     return; // Salimos para evitar un crash.
                                 }
+
+                                // Eliminamos el ítem de la lista de ítems activos del mundo.
                                 itemsActivos.remove(paquete.idItem);
-                                infoPortales.remove(paquete.idItem);
+
+                                // Eliminamos la información del portal de nuestro mapa de consulta usando la misma clave de coordenadas.
+                                infoPortales.remove(claveCoordenadas);
+                                // --- FIN DE LA MODIFICACIÓN ---
 
 
                                 // Creamos la ORDEN de cambio de mapa.
@@ -327,20 +338,12 @@ public class GameServer implements IGameServer {
                             System.out.println("[SERVER] Recibida información de " + paquete.portales.size() + " portales. Creándolos...");
 
                             // Iteramos sobre la información de cada portal recibida.
+                            infoPortales.clear();
+
+                            // Solo guardamos la información, NO creamos los ítems.
                             for (Network.PortalInfo info : paquete.portales) {
-                                // Creamos el ItemState para el portal.
-                                ItemState estadoPortal = new ItemState(proximoIdItem++, info.x, info.y, ItemState.ItemType.TELETRANSPORTE);
-
-                                // Lo añadimos a la lista de ítems activos del servidor.
-                                itemsActivos.put(estadoPortal.id, estadoPortal);
-
-                                // Guardamos su información de destino en nuestro nuevo HashMap.
-                                infoPortales.put(estadoPortal.id, info);
-
-                                // Notificamos a TODOS los clientes que deben crear este nuevo ítem (el portal).
-                                Network.PaqueteItemNuevo paqueteNuevoItem = new Network.PaqueteItemNuevo();
-                                paqueteNuevoItem.estadoItem = estadoPortal;
-                                servidor.sendToAllTCP(paqueteNuevoItem);
+                                String claveCoordenadas = info.x + "," + info.y;
+                                infoPortales.put(claveCoordenadas, info);
                             }
                         }
                         // --- FIN DE LA LÓGICA AÑADIDA ---
@@ -509,6 +512,7 @@ public class GameServer implements IGameServer {
                                 notificacionMuerte.idEntidad = enemigo.id;
                                 notificacionMuerte.esJugador = false;
                                 servidor.sendToAllTCP(notificacionMuerte);
+                                comprobarYGenerarPortalSiCorresponde();
                             }
                         }
                     }
@@ -761,33 +765,6 @@ public class GameServer implements IGameServer {
             tiempoDesdeUltimaContaminacion = 0f; // Reseteamos el temporizador
         }
 
-
-
-        this.tiempoGeneracionTeleport += deltaTime;
-        if ((int)this.tiempoGeneracionTeleport % 2 == 0 && (int)this.tiempoGeneracionTeleport != 0) {
-        }
-
-        // Suponiendo que el teletransportador solo debe aparecer si hay jugadores
-        if (!this.teleportGenerado && this.tiempoGeneracionTeleport >= 5f && !jugadores.isEmpty()) {
-            System.out.println("[GAMESERVER] Generando teletransportador...");
-
-            // Como el servidor no lee el mapa, definimos aquí las coordenadas.
-            // DEBES AJUSTAR ESTAS COORDENADAS a la posición donde quieres que aparezca.
-            float teleX = 1848.0f;
-            float teleY = 1190.0f;
-            int teleId = 10000;
-
-            // Creamos el estado del item
-            ItemState estadoTele = new ItemState(teleId, teleX, teleY, ItemState.ItemType.TELETRANSPORTE);
-            itemsActivos.put(estadoTele.id, estadoTele);
-
-            // Creamos el paquete para notificar a TODOS los clientes
-            Network.PaqueteItemNuevo paquete = new Network.PaqueteItemNuevo();
-            paquete.estadoItem = estadoTele;
-            servidor.sendToAllTCP(paquete);
-
-            this.teleportGenerado = true; // Marcamos como generado
-        }
         if (alMenosUnJugadorHaEnviadoPosicion) {
             actualizarDrones(deltaTime);
             actualizarEnemigosAI(deltaTime);
@@ -812,6 +789,44 @@ public class GameServer implements IGameServer {
             if (cooldownActual > 0) {
                 cooldownsHabilidadLimpieza.put(jugadorId, cooldownActual - deltaTime);
             }
+        }
+    }
+
+    private void comprobarYGenerarPortalSiCorresponde() {
+        // 1. Si el portal ya se generó en este mapa, no hacemos nada más.
+        if (teleportGenerado) {
+            return;
+        }
+
+        // 2. Obtenemos el límite de enemigos para el mapa actual.
+        int limiteEnemigos = enemigosPorMapa.getOrDefault(mapaActualServidor, 0);
+
+        // 3. LA CONDICIÓN CLAVE:
+        //    Comprobamos si la lista de enemigos activos está vacía Y
+        //    si ya hemos generado todos los enemigos que correspondían a este nivel.
+        if (enemigosActivos.isEmpty() && enemigosGeneradosEnNivelActual >= limiteEnemigos) {
+
+            System.out.println("[GAMESERVER] ¡Todos los enemigos derrotados! Generando portal de salida.");
+
+            // 4. GENERAMOS LOS PORTALES:
+            //    Reutilizamos la información que el cliente nos envió al cargar el mapa.
+            if (infoPortales != null && !infoPortales.isEmpty()) {
+                for (Network.PortalInfo info : infoPortales.values()) {
+                    // Creamos el estado del ítem para el portal.
+                    ItemState estadoPortal = new ItemState(proximoIdItem++, info.x, info.y, ItemState.ItemType.TELETRANSPORTE);
+
+                    // Lo añadimos a la lista de ítems del servidor.
+                    itemsActivos.put(estadoPortal.id, estadoPortal);
+
+                    // Creamos el paquete para notificar a TODOS los clientes.
+                    Network.PaqueteItemNuevo paqueteNuevoItem = new Network.PaqueteItemNuevo();
+                    paqueteNuevoItem.estadoItem = estadoPortal;
+                    servidor.sendToAllTCP(paqueteNuevoItem);
+                }
+            }
+
+            // 5. ¡Activamos el seguro para no volver a generar el portal en este nivel!
+            teleportGenerado = true;
         }
     }
 
