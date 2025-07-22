@@ -2,6 +2,8 @@ package network;
 
 import com.JSonic.uneg.*;
 import com.JSonic.uneg.EntidadesVisuales.Player;
+import com.JSonic.uneg.Pantallas.EstadisticasJugador;
+import com.JSonic.uneg.Pantallas.PantallaDeJuego;
 import com.JSonic.uneg.State.*;
 import com.badlogic.gdx.math.MathUtils;
 import com.badlogic.gdx.math.Rectangle;
@@ -27,6 +29,7 @@ public class LocalServer implements IGameServer {
     private final HashMap<Integer, ItemState> itemsActivos = new HashMap<>();
     private final HashMap<Integer, Integer> puntajesAnillos = new HashMap<>();
     private final HashMap<Integer, Integer> puntajesBasura = new HashMap<>();
+    private final HashMap<Integer, EstadisticasJugador> estadisticasJugadores = new HashMap<>();
     private static final ContaminationState contaminationState = new ContaminationState();
     //Declara un HashMap para asociar el ID del portal con su destino (para los portales
     private final HashMap<Integer, String> destinosPortales = new HashMap<>();
@@ -122,6 +125,22 @@ public class LocalServer implements IGameServer {
         jugadores.put(nuevoEstado.id, nuevoEstado);
         puntajesAnillos.put(nuevoEstado.id, 0);
         puntajesBasura.put(nuevoEstado.id, 0);
+
+        PlayerState.CharacterType tipoPersonaje = PantallaDeJuego.miPersonaje;
+        String nombreDelPersonaje;
+        if (tipoPersonaje != null) {
+            // Convierte "SONIC" a "sonic"
+            String nombreEnMinusculas = tipoPersonaje.toString().toLowerCase();
+            // Convierte "sonic" a "Sonic"
+            nombreDelPersonaje = nombreEnMinusculas.substring(0, 1).toUpperCase() + nombreEnMinusculas.substring(1);
+        } else {
+            nombreDelPersonaje = "Jugador"; // Un nombre por defecto si algo saliera mal.
+        }
+
+        // 3. Creamos las estadísticas usando el nombre correcto.
+        EstadisticasJugador stats = new EstadisticasJugador(nombreDelPersonaje);
+        estadisticasJugadores.put(nuevoEstado.id, stats);
+        System.out.println("[STATS] Objeto de estadísticas creado para el jugador " + nuevoEstado.id);
 
         // 3. "Enviamos" el paquete de bienvenida al cliente local.
         Network.RespuestaAccesoPaquete respuesta = new Network.RespuestaAccesoPaquete();
@@ -406,6 +425,11 @@ public class LocalServer implements IGameServer {
                             int puntajeActual = puntajesBasura.getOrDefault(idJugador, 0);
                             puntajesBasura.put(idJugador, puntajeActual + 1);
                             contaminationState.decrease(TRASH_CLEANUP_VALUE);
+                            EstadisticasJugador stats = estadisticasJugadores.get(idJugador);
+                            if (stats != null) {
+                                stats.sumarObjetosReciclados(1); // Sumamos 1 por cada pieza
+                                System.out.println("[STATS] Jugador " + idJugador + " recogió 1 pieza de basura. Puntos actualizados.");
+                            }
                             System.out.println("[LOCAL SERVER] Basura recogida. Contaminación reducida a: " + contaminationState.getPercentage() + "%");
                         }
 
@@ -450,7 +474,11 @@ public class LocalServer implements IGameServer {
             //Para que los bloques de basura sean contados como basura
             else if (objeto instanceof Network.PaqueteBloqueDestruido paquete) {
                 System.out.println("[LOCAL SERVER] Bloque destruido por jugador ID: " + paquete.idJugador);
-
+                EstadisticasJugador stats = estadisticasJugadores.get(paquete.idJugador);
+                if (stats != null) {
+                    stats.sumarZonaLimpiada(); // ¡+100 puntos por cada bloque!
+                    System.out.println("[STATS] Jugador " + paquete.idJugador + " (Knuckles) destruyó un bloque. Puntos actualizados.");
+                }
                 int puntajeActual = puntajesBasura.getOrDefault(paquete.idJugador, 0);
                 puntajesBasura.put(paquete.idJugador, puntajeActual + 1);
 
@@ -480,6 +508,12 @@ public class LocalServer implements IGameServer {
                 // 2. Reiniciamos el contador de basura del jugador a 0.
                 puntajesBasura.put(idJugador, 0);
 
+                EstadisticasJugador stats = estadisticasJugadores.get(idJugador);
+                if (stats != null) {
+                    stats.sumarObjetosReciclados(paquete.cantidad);
+                    System.out.println("[STATS] Jugador 1 recicló " + paquete.cantidad + " objetos.");
+                }
+
                 // 3. Enviamos la actualización completa al cliente.
                 Network.PaqueteActualizacionPuntuacion paquetePuntaje = new Network.PaqueteActualizacionPuntuacion();
                 paquetePuntaje.nuevosAnillos = puntajesAnillos.getOrDefault(idJugador, 0);
@@ -498,6 +532,12 @@ public class LocalServer implements IGameServer {
 
                     // 2. Aplicamos el efecto al estado del juego.
                     decreaseContamination(100.0f);
+                    EstadisticasJugador stats = estadisticasJugadores.get(1);
+                    if (stats != null) {
+                        stats.sumarZonaLimpiada();
+                        System.out.println("[STATS] Jugador 1 limpió una zona con habilidad especial.");
+                    }
+
 
                     // 3. Recogemos la basura (lógica que ya tenías).
                     for (ItemState item : new ArrayList<>(itemsActivos.values())) {
@@ -527,6 +567,18 @@ public class LocalServer implements IGameServer {
                         System.out.println("[LOCAL SERVER] ¡Enemigo ID " + enemigo.id + " derrotado!");
                         enemigosActivos.remove(enemigo.id);
 
+                        EstadisticasJugador stats = estadisticasJugadores.get(1); // En local, es el jugador 1
+                        if (stats != null) {
+                            stats.sumarEnemigoDerrotado();
+                            System.out.println("[STATS] Jugador 1 derrotó a un enemigo.");
+                        }
+
+                        if (enemigo.tipo == EnemigoState.EnemigoType.ROBOTNIK) {
+                            System.out.println("[FIN DE PARTIDA] ¡Jefe final derrotado!");
+                            finalizarPartidaYEnviarResultados();
+                            return; // Detenemos el método update para evitar más procesamiento
+                        }
+
                         Network.PaqueteEntidadEliminada notificacionMuerte = new Network.PaqueteEntidadEliminada();
                         notificacionMuerte.idEntidad = enemigo.id;
                         notificacionMuerte.esJugador = false;
@@ -538,6 +590,14 @@ public class LocalServer implements IGameServer {
                         comprobarYGenerarPortalSiCorresponde(manejadorNivel);
                     }
                 }
+            }  else if (objeto instanceof Network.ForzarFinDeJuegoDebug) {
+                System.out.println("[LOCAL SERVER] ¡Recibida orden de forzar fin de juego!");
+
+                // Simplemente llamamos a la función que ya hace todo el trabajo.
+                finalizarPartidaYEnviarResultados();
+
+                // Detenemos el bucle para no procesar más paquetes en este frame.
+                break;
             }
 
 
@@ -715,6 +775,7 @@ public class LocalServer implements IGameServer {
                             notificacionMuerte.idEntidad = jugador.id;
                             notificacionMuerte.esJugador = true;
                             clienteLocal.recibirPaqueteDelServidor(notificacionMuerte);
+                            finalizarPartidaYEnviarResultados();
                         }
                     }
                 }
@@ -754,6 +815,8 @@ public class LocalServer implements IGameServer {
                         notificacionMuerte.idEntidad = jugador.id;
                         notificacionMuerte.esJugador = true;
                         clienteLocal.recibirPaqueteDelServidor(notificacionMuerte);
+                        finalizarPartidaYEnviarResultados();
+
                     }
                 }
             } else if (distance <= ROBOT_DETECTION_RANGE) {
@@ -867,7 +930,7 @@ public class LocalServer implements IGameServer {
         }
     }
     //-------------------------------------------------------------------
-    
+
 
     private boolean spawnNuevoEnemigo(LevelManager manejadorNivel) {
         int intentos = 0;
@@ -916,6 +979,17 @@ public class LocalServer implements IGameServer {
             }
             intentos++;
         }
+    }
+
+    private void finalizarPartidaYEnviarResultados() {
+        System.out.println("[LOCAL SERVER] Finalizando partida y enviando resultados...");
+
+        Network.PaqueteResultadosFinales paqueteResultados = new Network.PaqueteResultadosFinales();
+        // Creamos una nueva lista a partir de los valores del HashMap
+        paqueteResultados.estadisticasFinales = new ArrayList<>(estadisticasJugadores.values());
+
+        // "Enviamos" el paquete final al cliente local.
+        clienteLocal.recibirPaqueteDelServidor(paqueteResultados);
     }
 
     @Override
