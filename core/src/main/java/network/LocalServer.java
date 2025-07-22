@@ -590,16 +590,7 @@ public class LocalServer implements IGameServer {
                         comprobarYGenerarPortalSiCorresponde(manejadorNivel);
                     }
                 }
-            }  else if (objeto instanceof Network.ForzarFinDeJuegoDebug) {
-                System.out.println("[LOCAL SERVER] ¡Recibida orden de forzar fin de juego!");
-
-                // Simplemente llamamos a la función que ya hace todo el trabajo.
-                finalizarPartidaYEnviarResultados();
-
-                // Detenemos el bucle para no procesar más paquetes en este frame.
-                break;
             }
-
 
         }
         // --- LÓGICA DE AUMENTO DE CONTAMINACIÓN ---

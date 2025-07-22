@@ -286,12 +286,6 @@ public class PantallaDeJuego extends PantallaBase {
     @Override
     public void actualizar(float deltat) {
 
-        if (Gdx.input.isKeyJustPressed(Input.Keys.E)) {
-            if (gameClient != null) {
-                System.out.println("[DEBUG] Enviando orden de FORZAR FIN DE JUEGO al servidor...");
-                gameClient.send(new Network.ForzarFinDeJuegoDebug());
-            }
-        }
 
         if (Gdx.input.isKeyJustPressed(Input.Keys.G)) {
             System.out.println("DEBUG: Forzando Game Over con la tecla G...");

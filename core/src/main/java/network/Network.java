@@ -85,9 +85,6 @@ public class Network {
         kryo.register(PaqueteResultadosFinales.class);
         kryo.register(EstadisticasJugador.class);
 
-        kryo.register(ForzarFinDeJuegoDebug.class);
-
-
     }
 
     // --- Definición de los Paquetes ---
@@ -276,7 +273,5 @@ public class Network {
         public List<EstadisticasJugador> estadisticasFinales;
     }
 
-    public static class ForzarFinDeJuegoDebug {
-    }
 }
 
