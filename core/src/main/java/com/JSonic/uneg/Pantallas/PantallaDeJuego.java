@@ -511,7 +511,9 @@ public class PantallaDeJuego extends PantallaBase {
                         hudVidaJugador.mostrarPerdidaDeVida();
                     } else if (porcentajeContaminacionActual == 100) {
                         personajeJugable.setVida(0);
-                        personajeJugable = null;
+                        if (!isGameOver) {
+                            activarGameOver();
+                        };
                     }
                     if(contaminationLabel != null) {
                         contaminationLabel.setText("TOXIC: " + Math.round(this.porcentajeContaminacionActual) + "%");
