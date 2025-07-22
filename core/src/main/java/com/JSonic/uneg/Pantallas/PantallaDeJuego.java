@@ -774,7 +774,7 @@ public class PantallaDeJuego extends PantallaBase {
         }
 
         if (hudVidaVillano != null) {
-            if (eggman != null) {
+            if (debeMostrarseElJefe()) {
                 // Calculamos la posición centrada sobre su cabeza
                 float anchoVillano = eggman.getTileSize();
                 float altoVillano = eggman.getTileSize();
@@ -868,9 +868,8 @@ public class PantallaDeJuego extends PantallaBase {
         for (RobotVisual enemigo : enemigosEnPantalla.values()) enemigo.draw(batch);
 
         if (eggman != null){
-            if(manejadorNivel.getNombreMapaActual().equals("maps/ZonaJefeN1.tmx") || manejadorNivel.getNombreMapaActual().equals("maps/ZonaJefeN2.tmx") || manejadorNivel.getNombreMapaActual().equals("maps/ZonaJefeN3.tmx"))
+            if(debeMostrarseElJefe())
                 eggman.draw(batch);
-
         }
 
         for (Bomba bomba : listaDeBombas) {
@@ -881,7 +880,7 @@ public class PantallaDeJuego extends PantallaBase {
         for (ItemVisual item : itemsEnPantalla.values()) item.draw(batch);
         batch.end();
 
-        if (eggman != null && hudVidaVillano != null) {
+        if (debeMostrarseElJefe() && hudVidaVillano != null) {
             hudVidaVillano.dibujar(camaraJuego);
         }
 
@@ -1046,6 +1045,11 @@ public class PantallaDeJuego extends PantallaBase {
         }
         barrasVidaEnemigos.clear();
 
+        if (eggman != null) {
+            eggman.dispose();
+            eggman = null;
+        }
+
         for (ItemVisual item : itemsEnPantalla.values()) {
             item.dispose();
         }
@@ -1140,6 +1144,18 @@ public class PantallaDeJuego extends PantallaBase {
             jugador.estado.y = y;
             jugador.setEstadoActual(estadoAnim);
         }
+    }
+
+    private boolean debeMostrarseElJefe() {
+        // Si la instancia de eggman no existe, no se muestra.
+        if (eggman == null) {
+            return false;
+        }
+        // Añade aquí los nombres de todos tus mapas de jefe.
+        String mapaActual = manejadorNivel.getNombreMapaActual();
+        return mapaActual.equals("maps/ZonaJefeN1.tmx") ||
+            mapaActual.equals("maps/ZonaJefeN2.tmx") ||
+            mapaActual.equals("maps/ZonaJefeN3.tmx");
     }
 
     @Override
