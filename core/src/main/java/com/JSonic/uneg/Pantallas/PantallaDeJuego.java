@@ -357,6 +357,9 @@ public class PantallaDeJuego extends PantallaBase {
                 //para esmeraldas
                 else if (paquete instanceof Network.PaqueteActualizacionEsmeraldas p) {
                     this.esmeraldasTotal = p.totalEsmeraldas;
+
+                    personajeJugable.anadirGema();//Contador de gemas
+
                     this.contadorEsmeraldas.setValor(this.esmeraldasTotal);
                 }
 
@@ -397,8 +400,9 @@ public class PantallaDeJuego extends PantallaBase {
                     contadorAnillos.setValor(this.anillosTotal);
                     contadorBasura.setValor(this.basuraTotal);
 
-                    if (anillosTotal == 100){
+                    if (anillosTotal >= 100){
                         personajeJugable.setVida(personajeJugable.getVida() + 100);
+                        anillosTotal -= 100; // Resta de 100 anillos
                     }
 
 
@@ -597,7 +601,7 @@ public class PantallaDeJuego extends PantallaBase {
 
             if (bomba.isExplotando() && !bomba.yaHaHechoDanio()) {
                 if (bomba.getBounds().overlaps(personajeJugable.getBounds())) {
-                    personajeJugable.setVida(personajeJugable.getVida() - 20);
+                    personajeJugable.setVida(personajeJugable.getVida() - 100);
                     bomba.marcarComoDanioHecho();
                     hudVidaJugador.mostrarPerdidaDeVida();
                 }
