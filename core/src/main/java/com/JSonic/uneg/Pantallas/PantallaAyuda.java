@@ -59,7 +59,7 @@ public class PantallaAyuda extends PantallaBase {
 
         Table tablaOpciones = new Table();
         TextButton btnComoJugar = new TextButton("Como jugar", getSkin(), "small-text");
-        TextButton btnEstadisticas = new TextButton("Ver Ult. Stats", getSkin(), "small-text");
+        TextButton btnEstadisticas = new TextButton("Estadisticas", getSkin(), "small-text");
         TextButton btnReglas = new TextButton("Reglas", getSkin(), "small-text");
         TextButton btnSalir = new TextButton("Salir", getSkin(), "small-text");
 
@@ -148,16 +148,18 @@ public class PantallaAyuda extends PantallaBase {
         btnEstadisticas.addListener(new ClickListener() {
             @Override
             public void clicked(InputEvent event, float x, float y) {
-                // Obtenemos las estadísticas guardadas desde la clase principal del juego
-                List<EstadisticasJugador> stats =  juegoApp.getEstadisticasUltimaPartida();
+                // Obtenemos las estadísticas guardadas
+                List<EstadisticasJugador> stats = juegoApp.getEstadisticasUltimaPartida();
 
-                // Comprobamos si hay estadísticas guardadas
+                // Limpiamos el panel derecho para mostrar el nuevo contenido
+                panelDerecho.clear();
+
                 if (stats != null && !stats.isEmpty()) {
-                    // Si hay, creamos y mostramos la pantalla de estadísticas
-                    juegoApp.setScreen(new PantallaEstadisticas(juegoApp, stats));
+                    // Si hay estadísticas, llamamos a un nuevo método que construye la tabla
+                    // y la añade al panel derecho.
+                    panelDerecho.add(construirPanelEstadisticas(stats)).expand().fill();
                 } else {
-                    // Si no hay (porque no se ha jugado ninguna partida), mostramos un mensaje
-                    panelDerecho.clear();
+                    // Si no hay estadísticas, mostramos el mensaje de siempre
                     Label noStatsLabel = new Label("No hay estadisticas de la ultima partida disponibles.", getSkin());
                     noStatsLabel.setWrap(true);
                     noStatsLabel.setAlignment(Align.center);
@@ -234,7 +236,52 @@ public class PantallaAyuda extends PantallaBase {
         panelContenido.add(panelDerecho).width(rightPanelWidth).fill();   // Panel derecho con el ancho restante y llenado completo.
     }
 
+    private ScrollPane construirPanelEstadisticas(List<EstadisticasJugador> stats) {
 
+        // 1. Ordenamos las estadísticas de mayor a menor puntuación
+        stats.sort(java.util.Comparator.comparingInt(EstadisticasJugador::getPuntuacionTotal).reversed());
+
+        Table tablaStats = new Table();
+
+        // 2. Creamos los estilos para las fuentes, similar a PantallaEstadisticas
+        //    Es importante crear nuevas instancias para no afectar otros estilos del skin.
+        BitmapFont fuenteTitulo = new BitmapFont(Gdx.files.internal("Fuentes/juego_fuente2.fnt"));
+        fuenteTitulo.getData().setScale(0.8f); // Un poco más pequeño para que quepa bien
+        Label.LabelStyle estiloTitulo = new Label.LabelStyle(fuenteTitulo, com.badlogic.gdx.graphics.Color.WHITE);
+
+        BitmapFont fuenteCuerpo = new BitmapFont(Gdx.files.internal("Fuentes/juego_fuente2.fnt"));
+        fuenteCuerpo.getData().setScale(0.7f);
+        Label.LabelStyle estiloEncabezado = new Label.LabelStyle(fuenteCuerpo, com.badlogic.gdx.graphics.Color.WHITE);
+        Label.LabelStyle estiloDatos = new Label.LabelStyle(fuenteCuerpo, com.badlogic.gdx.graphics.Color.LIGHT_GRAY);
+
+        // 3. Añadimos el Título
+        tablaStats.add(new Label("Resultados Ultima Partida", estiloTitulo)).colspan(2).center().padBottom(30);
+        tablaStats.row();
+
+        // 4. Añadimos los Encabezados
+        tablaStats.add(new Label("Jugador", estiloEncabezado)).padBottom(10).left();
+        tablaStats.add(new Label("Puntuacion", estiloEncabezado)).padBottom(10).right();
+        tablaStats.row();
+
+        // 5. Añadimos una línea separadora (opcional pero estético)
+        Image separador = new Image(getSkin().getDrawable("default-round-down")); // Usamos un drawable del skin
+        tablaStats.add(separador).colspan(2).height(2).fillX().padBottom(10);
+        tablaStats.row();
+
+        // 6. Recorremos las estadísticas y añadimos una fila por cada jugador
+        for (EstadisticasJugador stat : stats) {
+            tablaStats.add(new Label(stat.getNombreJugador(), estiloDatos)).pad(5).left();
+            tablaStats.add(new Label(String.valueOf(stat.getPuntuacionTotal()), estiloDatos)).pad(5).right();
+            tablaStats.row();
+        }
+
+        // 7. Envolvemos la tabla en un ScrollPane por si la lista es muy larga
+        ScrollPane scrollPane = new ScrollPane(tablaStats, getSkin());
+        scrollPane.setFadeScrollBars(false);
+        scrollPane.setScrollingDisabled(true, false);
+
+        return scrollPane;
+    }
 
     @Override
     public void actualizar(float delta) {
