@@ -11,7 +11,6 @@ import com.badlogic.gdx.math.Rectangle;
 import network.interfaces.IGameClient;
 import network.interfaces.IGameServer;
 import com.badlogic.gdx.math.Vector2;
-
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Queue;

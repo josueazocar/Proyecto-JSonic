@@ -12,10 +12,8 @@ import network.interfaces.IGameServer;
 
 
 import java.io.IOException;
-import java.util.EnumSet;
-import java.util.HashMap;
-import java.util.ArrayList;
-import java.util.Random;
+import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 
 public class GameServer implements IGameServer {
 
@@ -23,8 +21,8 @@ public class GameServer implements IGameServer {
     // --- ALMACENES DE ESTADO ---
     private final HashMap<Integer, PlayerState> jugadores = new HashMap<>();
     private final EnumSet<PlayerState.CharacterType> personajesEnUso = EnumSet.noneOf(PlayerState.CharacterType.class);
-    private final HashMap<Integer, EnemigoState> enemigosActivos = new HashMap<>();
-    private final HashMap<Integer, ItemState> itemsActivos = new HashMap<>();
+    private final Map<Integer, EnemigoState> enemigosActivos = new ConcurrentHashMap<>();
+    private final Map<Integer, ItemState> itemsActivos = new ConcurrentHashMap<>();
     private volatile ArrayList<com.badlogic.gdx.math.Rectangle> paredesDelMapa = null;
     private final HashMap<Integer, Integer> puntajesAnillosIndividuales = new HashMap<>();
     private final HashMap<Integer, Integer> puntajesBasuraIndividuales = new HashMap<>();
@@ -291,7 +289,7 @@ public class GameServer implements IGameServer {
                                     System.out.println("[SERVER] Detectado mapa de jefe. ¡Creando a Robotnik!");
 
                                     // Solo si es un mapa de jefe, creamos y enviamos la instancia del jefe.
-                                    EnemigoState estadoRobotnik = new EnemigoState(999, 300, 100, 100, EnemigoState.EnemigoType.ROBOTNIK);
+                                    EnemigoState estadoRobotnik = new EnemigoState(999, 300, 100, 1, EnemigoState.EnemigoType.ROBOTNIK);
                                     enemigosActivos.put(estadoRobotnik.id, estadoRobotnik);
 
                                     Network.PaqueteEnemigoNuevo paqueteRobotnik = new Network.PaqueteEnemigoNuevo();
@@ -709,6 +707,7 @@ public class GameServer implements IGameServer {
 
                         // Comprueba si el jugador ha sido derrotado.
                         if (jugadorMasCercano.vida <= 0) {
+                            comprobarDerrotaDelEquipo();
                             jugadores.remove(jugadorMasCercano.id);
                             Network.PaqueteEntidadEliminada notificacionMuerte = new Network.PaqueteEntidadEliminada();
                             notificacionMuerte.idEntidad = jugadorMasCercano.id;
@@ -758,7 +757,9 @@ public class GameServer implements IGameServer {
                     paqueteVida.nuevaVida = jugadorMasCercano.vida;
                     servidor.sendToTCP(jugadorMasCercano.id, paqueteVida);
 
+
                     if (jugadorMasCercano.vida <= 0) {
+                        comprobarDerrotaDelEquipo();
                         jugadores.remove(jugadorMasCercano.id);
                         Network.PaqueteEntidadEliminada notificacionMuerte = new Network.PaqueteEntidadEliminada();
                         notificacionMuerte.idEntidad = jugadorMasCercano.id;
@@ -1281,6 +1282,29 @@ public class GameServer implements IGameServer {
         // 7. CERRAMOS LA CONEXIÓN (si no estuviera ya cerrada).
         // Esto asegura que el servidor no mantenga conexiones inactivas.
         conexion.close();
+    }
+
+    private void comprobarDerrotaDelEquipo() {
+        // Asumimos que la partida no ha terminado todavía.
+        boolean unJugadorHaSidoDerrotado = false;
+
+        // Recorremos a todos los jugadores conectados.
+        for (PlayerState jugador : jugadores.values()) {
+            // Si encontramos al menos UN jugador cuya vida sea 0 o menos...
+            if (jugador.vida <= 0) {
+                // ...la condición se cumple.
+                unJugadorHaSidoDerrotado = true;
+                break; // Salimos del bucle, ya no necesitamos buscar más.
+            }
+        }
+
+        // Si, después de revisar, encontramos un jugador derrotado...
+        if (unJugadorHaSidoDerrotado) {
+            System.out.println("[GAMESERVER] ¡Un miembro del equipo ha caído! Enviando orden de Game Over.");
+
+            // Creamos y enviamos el paquete de derrota a todos los clientes.
+            servidor.sendToAllTCP(new Network.PaqueteGameOver());
+        }
     }
 
     private void reiniciarContadoresDeNivel() {

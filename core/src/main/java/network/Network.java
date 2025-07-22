@@ -11,6 +11,7 @@ import com.esotericsoftware.kryonet.EndPoint;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 // Esta clase centraliza el registro de todos los paquetes de red.
 public class Network {
@@ -37,6 +38,7 @@ public class Network {
         kryo.register(PaqueteEnemigoNuevo.class);
         kryo.register(PaqueteActualizacionEnemigos.class);
         kryo.register(java.util.HashMap.class);
+        kryo.register(java.util.concurrent.ConcurrentHashMap.class);
 
         kryo.register(ItemState.class);
         kryo.register(ItemState.ItemType.class);
@@ -87,7 +89,7 @@ public class Network {
         kryo.register(PaqueteResultadosFinales.class);
         kryo.register(EstadisticasJugador.class);
         kryo.register(PaqueteTransformacionSuper.class);
-
+        kryo.register(PaqueteGameOver.class);
         kryo.register(ForzarFinDeJuegoDebug.class);
     }
 
@@ -138,7 +140,7 @@ public class Network {
     }
     // Este paquete contendrá el estado actualizado de TODOS los enemigos activos.
     public static class PaqueteActualizacionEnemigos {
-        public HashMap<Integer, EnemigoState> estadosEnemigos;
+        public Map<Integer, EnemigoState> estadosEnemigos;
     }
     // Paquete enviado por el cliente al servidor cuando un enemigo termina una animación clave.
     public static class PaqueteAnimacionEnemigoTerminada {
@@ -285,6 +287,10 @@ public class Network {
     public static class PaqueteTransformacionSuper {
         public int idJugador; // Para saber quién se transforma
         public boolean esSuper; // Para saber si se activa o desactiva
+    }
+
+    public static class PaqueteGameOver {
+        // No necesita campos. Su llegada es el mensaje.
     }
 }
 

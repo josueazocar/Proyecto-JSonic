@@ -687,7 +687,11 @@ public class PantallaDeJuego extends PantallaBase {
                             otroJugador.setSuper(p.esSuper);
                         }
                     }
-                  }
+                  } else if (paquete instanceof Network.PaqueteGameOver) {
+                    // El servidor nos ordena mostrar la pantalla de Game Over.
+                    System.out.println("[CLIENT] ¡Orden de Game Over recibida del servidor!");
+                    activarGameOver();
+                }
             }
         }
 
