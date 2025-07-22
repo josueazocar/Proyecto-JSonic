@@ -112,6 +112,14 @@ public class PantallaDeJuego extends PantallaBase {
     private GameOverInterfaz interfazGameOver;
     private boolean isGameOver = false;
 
+    //Para la interfaz Victoria
+    private VictoriaInterfaz interfazVictoria;
+    private boolean isVictoria = false;
+    private float temporizadorVictoria = 0f;
+    private static final float DURACION_PANTALLA_VICTORIA = 5.0f;
+    private List<EstadisticasJugador> resultadosGuardados = null;
+
+
     public PantallaDeJuego(JSonicJuego juego, IGameServer server) {
         super("");
         this.juegoPrincipal = juego;
@@ -283,16 +291,45 @@ public class PantallaDeJuego extends PantallaBase {
         interfazGameOver = new GameOverInterfaz(juegoPrincipal, getSkin());
         mainStage.addActor(interfazGameOver);
 
+        interfazVictoria = new VictoriaInterfaz(juegoPrincipal, getSkin());
+        mainStage.addActor(interfazVictoria);
     }
 
     @Override
     public void actualizar(float deltat) {
 
+        if (Gdx.input.isKeyJustPressed(Input.Keys.V)) { // Usamos la tecla 'V' de Victoria
 
+            // Comprobamos que el juego esté en curso antes de forzar la victoria
+            if (gameClient != null && !isGameOver && !isVictoria) {
+                System.out.println("[DEBUG] Forzando la victoria con la tecla V...");
+
+                // Enviamos el paquete que le dice al servidor: "Termina la partida ahora"
+                gameClient.send(new Network.ForzarFinDeJuegoDebug());
+            }
+        }
         if (Gdx.input.isKeyJustPressed(Input.Keys.G)) {
             System.out.println("DEBUG: Forzando Game Over con la tecla G...");
             activarGameOver();
             return; // Detenemos la actualización para que el Game Over se active limpiamente
+        }
+
+        if (isVictoria) {
+            temporizadorVictoria -= deltat; // Restamos el tiempo
+
+            // Si el tiempo se acabó...
+            if (temporizadorVictoria <= 0 && resultadosGuardados != null) {
+                System.out.println("Temporizador de victoria finalizado. Cambiando a estadísticas...");
+
+                // Creamos y mostramos la pantalla de estadísticas con los resultados que guardamos.
+                PantallaEstadisticas pantallaDeResultados = new PantallaEstadisticas(juegoPrincipal, resultadosGuardados);
+                juegoPrincipal.setScreen(pantallaDeResultados);
+
+                // Es importante resetear para evitar que se ejecute de nuevo
+                resultadosGuardados = null;
+            }
+            // Mientras el temporizador corre, no hacemos nada más.
+            return;
         }
 
         if(isGameOver){
@@ -598,18 +635,11 @@ public class PantallaDeJuego extends PantallaBase {
                     }
                 }
                   else if (paquete instanceof Network.PaqueteResultadosFinales p) {
-                    System.out.println("[CLIENTE] ¡Orden recibida! Mostrando pantalla de estadísticas.");
-
-                    // Usamos Gdx.app.postRunnable para que el cambio de pantalla
-                    // se ejecute de forma segura en el hilo principal del juego.
-                    Gdx.app.postRunnable(() -> {
-                        // 1. Creamos la pantalla pasándole la lista de estadísticas del paquete.
-                        PantallaEstadisticas pantallaDeResultados = new PantallaEstadisticas(juegoPrincipal, p.estadisticasFinales);
-
-                        // 2. Le decimos al juego que cambie a esta nueva pantalla.
-                        juegoPrincipal.setScreen(pantallaDeResultados);
-                    });
-
+                    if (!isVictoria && !isGameOver) {
+                        activarVictoria();
+                        this.resultadosGuardados = p.estadisticasFinales;
+                        this.temporizadorVictoria = DURACION_PANTALLA_VICTORIA; // Inicia la cuenta atrás
+                    }
                     // 3. Salimos del bucle, ya no necesitamos procesar más paquetes.
                     break;
                   }
@@ -633,7 +663,7 @@ public class PantallaDeJuego extends PantallaBase {
 
             if (bomba.isExplotando() && !bomba.yaHaHechoDanio()) {
                 if (bomba.getBounds().overlaps(personajeJugable.getBounds())) {
-                    personajeJugable.setVida(personajeJugable.getVida() - 100);
+                    personajeJugable.setVida(personajeJugable.getVida() - 1);
                     bomba.marcarComoDanioHecho();
                     hudVidaJugador.mostrarPerdidaDeVida();
                 }
@@ -1213,6 +1243,18 @@ public class PantallaDeJuego extends PantallaBase {
         Gdx.input.setInputProcessor(mainStage);
 
         // 4. Detenemos la música de fondo.
+        if (soundManager != null) {
+            soundManager.stopBackgroundMusic();
+        }
+    }
+
+    private void activarVictoria() {
+        if (isVictoria || isGameOver) return;
+
+        System.out.println("¡VICTORIA! Mostrando la interfaz de victoria temporalmente...");
+        this.isVictoria = true;
+        this.interfazVictoria.setVisible(true); // Muestra "HAS GANADO"
+
         if (soundManager != null) {
             soundManager.stopBackgroundMusic();
         }

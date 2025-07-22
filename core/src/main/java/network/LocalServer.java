@@ -574,9 +574,20 @@ public class LocalServer implements IGameServer {
                         }
 
                         if (enemigo.tipo == EnemigoState.EnemigoType.ROBOTNIK) {
-                            System.out.println("[FIN DE PARTIDA] ¡Jefe final derrotado!");
-                            finalizarPartidaYEnviarResultados();
-                            return; // Detenemos el método update para evitar más procesamiento
+                            // Comprobamos el nombre del mapa actual. AJUSTA EL NOMBRE SI ES DIFERENTE.
+                            if (manejadorNivel.getNombreMapaActual().equals("maps/ZonaJefeN3.tmx")) {
+                                System.out.println("[VICTORIA FINAL] ¡Jefe final derrotado en la última zona!");
+                                finalizarPartidaYEnviarResultados(); // Se muestran las estadísticas.
+                                return; // Detenemos todo, la partida terminó.
+                            } else {
+                                // Si no es el jefe final, solo generamos el portal.
+                                System.out.println("[VICTORIA PARCIAL] Jefe de zona derrotado. Abriendo portal...");
+                                comprobarYGenerarPortalSiCorresponde(manejadorNivel);
+                            }
+
+                        } else {
+                            // Si el enemigo derrotado NO era Robotnik, comprobamos si era el último del mapa.
+                            comprobarYGenerarPortalSiCorresponde(manejadorNivel);
                         }
 
                         Network.PaqueteEntidadEliminada notificacionMuerte = new Network.PaqueteEntidadEliminada();
@@ -585,11 +596,16 @@ public class LocalServer implements IGameServer {
 
                         // Enviamos la orden al cliente local.
                         clienteLocal.recibirPaqueteDelServidor(notificacionMuerte);
-
-                        //para saber comprobar si se ha derrotado al jefe final
-                        comprobarYGenerarPortalSiCorresponde(manejadorNivel);
                     }
                 }
+            }else if (objeto instanceof Network.ForzarFinDeJuegoDebug) {
+                System.out.println("[LOCAL SERVER] ¡Recibida orden de forzar fin de juego!");
+
+                // Simplemente llamamos a la función que ya hace todo el trabajo.
+                finalizarPartidaYEnviarResultados();
+
+                // Detenemos el bucle para no procesar más paquetes en este frame.
+                break;
             }
 
         }
@@ -767,7 +783,6 @@ public class LocalServer implements IGameServer {
                             notificacionMuerte.idEntidad = jugador.id;
                             notificacionMuerte.esJugador = true;
                             clienteLocal.recibirPaqueteDelServidor(notificacionMuerte);
-                            finalizarPartidaYEnviarResultados();
                         }
                     } */
                 }
@@ -808,8 +823,6 @@ public class LocalServer implements IGameServer {
                         notificacionMuerte.idEntidad = jugador.id;
                         notificacionMuerte.esJugador = true;
                         clienteLocal.recibirPaqueteDelServidor(notificacionMuerte);
-                        finalizarPartidaYEnviarResultados();
-
                     }
                 }
             } else if (distance <= ROBOT_DETECTION_RANGE) {
