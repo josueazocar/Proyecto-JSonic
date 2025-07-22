@@ -1,6 +1,7 @@
 package network;
 
 import com.JSonic.uneg.EntidadesVisuales.Player;
+import com.JSonic.uneg.Pantallas.EstadisticasJugador;
 import com.JSonic.uneg.State.*;
 import com.badlogic.gdx.math.Rectangle;
 import com.esotericsoftware.kryo.Kryo;
@@ -8,6 +9,7 @@ import com.esotericsoftware.kryonet.EndPoint;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 
 // Esta clase centraliza el registro de todos los paquetes de red.
 public class Network {
@@ -79,6 +81,13 @@ public class Network {
         kryo.register(PaqueteJugadorDesconectado.class);
         kryo.register(PaqueteSalidaDePartida.class);
         kryo.register(PaqueteActualizacionEsmeraldas.class);
+
+        kryo.register(PaqueteResultadosFinales.class);
+        kryo.register(EstadisticasJugador.class);
+
+        kryo.register(ForzarFinDeJuegoDebug.class);
+
+
     }
 
     // --- Definición de los Paquetes ---
@@ -261,6 +270,13 @@ public class Network {
 
     public static class PaqueteSalidaDePartida {
         // No necesita campos. Su simple llegada es la notificación.
+    }
+
+    public static class PaqueteResultadosFinales {
+        public List<EstadisticasJugador> estadisticasFinales;
+    }
+
+    public static class ForzarFinDeJuegoDebug {
     }
 }
 
