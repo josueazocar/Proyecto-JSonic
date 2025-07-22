@@ -28,6 +28,7 @@ public class PantallaUnirsePartida extends PantallaBase {
 
     public PantallaUnirsePartida(final JSonicJuego juegoApp) {
         this.juegoApp = juegoApp;
+        inicializar();
     }
 
     @Override

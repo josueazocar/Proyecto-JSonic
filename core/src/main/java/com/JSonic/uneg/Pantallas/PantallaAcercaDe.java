@@ -26,6 +26,7 @@ public class PantallaAcercaDe extends PantallaBase {
     public PantallaAcercaDe(JSonicJuego juegoApp) {
         super();
         this.juegoApp = juegoApp;
+        inicializar();
     }
 
     @Override

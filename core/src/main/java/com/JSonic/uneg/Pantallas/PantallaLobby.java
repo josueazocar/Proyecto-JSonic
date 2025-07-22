@@ -27,6 +27,7 @@ public class PantallaLobby extends PantallaBase {
         super();
         this.juegoApp = juegoApp;
         this.esAnfitrion = esAnfitrion;
+        inicializar();
     }
 
     @Override

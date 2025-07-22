@@ -114,6 +114,8 @@ public class PantallaDeJuego extends PantallaBase {
         this.batch = juego.batch;
         this.gameClient = juego.getClient();
         this.localServer = server;
+        this.assetManager = juego.assetManager;
+        this.soundManager = juego.getSoundManager();
         inicializar();
     }
 
@@ -155,9 +157,9 @@ public class PantallaDeJuego extends PantallaBase {
 
 
         manejadorNivel.setPlayer(personajeJugable);
-        assetManager = new AssetManager();
-        soundManager = new SoundManager(assetManager);
-        soundManager.loadMusic(BACKGROUND_MUSIC_PATH2);
+        //assetManager = new AssetManager();
+        //soundManager = new SoundManager(assetManager);
+        //soundManager.loadMusic(BACKGROUND_MUSIC_PATH2);
         soundManager.playBackgroundMusic(BACKGROUND_MUSIC_PATH2, 0.5f, true);
         assetManager.finishLoading();
         shapeRenderer = new ShapeRenderer();

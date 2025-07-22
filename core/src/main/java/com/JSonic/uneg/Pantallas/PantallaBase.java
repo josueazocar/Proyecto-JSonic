@@ -29,7 +29,7 @@ public abstract class PantallaBase implements Screen {
         uiStage.addActor(uiTable);
         skin = new Skin(Gdx.files.internal("Skin/ui.json"));
 
-        inicializar();
+       // inicializar();
     }
 
     public PantallaBase(String args){

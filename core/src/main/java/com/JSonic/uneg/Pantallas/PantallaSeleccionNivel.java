@@ -25,6 +25,7 @@ public class PantallaSeleccionNivel extends PantallaBase {
         super();
         this.juegoApp = juegoApp;
         esMultijugador = false;
+        inicializar();
     }
 
     public PantallaSeleccionNivel(JSonicJuego juegoApp, boolean esMultijugador) {
