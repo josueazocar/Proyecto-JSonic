@@ -78,6 +78,7 @@ public class PantallaMenu extends PantallaBase {
         // Lógica de actualización continua
         if (imagenTextoInicio.isVisible() && Gdx.input.isKeyJustPressed(Input.Keys.ANY_KEY)) {
             imagenTextoInicio.setVisible(false);
+            juegoApp.setPantallaActiva(new PantallaHistoria(juegoApp));
             mostrarMenuPrincipal();
         }
     }

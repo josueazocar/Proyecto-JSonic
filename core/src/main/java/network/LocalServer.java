@@ -867,7 +867,7 @@ public class LocalServer implements IGameServer {
         }
     }
     //-------------------------------------------------------------------
-    
+
 
     private boolean spawnNuevoEnemigo(LevelManager manejadorNivel) {
         int intentos = 0;
