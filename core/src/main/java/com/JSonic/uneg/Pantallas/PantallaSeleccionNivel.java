@@ -32,6 +32,7 @@ public class PantallaSeleccionNivel extends PantallaBase {
         super();
         this.juegoApp = juegoApp;
         this.esMultijugador = esMultijugador;
+        inicializar();
     }
 
     @Override
