@@ -15,9 +15,9 @@ import com.badlogic.gdx.scenes.scene2d.utils.TextureRegionDrawable;
 public class PantallaMenu extends PantallaBase {
 
     private final JSonicJuego juegoApp;
-    private Texture texturaFondo, textureTextoInicio;
+    private Texture texturaFondo, textureTextoInicio, texturaFondoInicio;
     private TextureAtlas atlasBotones;
-    private Image imagenFondo, imagenTextoInicio;
+    private Image imagenFondo, imagenTextoInicio, imagenFondoDesenfoque;
     private Button botonJugar, botonAcercaDe, botonUnJugador, botonOnline , botonLocal,botonMultijugador, botonAtras, botonSalir, botonOpciones, botonAyuda, botonCrear, botonUnirse;
     private final boolean mostrarMenuDirecto;
     private boolean logicaInicializada = false; // Bandera para controlar la inicialización
@@ -48,11 +48,13 @@ public class PantallaMenu extends PantallaBase {
     public void inicializar() {
         // 1. Cargar todos los assets y crear los actores.
         texturaFondo = new Texture(Gdx.files.internal("Fondos/Portada.png"));
+        texturaFondoInicio = new Texture(Gdx.files.internal("Fondos/Portada_desenfoque.png"));
         textureTextoInicio = new Texture(Gdx.files.internal("Fondos/Texto_inicial.png"));
         atlasBotones = new TextureAtlas(Gdx.files.internal("Atlas/BotonesMenu.atlas"));
 
 
-        imagenFondo = new Image(texturaFondo);
+        imagenFondo = new Image(texturaFondoInicio);
+
         imagenTextoInicio = new Image(textureTextoInicio);
         botonJugar = crearBotonConEstados("boton_jugar", "boton_jugar_down", "boton_jugar_hover");
         botonAcercaDe = crearBotonConEstados("boton_AcercaDe", "boton_acercade_down", "boton_acercade_hover");
@@ -78,9 +80,10 @@ public class PantallaMenu extends PantallaBase {
 
         // Lógica de actualización continua
         if (imagenTextoInicio.isVisible() && Gdx.input.isKeyJustPressed(Input.Keys.ANY_KEY)) {
-            imagenTextoInicio.setVisible(false);
+            //imagenTextoInicio.setVisible(false);
             // Primero detenemos cualquier música que pudiera estar sonando
             juegoApp.getSoundManager().stopBackgroundMusic();
+
 
             // Ahora sí, esta llamada funcionará porque el método ya existe en JSonicJuego
             juegoApp.setPantallaActiva(new PantallaHistoria(juegoApp, juegoApp.getSoundManager()));
@@ -102,6 +105,7 @@ public class PantallaMenu extends PantallaBase {
 
         // Configurar visibilidad inicial
         if (mostrarMenuDirecto) {
+            imagenFondo.setDrawable(new TextureRegionDrawable(texturaFondo));
             imagenTextoInicio.setVisible(false);
             if (estadoInicial == EstadoMenu.OPCIONES) {
                 mostrarMenuOpciones();
@@ -116,6 +120,8 @@ public class PantallaMenu extends PantallaBase {
                 mostrarMenuPrincipal();
             }
         } else {
+            imagenFondo.setDrawable(new TextureRegionDrawable(texturaFondoInicio));
+            imagenTextoInicio.setVisible(true);
             imagenTextoInicio.setVisible(true);
             botonJugar.setVisible(false);
             botonOpciones.setVisible(false);
@@ -131,6 +137,8 @@ public class PantallaMenu extends PantallaBase {
             botonAyuda.setVisible(false);
         }
 
+        imagenFondo.setSize(mainStage.getWidth(), mainStage.getHeight());
+        mainStage.addActor(imagenFondo);
         configurarListeners();
 
         Table tablaAtras = new Table();
@@ -366,6 +374,7 @@ public class PantallaMenu extends PantallaBase {
         super.dispose();
         if (texturaFondo != null) texturaFondo.dispose();
         if (textureTextoInicio != null) textureTextoInicio.dispose();
+        if(texturaFondoInicio != null) texturaFondoInicio.dispose();
         if (atlasBotones != null) atlasBotones.dispose();
     }
 }
