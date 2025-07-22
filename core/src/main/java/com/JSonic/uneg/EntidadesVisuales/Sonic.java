@@ -13,6 +13,9 @@ import com.badlogic.gdx.graphics.g2d.TextureRegion;
 import com.badlogic.gdx.math.Rectangle;
 import com.badlogic.gdx.math.Matrix4; // <-- NUEVA IMPORTACIÓN NECESARIA
 
+import java.util.EnumMap;
+import java.util.HashMap;
+
 
 public class Sonic extends Player {
 
@@ -35,6 +38,17 @@ public class Sonic extends Player {
     // --- NUEVA VARIABLE PARA LA MATRIZ DE PROYECCIÓN ---
     private Matrix4 screenProjectionMatrix;
 
+    // --- ESTADO Y ATRIBUTOS DE SUPER SONIC ---
+    private boolean esSuperSonic = false;
+    private static final float VELOCIDAD_NORMAL = 2.5f; // Ajusten este valor a su velocidad base actual
+    private static final float VELOCIDAD_SUPER = 3.5f;  // Un poco más rápido
+
+    // --- RECURSOS PARA SUPER SONIC ---
+    private Texture superSonicSpriteSheet;
+    protected EnumMap<EstadoPlayer, Animation<TextureRegion>> animationsSuper = new EnumMap<>(EstadoPlayer.class);
+
+    //--Aumento de vida
+    private int MAX_VIDA = 1;
 
     public Sonic(PlayerState estadoInicial) {
         super(estadoInicial);
@@ -60,6 +74,8 @@ public class Sonic extends Player {
         }
     }
 
+
+
     /**
      * Inicializa recursos adicionales como la textura del destello y el indicador de habilidad.
      */
@@ -84,18 +100,26 @@ public class Sonic extends Player {
     public void activarEfectoFlash() {
         this.flashDurationTimer = 0.25f;
     }
+
+
     @Override
     public void KeyHandler() {
+        // [PROFESOR] Determinar la velocidad actual basada en el estado de Super Sonic
+        float currentSpeed = esSuperSonic ? VELOCIDAD_SUPER : VELOCIDAD_NORMAL;
+
         float currentX = estado.x;
         float currentY = estado.y;
 
+        // [PROFESOR] Llamamos al KeyHandler del padre, que ahora usará la nueva velocidad.
+        // Asegúrense que su Player.KeyHandler usa la variable 'speed' de la clase Player
+        // y nosotros la modificamos aquí antes de llamar a super.KeyHandler()
+        this.speed = currentSpeed;
         super.KeyHandler();
 
         if (Gdx.input.isKeyJustPressed(Input.Keys.SPACE) ) {
-          //  this.flashDurationTimer = 0.25f;
-          //  this.cleanCooldownTimer = CLEAN_COOLDOWN_SECONDS;
-           Gdx.app.log("Sonic", "Habilidad activada. Cooldown de " + CLEAN_COOLDOWN_SECONDS + "s iniciado.");
-
+            //  this.flashDurationTimer = 0.25f;
+            //  this.cleanCooldownTimer = CLEAN_COOLDOWN_SECONDS;
+            Gdx.app.log("Sonic", "Habilidad activada. Cooldown de " + CLEAN_COOLDOWN_SECONDS + "s iniciado.");
         }
 
         actionStateSet = false;
@@ -131,11 +155,13 @@ public class Sonic extends Player {
             if (Gdx.input.isKeyPressed(Input.Keys.A)) {
                 setEstadoActual(EstadoPlayer.SPECIAL_LEFT);
                 lastDirection = EstadoPlayer.LEFT;
-                estado.x -= speed;
+                // [PROFESOR] Usamos 'currentSpeed' en lugar de 'speed'
+                estado.x -= currentSpeed;
             } else if (Gdx.input.isKeyPressed(Input.Keys.D)) {
                 setEstadoActual(EstadoPlayer.SPECIAL_RIGHT);
                 lastDirection = EstadoPlayer.RIGHT;
-                estado.x += speed;
+                // [PROFESOR] Usamos 'currentSpeed' en lugar de 'speed'
+                estado.x += currentSpeed;
             } else {
                 if (lastDirection == EstadoPlayer.LEFT || lastDirection == EstadoPlayer.IDLE_LEFT) {
                     setEstadoActual(EstadoPlayer.SPECIAL_LEFT);
@@ -283,12 +309,81 @@ public class Sonic extends Player {
         animations.get(EstadoPlayer.SPECIAL_RIGHT).setPlayMode(Animation.PlayMode.LOOP);
         animations.get(EstadoPlayer.SPECIAL_LEFT).setPlayMode(Animation.PlayMode.LOOP);
 
+        CargarSuperSprites();
+
         Animation<TextureRegion> initialAnimation = animations.get(getEstadoActual());
         if (initialAnimation != null) {
             setFrameActual(initialAnimation.getKeyFrame(0));
         }
     }
 
+    // [PROFESOR] >>> REEMPLAZA TU MÉTODO CargarSuperSprites CON ESTE <<<
+    private void CargarSuperSprites() {
+        Gdx.app.log("Sonic_SuperSprites", "Iniciando carga de recursos para Super Sonic...");
+        try {
+            // [PROFESOR] Para la prueba, usamos "sonic.png". Cuando tengas el archivo final, cámbialo a "superSonic.png".
+            superSonicSpriteSheet = new Texture(Gdx.files.internal("Entidades/Player/Sonic/sonicS.png"));
+
+            // [PROFESOR] ¡CORRECCIÓN CLAVE! Usamos las mismas dimensiones de división que en CargarSprites (8x30)
+            // porque estamos usando la misma hoja de sprites para la prueba.
+            TextureRegion[][] matrizDeSprites = TextureRegion.split(superSonicSpriteSheet, superSonicSpriteSheet.getWidth() / 8, superSonicSpriteSheet.getHeight() / 30);
+
+            // --- Reutilizamos los arrays de frames (esta parte es correcta) ---
+            TextureRegion[] frameIdleRight = new TextureRegion[8]; TextureRegion[] frameIdleLeft = new TextureRegion[8];
+            TextureRegion[] frameUpRight = new TextureRegion[8]; TextureRegion[] frameUpLeft = new TextureRegion[8];
+            TextureRegion[] frameDownRight = new TextureRegion[8]; TextureRegion[] frameDownLeft = new TextureRegion[8];
+            TextureRegion[] frameLeft = new TextureRegion[8]; TextureRegion[] frameRight = new TextureRegion[8];
+            TextureRegion[] frameHitRight = new TextureRegion[8]; TextureRegion[] frameHitLeft = new TextureRegion[8];
+            TextureRegion[] frameKickRight = new TextureRegion[8]; TextureRegion[] frameKickLeft = new TextureRegion[8];
+            TextureRegion[] frameSpinRight = new TextureRegion[24]; TextureRegion[] frameSpinLeft = new TextureRegion[24];
+
+            // --- Lógica de carga (Copiada 1:1 de CargarSprites para GARANTIZAR que no falle) ---
+            for (int i = 0; i < 4; i++) { frameIdleLeft[i] = matrizDeSprites[0][i]; }
+            for (int i = 0; i < 4; i++) { frameIdleLeft[i + 4] = matrizDeSprites[0][3 - i]; }
+            for (int i = 0; i < 8; i++) { frameIdleRight[i] = new TextureRegion(frameIdleLeft[i]); frameIdleRight[i].flip(true, false); }
+            for (int i = 0; i < 8; i++) { frameUpLeft[i] = matrizDeSprites[1][i]; }
+            for (int i = 0; i < 8; i++) { frameUpRight[i] = new TextureRegion(frameUpLeft[i]); frameUpRight[i].flip(true, false); }
+            for (int i = 0; i < 8; i++) { frameDownLeft[i] = matrizDeSprites[1][i]; }
+            for (int i = 0; i < 8; i++) { frameDownRight[i] = new TextureRegion(frameDownLeft[i]); frameDownRight[i].flip(true, false); }
+            for (int i = 0; i < 8; i++) { frameLeft[i] = matrizDeSprites[1][i]; }
+            for (int i = 0; i < 8; i++) { frameRight[i] = new TextureRegion(frameLeft[i]); frameRight[i].flip(true, false); }
+            for (int i = 0; i < 8; i++) { frameHitLeft[i] = matrizDeSprites[7][i]; }
+            for (int i = 0; i < 8; i++) { frameHitRight[i] = new TextureRegion(frameHitLeft[i]); frameHitRight[i].flip(true, false); }
+            for (int i = 0; i < 8; i++) { frameKickLeft[i] = matrizDeSprites[8][i]; }
+            for (int i = 0; i < 8; i++) { frameKickRight[i] = new TextureRegion(frameKickLeft[i]); frameKickRight[i].flip(true, false); }
+            for (int i = 0; i < 24; i++) { frameSpinLeft[i] = matrizDeSprites[18][i % 8]; }
+            for (int i = 0; i < 24; i++) { frameSpinRight[i] = new TextureRegion(frameSpinLeft[i]); frameSpinRight[i].flip(true, false); }
+
+            // --- Se rellena el EnumMap 'animationsSuper' con TODAS las animaciones ---
+            animationsSuper.put(EstadoPlayer.IDLE_RIGHT, new Animation<>(0.12f, frameIdleRight));
+            animationsSuper.put(EstadoPlayer.IDLE_LEFT, new Animation<>(0.12f, frameIdleLeft));
+            animationsSuper.put(EstadoPlayer.UP_LEFT, new Animation<>(0.08f, frameUpLeft));
+            animationsSuper.put(EstadoPlayer.UP_RIGHT, new Animation<>(0.08f, frameUpRight));
+            animationsSuper.put(EstadoPlayer.DOWN_LEFT, new Animation<>(0.20f, frameDownLeft));
+            animationsSuper.put(EstadoPlayer.DOWN_RIGHT, new Animation<>(0.20f, frameDownRight));
+            animationsSuper.put(EstadoPlayer.LEFT, new Animation<>(0.15f, frameLeft));
+            animationsSuper.put(EstadoPlayer.RIGHT, new Animation<>(0.15f, frameRight));
+            animationsSuper.put(EstadoPlayer.HIT_RIGHT, new Animation<>(0.07f, frameHitRight));
+            animationsSuper.put(EstadoPlayer.HIT_LEFT, new Animation<>(0.07f, frameHitLeft));
+            animationsSuper.put(EstadoPlayer.KICK_RIGHT, new Animation<>(0.08f, frameKickRight));
+            animationsSuper.put(EstadoPlayer.KICK_LEFT, new Animation<>(0.08f, frameKickLeft));
+            animationsSuper.put(EstadoPlayer.SPECIAL_RIGHT, new Animation<>(0.05f, frameSpinRight));
+            animationsSuper.put(EstadoPlayer.SPECIAL_LEFT, new Animation<>(0.05f, frameSpinLeft));
+
+            for (Animation<TextureRegion> anim : animationsSuper.values()) {
+                anim.setPlayMode(Animation.PlayMode.LOOP);
+            }
+            animationsSuper.get(EstadoPlayer.HIT_RIGHT).setPlayMode(Animation.PlayMode.NORMAL);
+            animationsSuper.get(EstadoPlayer.HIT_LEFT).setPlayMode(Animation.PlayMode.NORMAL);
+            animationsSuper.get(EstadoPlayer.KICK_RIGHT).setPlayMode(Animation.PlayMode.NORMAL);
+            animationsSuper.get(EstadoPlayer.KICK_LEFT).setPlayMode(Animation.PlayMode.NORMAL);
+
+            Gdx.app.log("Sonic_SuperSprites", "Carga de Super Sonic completada. Total de animaciones cargadas: " + animationsSuper.size());
+
+        } catch (Exception e) {
+            Gdx.app.error("Sonic_SuperSprites", "CRÍTICO: Fallo al cargar los recursos de Super Sonic.", e);
+        }
+    }
     private void inicializarHitbox() {
         float baseTileSize = getTileSize();
         this.collisionWidth = baseTileSize * 0.6f;
@@ -301,34 +396,45 @@ public class Sonic extends Player {
         Gdx.app.log("Sonic", "Offsets del hitbox: x=" + collisionOffsetX + ", y=" + collisionOffsetY);
     }
 
+    // [PROFESOR] Reemplazar todo el método update con esta versión
     @Override
     public void update(float deltaTime) {
+        // [PROFESOR] Leemos el contador de gemas desde el objeto 'estado' heredado de Player.
+        if (gemas >= 7 && !esSuperSonic) {
+            esSuperSonic = true;
+            Gdx.app.log("Sonic", "¡TRANSFORMACIÓN A SUPER SONIC ACTIVADA!");
+            estado.vida += MAX_VIDA; // O el valor máximo de vida que tengan definido
+        }
+
+        // [PROFESOR] Determinamos el mapa de animaciones correcto. Ahora no será nulo.
+        EnumMap<EstadoPlayer, Animation<TextureRegion>> currentAnimations = esSuperSonic ? animationsSuper : animations;
+
         // --- LÓGICA DE TEMPORIZADORES ---
-        if (cleanCooldownTimer > 0) {
-            cleanCooldownTimer -= deltaTime;
-        }
-        if (flashDurationTimer > 0) {
-            flashDurationTimer -= deltaTime;
-        }
+        if (cleanCooldownTimer > 0) { cleanCooldownTimer -= deltaTime; }
+        if (flashDurationTimer > 0) { flashDurationTimer -= deltaTime; }
 
         // --- ACTUALIZAR ANIMACIÓN DEL INDICADOR ---
         cooldownIndicatorTime += deltaTime;
         cooldownIndicatorFrame = tornadoAnimation.getKeyFrame(cooldownIndicatorTime);
-        // --- FIN DE LÓGICA DE INDICADOR ---
 
         bounds.setPosition(estado.x + collisionOffsetX, estado.y + collisionOffsetY);
 
-        if (!animations.containsKey(getEstadoActual())) {
+        if (currentAnimations == null) {
+            Gdx.app.error("Sonic", "CRÍTICO: El mapa de animaciones ('currentAnimations') es nulo. Estado esSuperSonic: " + esSuperSonic);
+            return; // Salida segura para evitar más errores.
+        }
+
+        if (!currentAnimations.containsKey(getEstadoActual())) {
             Gdx.app.log("Sonic", "Advertencia: Estado " + getEstadoActual() + " no tiene animación. Cambiando a IDLE_RIGHT.");
             setEstadoActual(EstadoPlayer.IDLE_RIGHT);
         }
 
-        Animation<TextureRegion> targetAnimation = animations.get(getEstadoActual());
+        Animation<TextureRegion> targetAnimation = currentAnimations.get(getEstadoActual());
 
         if (this.animacion != targetAnimation) {
             this.tiempoXFrame = 0;
             this.animacion = targetAnimation;
-            Gdx.app.log("Sonic", "Cambio de animación a: " + getEstadoActual());
+            Gdx.app.log("Sonic", "Cambio de animación a: " + getEstadoActual() + (esSuperSonic ? " (Super)" : " (Normal)"));
         }
 
         if (this.animacion == null) {
@@ -339,6 +445,7 @@ public class Sonic extends Player {
 
         tiempoXFrame += deltaTime;
 
+        // ... (El resto de su lógica de update se mantiene igual) ...
         if ((estado.estadoAnimacion == EstadoPlayer.HIT_RIGHT || estado.estadoAnimacion == EstadoPlayer.HIT_LEFT ||
             estado.estadoAnimacion == EstadoPlayer.KICK_RIGHT || estado.estadoAnimacion == EstadoPlayer.KICK_LEFT) && animacion != null) {
 
@@ -360,7 +467,6 @@ public class Sonic extends Player {
             frameActual = null;
         }
     }
-
     @Override
     public void draw(SpriteBatch batch) {
         // Dibuja a Sonic y el indicador con la cámara del juego.
@@ -410,10 +516,15 @@ public class Sonic extends Player {
             texturaBlanca.dispose();
             Gdx.app.log("Sonic", "Textura del destello liberada.");
         }
-        // --- LIBERAR TEXTURA DEL INDICADOR ---
         if (tornadoSheet != null) {
             tornadoSheet.dispose();
             Gdx.app.log("Sonic", "Textura del indicador de cooldown liberada.");
         }
+        // [PROFESOR] >>> INICIO: LIBERAR RECURSOS DE SUPER SONIC
+        if (superSonicSpriteSheet != null) {
+            superSonicSpriteSheet.dispose();
+            Gdx.app.log("Sonic", "Textura de Super Sonic liberada.");
+        }
+        // [PROFESOR] <<< FIN: LIBERAR RECURSOS DE SUPER SONIC
     }
 }

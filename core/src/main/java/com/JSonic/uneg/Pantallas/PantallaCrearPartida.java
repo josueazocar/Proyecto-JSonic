@@ -85,6 +85,7 @@ public class PantallaCrearPartida extends PantallaBase {
                 juegoApp.setPantallaActiva(pantallaMenu);
             }
         });
+        inicializar();
     }
 
     @Override

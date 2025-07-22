@@ -42,8 +42,9 @@ public abstract class Player extends Entity implements Disposable {
     protected static final float DURACION_MENSAJE = 3.0f; // Mensaje visible por 3 segundos
     protected transient IGameClient gameClient;
     protected  boolean clean = false;
+    protected int gemas;
 
-// Mapa para almacenar diferentes animaciones por estado
+    // Mapa para almacenar diferentes animaciones por estado
 protected EnumMap<EstadoPlayer, Animation<TextureRegion>> animations;
 
     public enum EstadoPlayer {
@@ -87,6 +88,16 @@ protected EnumMap<EstadoPlayer, Animation<TextureRegion>> animations;
         // Inicializar el mapa de animaciones
         animations = new EnumMap<>(EstadoPlayer.class);
     }
+
+    /**
+     * Se llama cuando Sonic recoge una gema. Incrementa el contador.
+     * La lógica de transformación se maneja en el método update().
+     */
+    public void anadirGema() {
+        this.gemas++;
+        Gdx.app.log("Sonic", "Gema recogida. Total: " + this.gemas);
+    }
+
 
     public void setLevelManager(LevelManager levelManager) {
         this.levelManager = levelManager;

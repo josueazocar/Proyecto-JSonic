@@ -118,6 +118,8 @@ public class PantallaDeJuego extends PantallaBase {
         this.batch = juego.batch;
         this.gameClient = juego.getClient();
         this.localServer = server;
+        this.assetManager = juego.assetManager;
+        this.soundManager = juego.getSoundManager();
         inicializar();
     }
 
@@ -159,9 +161,9 @@ public class PantallaDeJuego extends PantallaBase {
 
 
         manejadorNivel.setPlayer(personajeJugable);
-        assetManager = new AssetManager();
-        soundManager = new SoundManager(assetManager);
-        soundManager.loadMusic(BACKGROUND_MUSIC_PATH2);
+        //assetManager = new AssetManager();
+        //soundManager = new SoundManager(assetManager);
+        //soundManager.loadMusic(BACKGROUND_MUSIC_PATH2);
         soundManager.playBackgroundMusic(BACKGROUND_MUSIC_PATH2, 0.5f, true);
         assetManager.finishLoading();
         shapeRenderer = new ShapeRenderer();
@@ -375,6 +377,9 @@ public class PantallaDeJuego extends PantallaBase {
                 //para esmeraldas
                 else if (paquete instanceof Network.PaqueteActualizacionEsmeraldas p) {
                     this.esmeraldasTotal = p.totalEsmeraldas;
+
+                    personajeJugable.anadirGema();//Contador de gemas
+
                     this.contadorEsmeraldas.setValor(this.esmeraldasTotal);
                 }
 
@@ -415,8 +420,9 @@ public class PantallaDeJuego extends PantallaBase {
                     contadorAnillos.setValor(this.anillosTotal);
                     contadorBasura.setValor(this.basuraTotal);
 
-                    if (anillosTotal == 100){
+                    if (anillosTotal >= 100){
                         personajeJugable.setVida(personajeJugable.getVida() + 100);
+                        anillosTotal -= 100; // Resta de 100 anillos
                     }
 
 
@@ -627,7 +633,7 @@ public class PantallaDeJuego extends PantallaBase {
 
             if (bomba.isExplotando() && !bomba.yaHaHechoDanio()) {
                 if (bomba.getBounds().overlaps(personajeJugable.getBounds())) {
-                    personajeJugable.setVida(personajeJugable.getVida() - 20);
+                    personajeJugable.setVida(personajeJugable.getVida() - 100);
                     bomba.marcarComoDanioHecho();
                     hudVidaJugador.mostrarPerdidaDeVida();
                 }

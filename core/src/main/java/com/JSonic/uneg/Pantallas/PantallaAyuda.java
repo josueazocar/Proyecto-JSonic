@@ -26,6 +26,7 @@ public class PantallaAyuda extends PantallaBase {
         super();
         this.juegoApp = juegoApp;
         this.pantallaAnterior = pantallaAnterior;
+        inicializar();
     }
 
     @Override

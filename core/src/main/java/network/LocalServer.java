@@ -747,6 +747,7 @@ public class LocalServer implements IGameServer {
                     // El jefe está en rango de ataque.
                     enemigo.estadoAnimacion = enemigo.mirandoDerecha ? EnemigoState.EstadoEnemigo.IDLE_RIGHT : EnemigoState.EstadoEnemigo.IDLE_LEFT;
 
+                /*
                     // --- AÑADIDO: Lógica de Ataque y Daño para Robotnik ---
                     if (enemigo.puedeAtacar()) {
                         enemigo.reiniciarCooldownAtaque();
@@ -768,8 +769,9 @@ public class LocalServer implements IGameServer {
                             clienteLocal.recibirPaqueteDelServidor(notificacionMuerte);
                             finalizarPartidaYEnviarResultados();
                         }
-                    }
+                    } */
                 }
+
                 continue; // Finaliza la lógica para Robotnik.
             }
 

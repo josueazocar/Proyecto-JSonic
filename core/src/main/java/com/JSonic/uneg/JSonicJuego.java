@@ -2,6 +2,7 @@ package com.JSonic.uneg;
 import com.JSonic.uneg.Pantallas.PantallaDeJuego;
 import com.JSonic.uneg.Pantallas.PantallaMenu;
 import com.JSonic.uneg.State.PlayerState;
+import com.badlogic.gdx.assets.AssetManager;
 import network.LocalServer;
 import network.GameClient;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
@@ -11,6 +12,9 @@ import java.util.ArrayList;
 public class JSonicJuego extends JuegoBase {
 
     public SpriteBatch batch;
+    //Para la musica y efectos de sonido.
+    public AssetManager assetManager;
+    public SoundManager soundManager;
     public static String direccionIp = "localhost"; // Dirección IP del servidor al que se conecta el cliente.
     public static ArrayList<PlayerState.CharacterType> personajesYaSeleccionados = new ArrayList<>();
     private IGameClient client;
@@ -27,9 +31,17 @@ public class JSonicJuego extends JuegoBase {
     @Override
     public void create() {
         batch = new SpriteBatch();
+
+        assetManager = new AssetManager();
+        soundManager = new SoundManager(assetManager);
         // Inicializar la pantalla de menú al iniciar el juego
         setPantallaActiva(new PantallaMenu(this));
 
+    }
+
+    // --- ¡AÑADE ESTE MÉTODO! ESTE ES EL QUE FALTABA ---
+    public SoundManager getSoundManager() {
+        return this.soundManager;
     }
 
     /**
@@ -70,6 +82,7 @@ public class JSonicJuego extends JuegoBase {
             personajesYaSeleccionados.clear();
         }
         batch.dispose();
+        assetManager.dispose();
         super.dispose();
     }
 
