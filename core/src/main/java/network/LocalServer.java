@@ -384,7 +384,12 @@ public class LocalServer implements IGameServer {
 
                                 // 1. Actualizamos el estado del jugador en el servidor.
                                 estadoJugador.isSuper = true;
-
+                                estadoJugador.vida = Player.MAX_VIDA;
+                                System.out.println("[LOCAL SERVER] Vida del jugador restaurada al máximo: " + estadoJugador.vida);
+                                Network.PaqueteActualizacionVida paqueteVida = new Network.PaqueteActualizacionVida();
+                                paqueteVida.idJugador = estadoJugador.id;
+                                paqueteVida.nuevaVida = estadoJugador.vida;
+                                clienteLocal.recibirPaqueteDelServidor(paqueteVida);
                                 // 2. Como tenemos una referencia directa al objeto del jugador,
                                 //    le ordenamos que se transforme llamando a su método.
                                 //    `personajeJugable` viene como parámetro del método update().
