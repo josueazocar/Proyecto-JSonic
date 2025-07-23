@@ -176,7 +176,10 @@ public class PantallaDeJuego extends PantallaBase {
         //assetManager = new AssetManager();
         //soundManager = new SoundManager(assetManager);
         //soundManager.loadMusic(BACKGROUND_MUSIC_PATH2);
-        soundManager.playBackgroundMusic(BACKGROUND_MUSIC_PATH2, 0.5f, true);
+        //soundManager.playBackgroundMusic(BACKGROUND_MUSIC_PATH2, 0.5f, true);
+
+        gestionarMusicaPorNivel();//Nuevo metodo para tocar musica por nivel
+
         assetManager.finishLoading();
         shapeRenderer = new ShapeRenderer();
 
@@ -315,6 +318,66 @@ public class PantallaDeJuego extends PantallaBase {
 
         // 4. El wrapper (y por tanto el menú) empieza invisible.
         this.pauseWrapper.setVisible(false);
+    }
+
+    private void gestionarMusicaPorNivel() {
+        // Medida de seguridad para evitar errores si algo no está listo.
+        if (soundManager == null || manejadorNivel == null) {
+            Gdx.app.error("GestionarMusica", "SoundManager o LevelManager no están inicializados.");
+            return;
+        }
+
+        //Detenemos cualquier música que se esté reproduciendo.
+        soundManager.stopBackgroundMusic();
+
+        //Obtenemos el nombre del mapa actual desde nuestro manejador.
+        String mapaActual = manejadorNivel.getNombreMapaActual();
+        String cancionAReproducir = null;
+
+        //¡La lógica principal! Aquí decides qué canción suena en cada mapa.
+        //Este switch es fácil de expandir con nuevos niveles.
+        Gdx.app.log("GestionarMusica", "Seleccionando música para el nivel: " + mapaActual);
+        switch (mapaActual) {
+            case "maps/Zona1N1.tmx":
+                // Ejemplo: Asigna la música para tu primer nivel.
+                cancionAReproducir = "SoundsBackground/Green Hill Zone Theme Sonic (8 Bit Version).mp3";
+                break;
+            case "maps/Zona1N2.tmx":
+                cancionAReproducir = "SoundsBackground/Level Theme/CactusMccoy.mp3";
+                break;
+
+            case "maps/Zona1N3.tmx":
+                cancionAReproducir = "SoundsBackground/Level Theme/Battle 1.mp3";
+                break;
+
+            case "maps/Zona2N3.tmx":
+                cancionAReproducir = "SoundsBackground/Level Theme/Heartache.mp3";
+                break;
+            case "maps/ZonaJefeN1.tmx":
+                // Ejemplo: Una música más intensa para el jefe.
+                cancionAReproducir = "SoundsBackground/Level Theme/CommandoSteve.mp3";
+                break;
+            case "maps/ZonaJefeN2.tmx":
+                cancionAReproducir = "SoundsBackground/Level Theme/Milky Ways.mp3";
+                break;
+
+            case "maps/ZonaJefeN3.tmx":
+                cancionAReproducir = "SoundsBackground/Level Theme/Strike the Earth.mp3";
+                break;
+
+            // --- > AÑADE AQUÍ UN 'case' PARA CADA UNO DE TUS MAPAS < ---
+            default:
+                // Opcional: Una canción por defecto si el mapa no coincide con ninguno.
+                Gdx.app.log("GestionarMusica", "El mapa actual no tiene una canción asignada. Se usará silencio o una por defecto.");
+                // cancionAReproducir = "SoundsBackground/DefaultMusic.mp3";
+                break;
+        }
+
+        //Si encontramos una canción para este nivel, la reproducimos.
+        if (cancionAReproducir != null) {
+            Gdx.app.log("GestionarMusica", "Reproduciendo: " + cancionAReproducir);
+            soundManager.playBackgroundMusic(cancionAReproducir, 0.5f, true);
+        }
     }
 
     @Override
@@ -467,6 +530,8 @@ public class PantallaDeJuego extends PantallaBase {
                     System.out.println("[CLIENT] Posición de llegada real leída del mapa: " + posicionLlegadaReal.x + ", " + posicionLlegadaReal.y);
                     enviarInformacionDelMapaActualAlServidor();
 
+                    gestionarMusicaPorNivel();//Metodo para cambiar musica por nivel
+
                 } else if (paquete instanceof Network.PaqueteActualizacionPuntuacion p) {
                     this.anillosTotal = p.nuevosAnillos;
                     this.basuraTotal = p.nuevaBasura;
@@ -579,26 +644,22 @@ public class PantallaDeJuego extends PantallaBase {
                         contaminationLabel.setText("TOXIC: 0%");
                     }
                 } else if (paquete instanceof Network.PaqueteActualizacionVida p) {
-                    // El servidor nos informa que la vida de un jugador ha cambiado.
-
-                    // Comprobamos si la actualización de vida es para NUESTRO jugador.
                     if (personajeJugable != null && p.idJugador == personajeJugable.estado.id) {
 
-                        // Actualizamos el estado de vida de nuestro jugador.
-                        // Asumimos que tienes un método setVida que también actualiza la UI (la barra de vida).
-                        if (p.nuevaVida <= personajeJugable.estado.vida) {
-                            hudVidaJugador.mostrarPerdidaDeVida();
-                        }
+                        // Primero, mostramos el efecto visual de "parpadeo"
+                        hudVidaJugador.mostrarPerdidaDeVida();
 
+                        // Actualizamos el valor directamente en el objeto de estado del jugador
+                        personajeJugable.estado.vida = p.nuevaVida;
+
+                        // Imprimimos el log para confirmar que el valor se recibió
+                        System.out.println("¡Recibido daño! Mi vida ahora es: " + personajeJugable.estado.vida);
+
+                        // Ahora que la vida está actualizada, comprobamos si el juego terminó
                         if (personajeJugable.estado.vida <= 0) {
                             activarGameOver();
                         }
-
-                        personajeJugable.setVida(p.nuevaVida);
-                        System.out.println("¡Recibido daño! Mi vida ahora es: " + p.nuevaVida);
                     }
-                    // Nota: En este diseño, no actualizamos la vida de los otros jugadores,
-                    // pero si en el futuro quisieras mostrar sus barras de vida, la lógica iría aquí.
                 }
                   else if (paquete instanceof Network.PaqueteEntidadEliminada p) {
                     System.out.println("Recibida orden de eliminar entidad con ID: " + p.idEntidad);
@@ -674,6 +735,19 @@ public class PantallaDeJuego extends PantallaBase {
                     // El servidor nos ordena mostrar la pantalla de Game Over.
                     System.out.println("[CLIENT] ¡Orden de Game Over recibida del servidor!");
                     activarGameOver();
+                } else if (paquete instanceof Network.PaqueteActualizacionVidaEnemigo p) {
+                    // El servidor nos informa que la vida de un enemigo ha cambiado.
+
+                    // Primero, comprobamos si es el jefe.
+                    if (eggman != null && eggman.estado.id == p.idEnemigo) {
+                        eggman.estado.vida = p.nuevaVida;
+                    } else {
+                        // Si no, buscamos en la lista de robots normales.
+                        RobotVisual enemigo = enemigosEnPantalla.get(p.idEnemigo);
+                        if (enemigo != null) {
+                            enemigo.estado.vida = p.nuevaVida;
+                        }
+                    }
                 }
             }
         }
@@ -868,6 +942,7 @@ public class PantallaDeJuego extends PantallaBase {
         }
 
         if (personajeJugable != null && hudVidaJugador != null) {
+            System.out.println("[DEBUG-VIDA] Pasando vida al HUD: " + personajeJugable.estado.vida);
             hudVidaJugador.actualizar(personajeJugable.estado.vida, Player.MAX_VIDA);
         }
 
