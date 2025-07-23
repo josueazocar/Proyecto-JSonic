@@ -86,7 +86,7 @@ public class LocalServer implements IGameServer {
 
     public LocalServer() {
         // Poblamos el mapa con la cantidad de enemigos por nivel.
-        enemigosPorMapa.put("maps/Zona1N1.tmx", 8);
+        enemigosPorMapa.put("maps/Zona1N1.tmx", 1);
         enemigosPorMapa.put("maps/ZonaJefeN1.tmx", 1);
         enemigosPorMapa.put("maps/Zona1N2.tmx", 1);
         enemigosPorMapa.put("maps/ZonaJefeN2.tmx", 1);
@@ -851,8 +851,19 @@ public class LocalServer implements IGameServer {
                     // --- AÑADIDO: Lógica de Ataque y Daño para Robotnik ---
                     if (enemigo.puedeAtacar()) {
                         enemigo.reiniciarCooldownAtaque();
-                        jugador.vida -= 2; // Daño del jefe
-                        System.out.println("[LOCAL SERVER] JEFE atacó al jugador. Vida restante: " + jugador.vida);
+
+                        int idJugador = jugador.id;
+                        int anillosActuales = puntajesAnillos.getOrDefault(idJugador, 0);
+
+                        if (anillosActuales == 0) {
+                            // Sin anillos, recibe 15 de daño del jefe.
+                            jugador.vida -= 15;
+                            System.out.println("[LOCAL SERVER] JEFE golpeó a Jugador " + idJugador + " sin anillos. Vida restante: " + jugador.vida);
+                        } else {
+                            // Con anillos, recibe el daño normal del jefe (que eran 5 puntos).
+                            jugador.vida -= 2;
+                            System.out.println("[LOCAL SERVER] JEFE golpeó a Jugador " + idJugador + " con anillos. Vida restante: " + jugador.vida);
+                        }
 
                         // Notifica al cliente de su nueva vida.
                         Network.PaqueteActualizacionVida paqueteVida = new Network.PaqueteActualizacionVida();
@@ -891,8 +902,19 @@ public class LocalServer implements IGameServer {
                 // --- AÑADIDO: Lógica de Ataque y Daño para Robots ---
                 if (enemigo.puedeAtacar()) {
                     enemigo.reiniciarCooldownAtaque();
-                    jugador.vida -= 1;
-                    System.out.println("[LOCAL SERVER] Robot atacó al jugador. Vida restante: " + jugador.vida);
+                    int idJugador = jugador.id;
+                    int anillosActuales = puntajesAnillos.getOrDefault(idJugador, 0);
+
+                    // Comprobamos si el jugador tiene 0 anillos
+                    if (anillosActuales == 0) {
+                        // Si NO tiene anillos, recibe 15 de daño.
+                        jugador.vida -= 15;
+                        System.out.println("[LOCAL SERVER] Jugador " + idJugador + " sin anillos fue golpeado. Vida restante: " + jugador.vida);
+                    } else {
+                        // Si SÍ tiene anillos, recibe el daño normal de 1 punto.
+                        jugador.vida -= 1;
+                        System.out.println("[LOCAL SERVER] Jugador " + idJugador + " con anillos fue golpeado. Vida restante: " + jugador.vida);
+                    }
 
                     // Notifica al cliente de su nueva vida.
                     Network.PaqueteActualizacionVida paqueteVida = new Network.PaqueteActualizacionVida();

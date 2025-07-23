@@ -778,7 +778,17 @@ public class PantallaDeJuego extends PantallaBase {
 
             if (bomba.isExplotando() && !bomba.yaHaHechoDanio()) {
                 if (bomba.getBounds().overlaps(personajeJugable.getBounds())) {
-                    personajeJugable.setVida(personajeJugable.getVida() - 1);
+                    int anillosActuales = anillosTotal;
+                    if (anillosActuales == 0) {
+                        // Sin anillos, recibe 15 de daño del jefe.
+                        personajeJugable.estado.vida = personajeJugable.estado.vida - 15;
+                        System.out.println("[LOCAL SERVER] JEFE golpeó a Jugador Con Cohete" + " sin anillos. Vida restante: " + personajeJugable.getVida());
+                    } else {
+                        // Con anillos, recibe el daño normal del jefe
+                        personajeJugable.estado.vida = personajeJugable.estado.vida - 3;
+                        System.out.println("[LOCAL SERVER] JEFE golpeó a Jugador Con Cohete" + " sin anillos. Vida restante: " + personajeJugable.getVida());
+                    }
+
                     bomba.marcarComoDanioHecho();
                     hudVidaJugador.mostrarPerdidaDeVida();
                 }
