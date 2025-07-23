@@ -1,6 +1,7 @@
 package com.JSonic.uneg.EntidadesVisuales;
 
 import com.JSonic.uneg.LevelManager;
+import com.JSonic.uneg.Pantallas.PantallaDeJuego;
 import com.JSonic.uneg.State.DronState;
 import com.JSonic.uneg.State.PlayerState;
 import com.badlogic.gdx.Gdx;
@@ -148,12 +149,14 @@ public class Tails extends Player {
             // Si la bandera es falsa, estamos en una partida LOCAL (un jugador).
             else {
                 // Verificamos que el dron exista para evitar errores.
-                if (miDron != null) {
+                if (miDron != null && PantallaDeJuego.getBasuraTotal() >= 20) {
                     System.out.println("[CLIENTE] MODO LOCAL: Invocando el dron localmente.");
                     // Esta es la llamada a tu lógica original de un jugador, que ya funcionaba.
+                    gameClient.send(new Network.PaqueteHabilidadDronUsada());
                     miDron.invocar(this);
                 } else {
-                    System.err.println("[CLIENTE ERROR] Se intentó invocar un dron en modo local, pero miDron es nulo.");
+                    System.err.println("Se necesitan 20 basuras para invocar el dron");
+                    mostrarMensaje("Necesitas recoger 20 basuras");
                 }
             }
         }

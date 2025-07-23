@@ -649,6 +649,26 @@ public class LocalServer implements IGameServer {
 
                 // Detenemos el bucle para no procesar más paquetes en este frame.
                 break;
+            }else if (objeto instanceof Network.PaqueteHabilidadDronUsada) {
+                System.out.println("[LOCAL SERVER] Recibida notificación de uso de habilidad de dron.");
+                int idJugador = 1; // En modo local, el jugador siempre es el ID 1
+
+                // a. Obtenemos la basura actual DESDE EL SERVIDOR
+                int basuraActual = puntajesBasura.getOrDefault(idJugador, 0);
+
+                // b. Comprobamos de nuevo la condición (por si acaso) y aplicamos el coste
+                if (basuraActual >= 20) {
+                    puntajesBasura.put(idJugador, basuraActual - 20);
+                }
+
+                // c. Creamos y enviamos el paquete de actualización AHORA SÍ con el valor correcto
+                Network.PaqueteActualizacionPuntuacion paquetePuntaje = new Network.PaqueteActualizacionPuntuacion();
+                paquetePuntaje.nuevosAnillos = puntajesAnillos.getOrDefault(idJugador, 0);
+                paquetePuntaje.nuevaBasura = puntajesBasura.get(idJugador); // El nuevo valor con el coste restado
+                paquetePuntaje.totalBasuraReciclada = this.basuraReciclada;
+
+                // d. Enviamos el paquete al cliente para que la UI se actualice de forma autoritaria
+                clienteLocal.recibirPaqueteDelServidor(paquetePuntaje);
             }
 
         }
