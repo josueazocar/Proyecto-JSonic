@@ -1,18 +1,13 @@
 package com.JSonic.uneg.ObjetosDelEntorno;
 
 import com.JSonic.uneg.JSonicJuego;
-import com.JSonic.uneg.Pantallas.PantallaMenu;
-import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.g2d.BitmapFont;
-import com.badlogic.gdx.scenes.scene2d.InputEvent;
+import com.badlogic.gdx.math.Interpolation;
+import com.badlogic.gdx.scenes.scene2d.actions.Actions;
 import com.badlogic.gdx.scenes.scene2d.ui.Label;
 import com.badlogic.gdx.scenes.scene2d.ui.Skin;
 import com.badlogic.gdx.scenes.scene2d.ui.Table;
-import com.badlogic.gdx.scenes.scene2d.ui.TextButton;
-import com.badlogic.gdx.scenes.scene2d.utils.ClickListener;
-import network.LocalServer;
-import network.Network;
 
 public class VictoriaInterfaz extends Table {
 
@@ -20,36 +15,70 @@ public class VictoriaInterfaz extends Table {
     private Label tituloLabel;
     private Label subtituloLabel;
 
+    private BitmapFont fuenteSubtitulo;
+
     public VictoriaInterfaz(JSonicJuego juegoApp, Skin skin) {
         super(skin);
         this.juegoApp = juegoApp;
         setupUI(skin);
     }
+
     private void setupUI(Skin skin) {
         this.setVisible(false);
         this.setFillParent(true);
         this.center();
 
-        Label.LabelStyle estiloTitulo = new Label.LabelStyle(skin.getFont("body-font"), Color.GREEN);
-        estiloTitulo.font.getData().setScale(2.0f);
+        Label.LabelStyle estiloTitulo = new Label.LabelStyle(skin.getFont("body-font"), Color.GREEN); // Color cambiado a Amarillo para más impacto
+        estiloTitulo.font.getData().setScale(2.5f); // Un poco más grande
         tituloLabel = new Label("VICTORIA", estiloTitulo);
 
-        this.add(tituloLabel).padBottom(50).row();
 
-        BitmapFont fuenteSubtitulo = new BitmapFont(); // Creamos una nueva fuente por defecto
-        fuenteSubtitulo.getData().setScale(1.2f); // Hacemos la fuente un poco más grande que la normal
-
+        fuenteSubtitulo = new BitmapFont();
+        fuenteSubtitulo.getData().setScale(1.2f);
         Label.LabelStyle estiloSubtitulo = new Label.LabelStyle(fuenteSubtitulo, Color.WHITE);
         subtituloLabel = new Label("Espera para ver las estadisticas...", estiloSubtitulo);
 
-        // --- Añadimos los elementos a la tabla ---
-        this.add(tituloLabel).padBottom(15).row(); // Reducimos el espacio inferior para que el subtítulo quede más cerca
-        this.add(subtituloLabel).padBottom(50).row(); // Añadimos el nuevo label
+        this.add(tituloLabel).padBottom(15).row();
+        this.add(subtituloLabel);
     }
 
 
+    @Override
+    public void setVisible(boolean visible) {
+        super.setVisible(visible);
+        if (visible) {
+            iniciarAnimacionDeEntrada();
+        }
+    }
+
 
     public void iniciarAnimacionDeEntrada() {
-        // Aquí podrías añadir una acción para que el tituloLabel aparezca con un "fade in"
+        tituloLabel.clearActions();
+        tituloLabel.getColor().a = 0;
+        tituloLabel.setFontScale(2.0f);
+
+        subtituloLabel.getColor().a = 0;
+
+        tituloLabel.addAction(
+            Actions.sequence(
+                Actions.parallel(
+                    Actions.fadeIn(0.7f, Interpolation.pow2Out),
+                    Actions.scaleTo(2.5f, 2.5f, 0.7f, Interpolation.pow2Out)
+                ),
+                Actions.run(new Runnable() {
+                    @Override
+                    public void run() {
+                        subtituloLabel.addAction(Actions.fadeIn(0.5f));
+                    }
+                })
+            )
+        );
+    }
+
+
+    public void dispose() {
+        if (fuenteSubtitulo != null) {
+            fuenteSubtitulo.dispose();
+        }
     }
 }
