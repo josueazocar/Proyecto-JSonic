@@ -3,6 +3,7 @@ package com.JSonic.uneg.EntidadesVisuales;
 import com.JSonic.uneg.LevelManager;
 import com.JSonic.uneg.ObjetosDelEntorno.ItemVisual;
 import com.JSonic.uneg.ObjetosDelEntorno.ObjetoRomperVisual;
+import com.JSonic.uneg.SoundManager;
 import com.JSonic.uneg.State.PlayerState;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Input.Keys;
@@ -43,6 +44,7 @@ public abstract class Player extends Entity implements Disposable {
     protected transient IGameClient gameClient;
     protected  boolean clean = false;
     protected int gemas;
+    protected transient SoundManager soundManager;
 
     // Mapa para almacenar diferentes animaciones por estado
 protected EnumMap<EstadoPlayer, Animation<TextureRegion>> animations;
@@ -116,6 +118,9 @@ protected EnumMap<EstadoPlayer, Animation<TextureRegion>> animations;
 
     public void setSuper(boolean esSuper) {
         // Por defecto, no hace nada. Las subclases como Sonic lo sobreescribirán.
+    }
+    public void setSoundManager(SoundManager soundManager) {
+        this.soundManager = soundManager;
     }
 
     public void setEstado(PlayerState estado) {

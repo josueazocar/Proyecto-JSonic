@@ -4,11 +4,15 @@ import com.badlogic.gdx.assets.AssetManager;
 import com.badlogic.gdx.audio.Music; // Importar Music para la música de fondo
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.audio.Sound;
+import java.util.HashMap;
 
 public class SoundManager {
 
     private final AssetManager assetManager;
     private Music backgroundMusic; // Objeto Music para la música de fondo
+
+    private float sfxVolume = 1.0f;
+    private final HashMap<String, String> sfxMap = new HashMap<>();
     private String currentMusicPath; // Para recordar qué música está sonando
     private Sound sonidoClick;
     private String clickSoundPath;
@@ -18,6 +22,18 @@ public class SoundManager {
         this.assetManager = assetManager;
     }
 
+    /**
+     * Pone en cola de carga cualquier efecto de sonido.
+     * @param key La clave para llamarlo (ej: "explosion_bomba").
+     * @param path La ruta al archivo.
+     */
+    public void registerSound(String key, String path) {
+        if (!sfxMap.containsKey(key)) {
+            sfxMap.put(key, path);
+            assetManager.load(path, Sound.class);
+            Gdx.app.log("SoundManager", "Sonido registrado [" + key + "] en la ruta: " + path);
+        }
+    }
     // Método para cargar la música
     // Se recomienda usar el AssetManager para esto
     public void loadMusic(String filePath) {
@@ -27,6 +43,22 @@ public class SoundManager {
         }
         this.currentMusicPath = filePath; // Guarda la ruta para luego obtenerla
     }
+
+    /**
+     * Reproduce cualquier sonido registrado usando su clave.
+     * @param key La clave del sonido a reproducir.
+     */
+    public void play(String key) {
+        String path = sfxMap.get(key);
+        if (path != null && assetManager.isLoaded(path, Sound.class)) {
+            Sound sound = assetManager.get(path, Sound.class);
+            sound.play(sfxVolume);
+        } else {
+            Gdx.app.error("SoundManager", "No se pudo reproducir el sonido: '" + key + "'. ¿Está registrado y cargado?");
+        }
+    }
+
+    public void setSfxVolume(float volume) { this.sfxVolume = volume; }
 
     // Método para obtener la música una vez cargada
     private Music getLoadedMusic(String filePath) {
@@ -61,7 +93,22 @@ public class SoundManager {
         } else {
             Gdx.app.log("SoundManager", "Error: No se pudo reproducir la música " + filePath);
         }
+
+        // --- Controles de Audio ---
+
+        public void stopBackgroundMusic() { if (backgroundMusic != null) backgroundMusic.stop(); }
+        public void pauseBackgroundMusic() { if (backgroundMusic != null) backgroundMusic.pause(); }
+        public void resumeBackgroundMusic() { if (backgroundMusic != null) backgroundMusic.play(); }
+        public void setSfxVolume(float volume) { this.sfxVolume = Math.max(0, Math.min(1, volume)); }
+        public void setMusicVolume(float volume) {
+            this.musicVolume = Math.max(0, Math.min(1, volume));
+            if (backgroundMusic != null) {
+                backgroundMusic.setVolume(this.musicVolume);
+            }
+        }
     }
+
+
 
     // Método para detener la música
     public void stopBackgroundMusic() {
@@ -106,25 +153,11 @@ public class SoundManager {
     }
 
     public void loadClickSound(String filePath) {
-        if (!assetManager.isLoaded(filePath, Sound.class)) {
-            assetManager.load(filePath, Sound.class);
-            Gdx.app.log("SoundManager", "Poniendo en cola la carga del sonido de clic: " + filePath);
-        }
-        this.clickSoundPath = filePath;
+        registerSound("click", filePath);
     }
 
     public void playClickSound() {
-        if (sonidoClick == null) {
-            // Comprobamos si la ruta existe y si el asset ya ha sido cargado.
-            if (clickSoundPath != null && assetManager.isLoaded(clickSoundPath, Sound.class)) {
-                sonidoClick = assetManager.get(clickSoundPath, Sound.class);
-            }
-        }
-        if (sonidoClick != null) {
-            sonidoClick.play(0.8f);
-        } else {
-            Gdx.app.log("SoundManager", "Error: El sonido del clic no está disponible. ¿Se llamó a assetManager.finishLoading()?");
-        }
+        play("click");
     }
 
 
