@@ -331,7 +331,6 @@ public class PantallaDeJuego extends PantallaBase {
             return;
         }
 
-
         if (Gdx.input.isKeyJustPressed(Input.Keys.V)) { // Usamos la tecla 'V' de Victoria
 
             // Comprobamos que el juego esté en curso antes de forzar la victoria
@@ -383,22 +382,6 @@ public class PantallaDeJuego extends PantallaBase {
             }
         }
 
-       /* if (Gdx.input.isKeyJustPressed(Input.Keys.ESCAPE)) {
-            System.out.println("[CLIENT] El jugador ha decidido salir de la partida. Notificando al servidor...");
-
-            if (gameClient != null) {
-                gameClient.send(new Network.PaqueteSalidaDePartida());
-                gameClient.disconnect();
-            }
-
-            this.pause();
-            PantallaMenu pantallaMenu = new PantallaMenu(juegoPrincipal, true);
-            pantallaMenu.setEstadoMenu(PantallaMenu.EstadoMenu.JUGAR);
-            juegoPrincipal.setPantallaActiva(pantallaMenu);
-            LocalServer.decreaseContamination(100);
-
-            return;
-        }*/
 
         if (localServer != null) {
             localServer.update(deltat, this.manejadorNivel, personajeJugable);

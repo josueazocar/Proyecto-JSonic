@@ -56,7 +56,7 @@ public class PantallaEstadisticas extends PantallaBase{
         Label.LabelStyle estiloTitulo = new Label.LabelStyle(fuenteTitulo, Color.WHITE);
         Label.LabelStyle estiloEncabezado = new Label.LabelStyle(skin.getFont("body-font"), Color.WHITE);
         estiloEncabezado.font.getData().setScale(0.85f);
-        Label.LabelStyle estiloDatos = new Label.LabelStyle(skin.getFont("body-font"), Color.LIGHT_GRAY);
+        Label.LabelStyle estiloDatos = new Label.LabelStyle(skin.getFont("body-font"), Color.GOLD);
         estiloDatos.font.getData().setScale(0.8f);
 
         // Contenido de la tabla de estadísticas... (sin cambios aquí)
@@ -66,8 +66,10 @@ public class PantallaEstadisticas extends PantallaBase{
         tablaStats.add(new Label("Puntuacion Final", estiloEncabezado)).padTop(-160).padBottom(20).padLeft(80);
         tablaStats.row();
         for (EstadisticasJugador stats : listaEstadisticas) {
-            tablaStats.add(new Label(stats.getNombreJugador(), estiloDatos)).center().padTop(-80);
-            tablaStats.add(new Label(String.valueOf(stats.getPuntuacionTotal()), estiloDatos)).padLeft(80).padTop(-80);
+            tablaStats.add(new Label(stats.getNombreJugador(), estiloDatos)).center();
+            tablaStats.add(new Label(String.valueOf(stats.getPuntuacionTotal()), estiloDatos)).padLeft(100);
+            tablaStats.getCells().peek().padBottom(20); // Celda de Puntuación
+            tablaStats.getCells().get(tablaStats.getCells().size - 2).padBottom(20);
             tablaStats.row();
         }
 
