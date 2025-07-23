@@ -234,12 +234,21 @@ public class GameServer implements IGameServer {
                                             // 1. Actualizamos el estado del jugador EN EL SERVIDOR.
                                             jugador.isSuper = true;
 
-                                            // 2. Creamos el "anuncio oficial".
+                                            jugador.vida = Player.MAX_VIDA;
+                                            System.out.println("[GAMESERVER] Vida del jugador " + jugador.id + " restaurada al máximo: " + jugador.vida);
+
+                                            // 2. Notificamos al cliente de Sonic sobre su nueva vida.
+                                            Network.PaqueteActualizacionVida paqueteVida = new Network.PaqueteActualizacionVida();
+                                            paqueteVida.idJugador = jugador.id;
+                                            paqueteVida.nuevaVida = jugador.vida;
+                                            servidor.sendToTCP(jugador.id, paqueteVida);
+
+                                            // 3. Creamos el "anuncio oficial".
                                             Network.PaqueteTransformacionSuper paqueteSuper = new Network.PaqueteTransformacionSuper();
                                             paqueteSuper.idJugador = jugador.id;
                                             paqueteSuper.esSuper = true;
 
-                                            // 3. Lo enviamos a TODOS los jugadores.
+                                            // 4. Lo enviamos a TODOS los jugadores.
                                             servidor.sendToAllTCP(paqueteSuper);
                                             System.out.println("[GAMESERVER] Notificando a todos que el jugador " + jugador.id + " es ahora Super Sonic.");
                                         }
@@ -327,6 +336,26 @@ public class GameServer implements IGameServer {
                                     // Actualizamos el puntaje GLOBAL del equipo.
                                     totalAnillosGlobal++;
                                     System.out.println("[SERVER] Anillo recogido. Total de equipo: " + totalAnillosGlobal);
+
+                                    int anillosAhora = puntajesAnillosIndividuales.get(conexion.getID());
+                                    if (anillosAhora >= 100) {
+                                        System.out.println("[GAMESERVER] Jugador " + conexion.getID() + " tiene 100 anillos. Canjeando por vida.");
+
+                                        // 1. Restamos los 100 anillos al jugador EN EL SERVIDOR.
+                                        puntajesAnillosIndividuales.put(conexion.getID(), anillosAhora - 100);
+
+                                        // 2. Obtenemos el estado del jugador y aumentamos su vida EN EL SERVIDOR.
+                                        PlayerState estadoJugador = jugadores.get(conexion.getID());
+                                        if (estadoJugador != null) {
+                                            estadoJugador.vida = Math.min(estadoJugador.vida + 100, Player.MAX_VIDA);
+
+                                            // 3. Notificamos al jugador de su nueva vida.
+                                            Network.PaqueteActualizacionVida paqueteVida = new Network.PaqueteActualizacionVida();
+                                            paqueteVida.idJugador = conexion.getID();
+                                            paqueteVida.nuevaVida = estadoJugador.vida;
+                                            servidor.sendToTCP(conexion.getID(), paqueteVida);
+                                        }
+                                    }
 
                                 } else if (itemRecogido.tipo == ItemState.ItemType.BASURA || itemRecogido.tipo == ItemState.ItemType.PIEZA_PLASTICO) {
                                     int puntajeActual = puntajesBasuraIndividuales.getOrDefault(conexion.getID(), 0);
@@ -581,6 +610,15 @@ public class GameServer implements IGameServer {
                         if (enemigo != null && enemigo.vida > 0) {
                             enemigo.vida -= paquete.danio;
                             System.out.println("[SERVER] Enemigo ID " + enemigo.id + " recibió " + paquete.danio + " de daño. Vida restante: " + enemigo.vida);
+
+                            // 1. Creamos el paquete de actualización de vida del enemigo.
+                            Network.PaqueteActualizacionVidaEnemigo paqueteVida = new Network.PaqueteActualizacionVidaEnemigo();
+                            paqueteVida.idEnemigo = enemigo.id;
+                            paqueteVida.nuevaVida = enemigo.vida;
+
+                            // 2. Lo enviamos a TODOS los clientes para que actualicen sus barras de vida.
+                            servidor.sendToAllTCP(paqueteVida);
+
                             if (enemigo.vida <= 0) {
                                 System.out.println("[SERVER] ¡Enemigo ID " + enemigo.id + " ha sido derrotado!");
                                 enemigosActivos.remove(enemigo.id);

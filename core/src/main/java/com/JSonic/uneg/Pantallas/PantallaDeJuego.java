@@ -674,6 +674,19 @@ public class PantallaDeJuego extends PantallaBase {
                     // El servidor nos ordena mostrar la pantalla de Game Over.
                     System.out.println("[CLIENT] ¡Orden de Game Over recibida del servidor!");
                     activarGameOver();
+                } else if (paquete instanceof Network.PaqueteActualizacionVidaEnemigo p) {
+                    // El servidor nos informa que la vida de un enemigo ha cambiado.
+
+                    // Primero, comprobamos si es el jefe.
+                    if (eggman != null && eggman.estado.id == p.idEnemigo) {
+                        eggman.estado.vida = p.nuevaVida;
+                    } else {
+                        // Si no, buscamos en la lista de robots normales.
+                        RobotVisual enemigo = enemigosEnPantalla.get(p.idEnemigo);
+                        if (enemigo != null) {
+                            enemigo.estado.vida = p.nuevaVida;
+                        }
+                    }
                 }
             }
         }

@@ -47,9 +47,6 @@ public class Sonic extends Player {
     private Texture superSonicSpriteSheet;
     protected EnumMap<EstadoPlayer, Animation<TextureRegion>> animationsSuper = new EnumMap<>(EstadoPlayer.class);
 
-    //--Aumento de vida
-    private int MAX_VIDA = 1;
-
     public Sonic(PlayerState estadoInicial) {
         super(estadoInicial);
         CargarSprites();
@@ -531,7 +528,6 @@ public class Sonic extends Player {
             this.esSuperSonic = esSuper;
             this.estado.isSuper = esSuper; // Actualizamos también el estado local
             if (esSuper) {
-                estado.vida += MAX_VIDA;
                 Gdx.app.log("Sonic", "¡ORDEN RECIBIDA! Transformando a Super Sonic.");
                 // Aquí podrías añadir un efecto de sonido o visual si quisieras
             } else {
