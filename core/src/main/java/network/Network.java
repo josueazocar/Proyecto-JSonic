@@ -243,6 +243,7 @@ public class Network {
     public static class PaqueteAtaqueJugadorAEnemigo {
         public int idEnemigo;
         public int danio = 1; // Puedes variar el daño por ataque
+        public int idJugador;
     }
 
     // El servidor envía esto cuando una entidad (jugador o enemigo) muere.

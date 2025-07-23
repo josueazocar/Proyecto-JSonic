@@ -2,6 +2,7 @@ package network;
 
 import com.JSonic.uneg.*;
 import com.JSonic.uneg.EntidadesVisuales.Player;
+import com.JSonic.uneg.Pantallas.EstadisticasJugador;
 import com.JSonic.uneg.State.*;
 import com.badlogic.gdx.math.Rectangle;
 import com.badlogic.gdx.math.Vector2;
@@ -69,6 +70,7 @@ public class GameServer implements IGameServer {
 
     private final HashMap<Integer, AnimalState> animalesActivos = new HashMap<>();
     private final HashMap<Integer, Float> cooldownsHabilidadLimpieza = new HashMap<>();
+    private final HashMap<Integer, EstadisticasJugador> estadisticasJugadores = new HashMap<>();
     private static final float COOLDOWN_HABILIDAD_SONIC = 40.0f; // Cooldown real
     private int proximoIdAnimal = 20000; // ID base para evitar colisiones con otros IDs
 
@@ -129,6 +131,10 @@ public class GameServer implements IGameServer {
                 puntajesBasuraIndividuales.put(conexion.getID(), 0);
                 cooldownsHabilidadLimpieza.put(conexion.getID(), 0f);
 
+                EstadisticasJugador stats = new EstadisticasJugador("Jugador " + nuevoEstado.characterType.toString());
+                estadisticasJugadores.put(conexion.getID(), stats);
+                System.out.println("[STATS] Objeto de estadísticas creado para el jugador " + nuevoEstado.characterType.toString());
+
                 Network.PaqueteTuID paqueteID = new Network.PaqueteTuID();
                 paqueteID.id = conexion.getID();
                 conexion.sendTCP(paqueteID);
@@ -151,6 +157,10 @@ public class GameServer implements IGameServer {
 
                     // Le asignamos el nombre que viene en el paquete.
                     estadoAsignado.nombreJugador = solicitud.nombreJugador;
+                    EstadisticasJugador stats = estadisticasJugadores.get(conexion.getID());
+                    if (stats != null) {
+                        stats.setNombreJugador(solicitud.nombreJugador);
+                    }
 
                     // Enviamos la respuesta de bienvenida al cliente.
                     Network.RespuestaAccesoPaquete respuesta = new Network.RespuestaAccesoPaquete();
@@ -289,7 +299,7 @@ public class GameServer implements IGameServer {
                                     System.out.println("[SERVER] Detectado mapa de jefe. ¡Creando a Robotnik!");
 
                                     // Solo si es un mapa de jefe, creamos y enviamos la instancia del jefe.
-                                    EnemigoState estadoRobotnik = new EnemigoState(999, 300, 100, 1, EnemigoState.EnemigoType.ROBOTNIK);
+                                    EnemigoState estadoRobotnik = new EnemigoState(999, 300, 100, 100, EnemigoState.EnemigoType.ROBOTNIK);
                                     enemigosActivos.put(estadoRobotnik.id, estadoRobotnik);
 
                                     Network.PaqueteEnemigoNuevo paqueteRobotnik = new Network.PaqueteEnemigoNuevo();
@@ -448,7 +458,12 @@ public class GameServer implements IGameServer {
 
                         // 3. ACTUALIZACIÓN DE TOTALES:
                         basuraReciclada += basuraDepositadaEstaVez;
-
+                        EstadisticasJugador stats = estadisticasJugadores.get(idJugadorQueActivo);
+                        if (stats != null && basuraDepositadaEstaVez > 0) {
+                            // Actualizamos sus puntos sumando la cantidad de basura reciclada.
+                            stats.sumarObjetosReciclados(basuraDepositadaEstaVez);
+                            System.out.println("[STATS] Jugador " + idJugadorQueActivo + " recicló " + basuraDepositadaEstaVez + " objetos.");
+                        }
                         // 4. REINICIO DE CONTADORES:
                         puntajesBasuraIndividuales.replaceAll((id, valorActual) -> 0);
                         System.out.println("[SERVER DEBUG] Mapa de basuras después del reinicio: " + puntajesBasuraIndividuales.toString());
@@ -483,7 +498,12 @@ public class GameServer implements IGameServer {
                         contaminationState.decrease(TRASH_CLEANUP_VALUE);
                         System.out.println("[SERVER] Basura recogida. Contaminación reducida a " + contaminationState.getPercentage());
                         // (Aquí deberías enviar los paquetes de actualización de puntuación y contaminación a todos)
-
+                        EstadisticasJugador stats = estadisticasJugadores.get(paquete.idJugador);
+                        if (stats != null) {
+                            // Le damos los puntos correspondientes a limpiar una zona.
+                            stats.sumarZonaLimpiada();
+                            System.out.println("[STATS] Jugador " + paquete.idJugador + " (Knuckles) limpió una zona al destruir un bloque.");
+                        }
                         // --- ORDENAR A TODOS LOS CLIENTES QUE DESTRUYAN EL BLOQUE ---
                         Network.PaqueteBloqueConfirmadoDestruido respuesta = new Network.PaqueteBloqueConfirmadoDestruido();
                         respuesta.idBloque = paquete.idBloque;
@@ -536,7 +556,11 @@ public class GameServer implements IGameServer {
 
                         // 2. Reiniciar el cooldown para este jugador.
                         cooldownsHabilidadLimpieza.put(jugadorId, COOLDOWN_HABILIDAD_SONIC);
-
+                        EstadisticasJugador stats = estadisticasJugadores.get(jugadorId);
+                        if (stats != null) {
+                            stats.sumarZonaLimpiada(); // Suma los puntos definidos en EstadisticasJugador
+                            System.out.println("[STATS] Jugador " + jugadorId + " (Sonic) limpió una zona con su habilidad.");
+                        }
                         // 3. Notificar a TODOS los clientes del efecto.
                         // Usamos el paquete que ya tenías para esto.
                         Network.PaqueteHabilidadLimpiezaSonic notificacion = new Network.PaqueteHabilidadLimpiezaSonic();
@@ -564,10 +588,26 @@ public class GameServer implements IGameServer {
                                 notificacionMuerte.idEntidad = enemigo.id;
                                 notificacionMuerte.esJugador = false;
                                 servidor.sendToAllTCP(notificacionMuerte);
+                                EstadisticasJugador stats = estadisticasJugadores.get(paquete.idJugador);
+                                if (stats != null) {
+                                    stats.sumarEnemigoDerrotado();
+                                    System.out.println("[STATS] Jugador " + paquete.idJugador + " derrotó a un enemigo.");
+                                }
+                                if (enemigo.tipo == EnemigoState.EnemigoType.ROBOTNIK) {
+                                    // Y si estamos en el mapa correcto.
+                                    if ("maps/ZonaJefeN3.tmx".equals(mapaActualServidor)) {
+                                        finalizarPartidaYEnviarResultados();
+                                        return; // Salimos para no procesar más lógica (como generar portales).
+                                    }
+                                }
                                 comprobarYGenerarPortalSiCorresponde();
                             }
                         }
                     }
+                } if (objeto instanceof Network.ForzarFinDeJuegoDebug) {
+                    System.out.println("[GAMESERVER] ¡Recibida orden de forzar fin de juego!");
+                    // Simplemente llamamos a la función que ya hace todo el trabajo.
+                    finalizarPartidaYEnviarResultados();
                 }
             }
 
@@ -1125,6 +1165,20 @@ public class GameServer implements IGameServer {
             dronesActivos.remove(id);
         }
     }
+
+    private void finalizarPartidaYEnviarResultados() {
+        System.out.println("[GAMESERVER] ¡VICTORIA! Finalizando partida y enviando resultados a todos...");
+
+        Network.PaqueteResultadosFinales paqueteResultados = new Network.PaqueteResultadosFinales();
+        // Creamos una nueva lista a partir de los valores del HashMap de estadísticas.
+        paqueteResultados.estadisticasFinales = new ArrayList<>(estadisticasJugadores.values());
+
+        // Enviamos el paquete final a TODOS los clientes conectados.
+        servidor.sendToAllTCP(paqueteResultados);
+
+        // Opcional: podrías añadir aquí una lógica para reiniciar el servidor.
+    }
+
     private boolean hayColision(Rectangle bounds) {
         if (paredesDelMapa != null) {
             for (Rectangle pared : paredesDelMapa) {

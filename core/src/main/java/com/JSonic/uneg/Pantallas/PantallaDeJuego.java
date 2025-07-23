@@ -856,7 +856,7 @@ public class PantallaDeJuego extends PantallaBase {
                     if (gameClient != null) {
                         Network.PaqueteAtaqueJugadorAEnemigo paquete = new Network.PaqueteAtaqueJugadorAEnemigo();
                         paquete.idEnemigo = enemigo.estado.id;
-                        // paquete.danio = 1; // Podrías añadir daño variable aquí
+                        paquete.idJugador = personajeJugable.estado.id;
                         gameClient.send(paquete);
                     }
                 }

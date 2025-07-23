@@ -45,6 +45,10 @@ public class EstadisticasJugador {
         actualizarPuntuacion();
     }
 
+    public void setNombreJugador(String nombreJugador) {
+        this.nombreJugador = nombreJugador;
+    }
+
     public String getNombreJugador() { return nombreJugador; }
     public int getPuntuacionTotal() { return puntuacionTotal; }
     public int getZonasLimpiadas() { return zonasLimpiadas; }
