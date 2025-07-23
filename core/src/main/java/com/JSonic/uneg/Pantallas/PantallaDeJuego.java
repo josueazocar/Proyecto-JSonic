@@ -176,7 +176,10 @@ public class PantallaDeJuego extends PantallaBase {
         //assetManager = new AssetManager();
         //soundManager = new SoundManager(assetManager);
         //soundManager.loadMusic(BACKGROUND_MUSIC_PATH2);
-        soundManager.playBackgroundMusic(BACKGROUND_MUSIC_PATH2, 0.5f, true);
+        //soundManager.playBackgroundMusic(BACKGROUND_MUSIC_PATH2, 0.5f, true);
+
+        gestionarMusicaPorNivel();//Nuevo metodo para tocar musica por nivel
+
         assetManager.finishLoading();
         shapeRenderer = new ShapeRenderer();
 
@@ -316,6 +319,68 @@ public class PantallaDeJuego extends PantallaBase {
         // 4. El wrapper (y por tanto el menú) empieza invisible.
         this.pauseWrapper.setVisible(false);
     }
+
+    private void gestionarMusicaPorNivel() {
+        // Medida de seguridad para evitar errores si algo no está listo.
+        if (soundManager == null || manejadorNivel == null) {
+            Gdx.app.error("GestionarMusica", "SoundManager o LevelManager no están inicializados.");
+            return;
+        }
+
+        //Detenemos cualquier música que se esté reproduciendo.
+        soundManager.stopBackgroundMusic();
+
+        //Obtenemos el nombre del mapa actual desde nuestro manejador.
+        String mapaActual = manejadorNivel.getNombreMapaActual();
+        String cancionAReproducir = null;
+
+        //¡La lógica principal! Aquí decides qué canción suena en cada mapa.
+        //Este switch es fácil de expandir con nuevos niveles.
+        Gdx.app.log("GestionarMusica", "Seleccionando música para el nivel: " + mapaActual);
+        switch (mapaActual) {
+            case "maps/Zona1N1.tmx":
+                // Ejemplo: Asigna la música para tu primer nivel.
+                cancionAReproducir = "SoundsBackground/Green Hill Zone Theme Sonic (8 Bit Version).mp3";
+                break;
+            case "maps/Zona1N2.tmx":
+                cancionAReproducir = "SoundsBackground/Level Theme/CactusMccoy.mp3";
+                break;
+
+            case "maps/Zona1N3.tmx":
+                cancionAReproducir = "SoundsBackground/Level Theme/Battle 1.mp3";
+                break;
+
+            case "maps/Zona2N3.tmx":
+                cancionAReproducir = "SoundsBackground/Level Theme/Heartache.mp3";
+                break;
+            case "maps/ZonaJefeN1.tmx":
+                // Ejemplo: Una música más intensa para el jefe.
+                cancionAReproducir = "SoundsBackground/Level Theme/CommandoSteve.mp3";
+                break;
+            case "maps/ZonaJefeN2.tmx":
+                cancionAReproducir = "SoundsBackground/Level Theme/Milky Ways.mp3";
+                break;
+
+            case "maps/ZonaJefeN3.tmx":
+                cancionAReproducir = "SoundsBackground/Level Theme/Strike the Earth.mp3";
+                break;
+
+            // --- > AÑADE AQUÍ UN 'case' PARA CADA UNO DE TUS MAPAS < ---
+            default:
+                // Opcional: Una canción por defecto si el mapa no coincide con ninguno.
+                Gdx.app.log("GestionarMusica", "El mapa actual no tiene una canción asignada. Se usará silencio o una por defecto.");
+                // cancionAReproducir = "SoundsBackground/DefaultMusic.mp3";
+                break;
+        }
+
+        //Si encontramos una canción para este nivel, la reproducimos.
+        if (cancionAReproducir != null) {
+            Gdx.app.log("GestionarMusica", "Reproduciendo: " + cancionAReproducir);
+            soundManager.playBackgroundMusic(cancionAReproducir, 0.5f, true);
+        }
+    }
+
+
 
     @Override
     public void actualizar(float deltat) {
@@ -466,6 +531,8 @@ public class PantallaDeJuego extends PantallaBase {
                     personajeJugable.estado.y = posicionLlegadaReal.y;
                     System.out.println("[CLIENT] Posición de llegada real leída del mapa: " + posicionLlegadaReal.x + ", " + posicionLlegadaReal.y);
                     enviarInformacionDelMapaActualAlServidor();
+
+                    gestionarMusicaPorNivel();//Metodo para cambiar musica por nivel
 
                 } else if (paquete instanceof Network.PaqueteActualizacionPuntuacion p) {
                     this.anillosTotal = p.nuevosAnillos;
