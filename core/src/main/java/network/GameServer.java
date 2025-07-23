@@ -514,28 +514,56 @@ public class GameServer implements IGameServer {
                         for (int basuraDeJugador : puntajesBasuraIndividuales.values()) {
                             basuraDepositadaEstaVez += basuraDeJugador;
                         }
+                        // 3. CONDICIÓN Y CURACIÓN: Si se recicló basura, curamos a TODOS los jugadores.
+                        if (basuraDepositadaEstaVez >=5) {
+                            System.out.println("[SERVER] Reciclando " + basuraDepositadaEstaVez + " de basura. Curando a todos los jugadores.");
 
-                        // 3. ACTUALIZACIÓN DE TOTALES:
-                        basuraReciclada += basuraDepositadaEstaVez;
-                        EstadisticasJugador stats = estadisticasJugadores.get(idJugadorQueActivo);
-                        if (stats != null && basuraDepositadaEstaVez > 0) {
-                            // Actualizamos sus puntos sumando la cantidad de basura reciclada.
-                            stats.sumarObjetosReciclados(basuraDepositadaEstaVez);
-                            System.out.println("[STATS] Jugador " + idJugadorQueActivo + " recicló " + basuraDepositadaEstaVez + " objetos.");
-                        }
-                        // 4. REINICIO DE CONTADORES:
-                        puntajesBasuraIndividuales.replaceAll((id, valorActual) -> 0);
-                        System.out.println("[SERVER DEBUG] Mapa de basuras después del reinicio: " + puntajesBasuraIndividuales.toString());
+                            // Iteramos sobre cada jugador conectado para aplicarle la curación.
+                            for (PlayerState jugadorACurar : jugadores.values()) {
+                                // a. Calculamos la nueva vida sin exceder el máximo.
+                                int vidaNueva = jugadorACurar.vida + 10;
+                                jugadorACurar.vida = Math.min(vidaNueva, Player.MAX_VIDA);
 
-                        // 5. NOTIFICACIÓN A TODOS:
-                        for (Integer idJugadorConectado : jugadores.keySet()) {
-                            Network.PaqueteActualizacionPuntuacion paquetePuntaje = new Network.PaqueteActualizacionPuntuacion();
-                            paquetePuntaje.nuevosAnillos = puntajesAnillosIndividuales.getOrDefault(idJugadorConectado, 0);
-                            paquetePuntaje.nuevaBasura = puntajesBasuraIndividuales.getOrDefault(idJugadorConectado, 0);
-                            paquetePuntaje.totalBasuraReciclada = basuraReciclada;
-                            servidor.sendToTCP(idJugadorConectado, paquetePuntaje);
+                                // b. Creamos un paquete de actualización de vida PARA ESE JUGADOR.
+                                Network.PaqueteActualizacionVida paqueteVida = new Network.PaqueteActualizacionVida();
+                                paqueteVida.idJugador = jugadorACurar.id;
+                                paqueteVida.nuevaVida = jugadorACurar.vida;
+
+                                // c. Enviamos la notificación de su nueva vida a cada jugador individualmente.
+                                servidor.sendToTCP(jugadorACurar.id, paqueteVida);
+                            }
+
+                            Network.PaqueteMensajeUI msg = new Network.PaqueteMensajeUI();
+                            msg.mensaje = "Basura reciclada +10 SALUD A TODOS!";
+                            conexion.sendTCP(msg);
+
+                            // 3. ACTUALIZACIÓN DE TOTALES:
+                            basuraReciclada += basuraDepositadaEstaVez;
+                            EstadisticasJugador stats = estadisticasJugadores.get(idJugadorQueActivo);
+                            if (stats != null && basuraDepositadaEstaVez > 0) {
+                                // Actualizamos sus puntos sumando la cantidad de basura reciclada.
+                                stats.sumarObjetosReciclados(basuraDepositadaEstaVez);
+                                System.out.println("[STATS] Jugador " + idJugadorQueActivo + " recicló " + basuraDepositadaEstaVez + " objetos.");
+                            }
+                            // 4. REINICIO DE CONTADORES:
+                            puntajesBasuraIndividuales.replaceAll((id, valorActual) -> 0);
+                            System.out.println("[SERVER DEBUG] Mapa de basuras después del reinicio: " + puntajesBasuraIndividuales.toString());
+
+                            // 5. NOTIFICACIÓN A TODOS:
+                            for (Integer idJugadorConectado : jugadores.keySet()) {
+                                Network.PaqueteActualizacionPuntuacion paquetePuntaje = new Network.PaqueteActualizacionPuntuacion();
+                                paquetePuntaje.nuevosAnillos = puntajesAnillosIndividuales.getOrDefault(idJugadorConectado, 0);
+                                paquetePuntaje.nuevaBasura = puntajesBasuraIndividuales.getOrDefault(idJugadorConectado, 0);
+                                paquetePuntaje.totalBasuraReciclada = basuraReciclada;
+                                servidor.sendToTCP(idJugadorConectado, paquetePuntaje);
+                            }
+                            System.out.println("[SERVER] Paquetes de actualización de puntuación enviados a todos los jugadores.");
+                        } else {
+                            Network.PaqueteMensajeUI msg = new Network.PaqueteMensajeUI();
+                            msg.mensaje = "Necesitan recoger 5 Basuras para Curarse!";
+                            conexion.sendTCP(msg);
                         }
-                        System.out.println("[SERVER] Paquetes de actualización de puntuación enviados a todos los jugadores.");
+
                     }
                 } if (objeto instanceof Network.PaqueteBloqueDestruido paquete) {
                     PlayerState jugador = jugadores.get(paquete.idJugador);
