@@ -4,6 +4,7 @@ package com.JSonic.uneg.Pantallas;
 import com.JSonic.uneg.JSonicJuego;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Input;
+import com.badlogic.gdx.Preferences;
 import com.badlogic.gdx.graphics.GL20;
 import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.TextureAtlas;
@@ -11,6 +12,7 @@ import com.badlogic.gdx.scenes.scene2d.InputEvent;
 import com.badlogic.gdx.scenes.scene2d.ui.*;
 import com.badlogic.gdx.scenes.scene2d.utils.ClickListener;
 import com.badlogic.gdx.scenes.scene2d.utils.TextureRegionDrawable;
+import com.JSonic.uneg.GestorDeProgreso;
 
 public class PantallaSeleccionNivel extends PantallaBase {
 
@@ -205,9 +207,15 @@ public class PantallaSeleccionNivel extends PantallaBase {
             botonNivel2.setDisabled(false);
             botonNivel3.setDisabled(false);
         } else {
-            botonNivel1.setDisabled(false);
-            botonNivel2.setDisabled(true);
-            botonNivel3.setDisabled(true);
+            // --- LÓGICA DE UN JUGADOR CON PROGRESO ---
+            // 1. Cargamos el nivel más alto desbloqueado
+            int nivelMasAlto = GestorDeProgreso.cargarNivelMasAltoDesbloqueado();
+            System.out.println("[SeleccionNivel] Nivel más alto desbloqueado: " + nivelMasAlto);
+
+            // 2. Habilitamos los botones según el progreso
+            botonNivel1.setDisabled(false); // El nivel 1 siempre está disponible
+            botonNivel2.setDisabled(nivelMasAlto < 2); // Se deshabilita si el nivel más alto es menor que 2
+            botonNivel3.setDisabled(nivelMasAlto < 3); // Se deshabilita si el nivel más alto es menor que 3
         }
 
         // Lógica para la selección inicial (como en la pantalla de personajes)

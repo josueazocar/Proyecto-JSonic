@@ -412,6 +412,13 @@ public class LocalServer implements IGameServer {
                     else if (itemRecogido.tipo == ItemState.ItemType.TELETRANSPORTE) {
                         System.out.println("[LOCAL SERVER] Jugador ha activado el teletransportador.");
                         String destinoMapa = destinosPortales.get(paquete.idItem);
+
+                        String mapaActual = manejadorNivel.getNombreMapaActual();
+                        if (mapaActual.equals("maps/ZonaJefeN1.tmx")) {
+                            GestorDeProgreso.guardarProgresoDeNivel(2);
+                        } else if (mapaActual.equals("maps/ZonaJefeN2.tmx")) {
+                            GestorDeProgreso.guardarProgresoDeNivel(3);
+                        }
                         if (destinoMapa == null) {
                             System.err.println("[LOCAL SERVER] Error: El portal con ID " + paquete.idItem + " no tiene un mapa de destino definido.");
                             return; // Salimos para evitar el error.

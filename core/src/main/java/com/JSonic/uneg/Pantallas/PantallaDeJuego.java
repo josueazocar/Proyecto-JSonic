@@ -1419,13 +1419,6 @@ public class PantallaDeJuego extends PantallaBase {
         }
     }
 
-    @Override
-    public void hide() {
-        if (soundManager != null) {
-            soundManager.stopBackgroundMusic();
-        }
-    }
-
 
     @Override
     public void pause() {
