@@ -65,7 +65,7 @@ public class PantallaDeJuego extends PantallaBase {
     private final HashMap<Integer, RobotVisual> enemigosEnPantalla = new HashMap<>();
     private final HashMap<Integer, ItemVisual> itemsEnPantalla = new HashMap<>();
     private int anillosTotal = 0;
-    private int basuraTotal = 0;
+    private static int basuraTotal = 0;
     private float porcentajeContaminacionActual = 0f;
 
     //para el label de los aniamles
@@ -132,7 +132,16 @@ public class PantallaDeJuego extends PantallaBase {
         this.localServer = server;
         this.assetManager = juego.assetManager;
         this.soundManager = juego.getSoundManager();
+        this.basuraTotal = 0;
         inicializar();
+    }
+
+    public static int getBasuraTotal() {
+        return basuraTotal;
+    }
+
+    public static void setBasuraTotal(int basuraTotal) {
+        PantallaDeJuego.basuraTotal = basuraTotal;
     }
 
 

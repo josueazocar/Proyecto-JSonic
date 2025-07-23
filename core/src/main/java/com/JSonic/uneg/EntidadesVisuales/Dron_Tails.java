@@ -129,7 +129,7 @@ public class Dron_Tails {
 
                             levelManager.generarArbol(posicion.x, posicion.y);
                             System.out.println("[DRON LOCAL] Árbol plantado localmente.");
-                            LocalServer.decreaseContamination(5);
+                            LocalServer.decreaseContamination(15);
 
 
                             if (objetivo != null) {

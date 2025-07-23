@@ -450,25 +450,54 @@ public class GameServer implements IGameServer {
                     int jugadorId = conexion.getID();
                     PlayerState jugador = jugadores.get(jugadorId);
 
-                    // Solo se puede invocar si el jugador existe y no tiene un dron ya activo.
-                    if (jugador != null && !dronesActivos.containsKey(jugadorId)) {
-                        // Creamos un nuevo DronState usando el constructor del servidor
-                        DronState nuevoDron = new DronState(proximoIdDron++, jugadorId, jugador.x, jugador.y);
-                        dronesActivos.put(jugadorId, nuevoDron);
+                    // 1. Verificación de seguridad: El jugador debe existir, ser Tails y no tener ya un dron activo.
+                    if (jugador != null && jugador.characterType == PlayerState.CharacterType.TAILS && !dronesActivos.containsKey(jugadorId)) {
 
-                        System.out.println("[SERVER DEBUG] Dron CREADO para jugador " + jugadorId + ". Timer inicial: " + nuevoDron.temporizador);
-                        Network.PaqueteDronEstado paqueteEstado = new Network.PaqueteDronEstado();
-                        paqueteEstado.ownerId = jugador.id;
-                        paqueteEstado.nuevoEstado = DronState.EstadoDron.APARECIENDO;
-                        paqueteEstado.x = jugador.x; // Posición inicial
-                        paqueteEstado.y = jugador.y;
-                        servidor.sendToAllTCP(paqueteEstado);
-                        // Notificamos al dueño que su petición fue exitosa y debe mostrar el mensaje
-                        Network.PaqueteMensajeUI msg = new Network.PaqueteMensajeUI();
-                        msg.mensaje = "Sembrando árbol...";
-                        conexion.sendTCP(msg);
+                        // 2. Obtenemos la cantidad de basura DESDE LOS REGISTROS DEL SERVIDOR (la fuente de la verdad).
+                        int basuraActual = puntajesBasuraIndividuales.getOrDefault(jugadorId, 0);
 
-                        System.out.println("[SERVER] Jugador " + jugadorId + " ha invocado un dron.");
+                        // 3. El SERVIDOR comprueba si se cumple la condición.
+                        if (basuraActual >= 20) {
+                            // --- ACCIÓN APROBADA ---
+
+                            // a. El servidor aplica el coste de la habilidad.
+                            puntajesBasuraIndividuales.put(jugadorId, basuraActual - 20);
+
+                            // b. El servidor notifica al jugador de su nuevo total de basura para actualizar su UI.
+                            Network.PaqueteActualizacionPuntuacion paquetePuntaje = new Network.PaqueteActualizacionPuntuacion();
+                            paquetePuntaje.nuevosAnillos = puntajesAnillosIndividuales.getOrDefault(jugadorId, 0);
+                            paquetePuntaje.nuevaBasura = puntajesBasuraIndividuales.get(jugadorId);
+                            paquetePuntaje.totalBasuraReciclada = basuraReciclada;
+                            conexion.sendTCP(paquetePuntaje);
+
+                            // c. El servidor ejecuta la acción: crea el estado del dron (tu código original).
+                            DronState nuevoDron = new DronState(proximoIdDron++, jugadorId, jugador.x, jugador.y);
+                            dronesActivos.put(jugadorId, nuevoDron);
+
+                            System.out.println("[SERVER DEBUG] Dron CREADO para jugador " + jugadorId + ". Timer inicial: " + nuevoDron.temporizador);
+
+                            // d. El servidor notifica a TODOS los clientes que el dron ha aparecido.
+                            Network.PaqueteDronEstado paqueteEstado = new Network.PaqueteDronEstado();
+                            paqueteEstado.ownerId = jugador.id;
+                            paqueteEstado.nuevoEstado = DronState.EstadoDron.APARECIENDO;
+                            paqueteEstado.x = jugador.x; // Posición inicial
+                            paqueteEstado.y = jugador.y;
+                            servidor.sendToAllTCP(paqueteEstado);
+
+                            // e. El servidor envía un mensaje de confirmación al jugador que lo invocó.
+                            Network.PaqueteMensajeUI msg = new Network.PaqueteMensajeUI();
+                            msg.mensaje = "Sembrando árbol...";
+                            conexion.sendTCP(msg);
+
+                            System.out.println("[SERVER] Jugador " + jugadorId + " ha invocado un dron.");
+
+                        } else {
+                            // --- ACCIÓN DENEGADA ---
+                            // Si no tiene suficiente basura, el servidor le envía un mensaje de error solo a él.
+                            Network.PaqueteMensajeUI msg = new Network.PaqueteMensajeUI();
+                            msg.mensaje = "Necesitas recoger 20 basuras";
+                            conexion.sendTCP(msg);
+                        }
                     }
                 } if (objeto instanceof Network.PaqueteBasuraDepositada) {
                     System.out.println("[SERVER] ¡Recibido PaqueteBasuraDepositada!");
@@ -485,28 +514,56 @@ public class GameServer implements IGameServer {
                         for (int basuraDeJugador : puntajesBasuraIndividuales.values()) {
                             basuraDepositadaEstaVez += basuraDeJugador;
                         }
+                        // 3. CONDICIÓN Y CURACIÓN: Si se recicló basura, curamos a TODOS los jugadores.
+                        if (basuraDepositadaEstaVez >=5) {
+                            System.out.println("[SERVER] Reciclando " + basuraDepositadaEstaVez + " de basura. Curando a todos los jugadores.");
 
-                        // 3. ACTUALIZACIÓN DE TOTALES:
-                        basuraReciclada += basuraDepositadaEstaVez;
-                        EstadisticasJugador stats = estadisticasJugadores.get(idJugadorQueActivo);
-                        if (stats != null && basuraDepositadaEstaVez > 0) {
-                            // Actualizamos sus puntos sumando la cantidad de basura reciclada.
-                            stats.sumarObjetosReciclados(basuraDepositadaEstaVez);
-                            System.out.println("[STATS] Jugador " + idJugadorQueActivo + " recicló " + basuraDepositadaEstaVez + " objetos.");
-                        }
-                        // 4. REINICIO DE CONTADORES:
-                        puntajesBasuraIndividuales.replaceAll((id, valorActual) -> 0);
-                        System.out.println("[SERVER DEBUG] Mapa de basuras después del reinicio: " + puntajesBasuraIndividuales.toString());
+                            // Iteramos sobre cada jugador conectado para aplicarle la curación.
+                            for (PlayerState jugadorACurar : jugadores.values()) {
+                                // a. Calculamos la nueva vida sin exceder el máximo.
+                                int vidaNueva = jugadorACurar.vida + 10;
+                                jugadorACurar.vida = Math.min(vidaNueva, Player.MAX_VIDA);
 
-                        // 5. NOTIFICACIÓN A TODOS:
-                        for (Integer idJugadorConectado : jugadores.keySet()) {
-                            Network.PaqueteActualizacionPuntuacion paquetePuntaje = new Network.PaqueteActualizacionPuntuacion();
-                            paquetePuntaje.nuevosAnillos = puntajesAnillosIndividuales.getOrDefault(idJugadorConectado, 0);
-                            paquetePuntaje.nuevaBasura = puntajesBasuraIndividuales.getOrDefault(idJugadorConectado, 0);
-                            paquetePuntaje.totalBasuraReciclada = basuraReciclada;
-                            servidor.sendToTCP(idJugadorConectado, paquetePuntaje);
+                                // b. Creamos un paquete de actualización de vida PARA ESE JUGADOR.
+                                Network.PaqueteActualizacionVida paqueteVida = new Network.PaqueteActualizacionVida();
+                                paqueteVida.idJugador = jugadorACurar.id;
+                                paqueteVida.nuevaVida = jugadorACurar.vida;
+
+                                // c. Enviamos la notificación de su nueva vida a cada jugador individualmente.
+                                servidor.sendToTCP(jugadorACurar.id, paqueteVida);
+                            }
+
+                            Network.PaqueteMensajeUI msg = new Network.PaqueteMensajeUI();
+                            msg.mensaje = "Basura reciclada +10 SALUD A TODOS!";
+                            conexion.sendTCP(msg);
+
+                            // 3. ACTUALIZACIÓN DE TOTALES:
+                            basuraReciclada += basuraDepositadaEstaVez;
+                            EstadisticasJugador stats = estadisticasJugadores.get(idJugadorQueActivo);
+                            if (stats != null && basuraDepositadaEstaVez > 0) {
+                                // Actualizamos sus puntos sumando la cantidad de basura reciclada.
+                                stats.sumarObjetosReciclados(basuraDepositadaEstaVez);
+                                System.out.println("[STATS] Jugador " + idJugadorQueActivo + " recicló " + basuraDepositadaEstaVez + " objetos.");
+                            }
+                            // 4. REINICIO DE CONTADORES:
+                            puntajesBasuraIndividuales.replaceAll((id, valorActual) -> 0);
+                            System.out.println("[SERVER DEBUG] Mapa de basuras después del reinicio: " + puntajesBasuraIndividuales.toString());
+
+                            // 5. NOTIFICACIÓN A TODOS:
+                            for (Integer idJugadorConectado : jugadores.keySet()) {
+                                Network.PaqueteActualizacionPuntuacion paquetePuntaje = new Network.PaqueteActualizacionPuntuacion();
+                                paquetePuntaje.nuevosAnillos = puntajesAnillosIndividuales.getOrDefault(idJugadorConectado, 0);
+                                paquetePuntaje.nuevaBasura = puntajesBasuraIndividuales.getOrDefault(idJugadorConectado, 0);
+                                paquetePuntaje.totalBasuraReciclada = basuraReciclada;
+                                servidor.sendToTCP(idJugadorConectado, paquetePuntaje);
+                            }
+                            System.out.println("[SERVER] Paquetes de actualización de puntuación enviados a todos los jugadores.");
+                        } else {
+                            Network.PaqueteMensajeUI msg = new Network.PaqueteMensajeUI();
+                            msg.mensaje = "Necesitan recoger 5 Basuras para Curarse!";
+                            conexion.sendTCP(msg);
                         }
-                        System.out.println("[SERVER] Paquetes de actualización de puntuación enviados a todos los jugadores.");
+
                     }
                 } if (objeto instanceof Network.PaqueteBloqueDestruido paquete) {
                     PlayerState jugador = jugadores.get(paquete.idJugador);

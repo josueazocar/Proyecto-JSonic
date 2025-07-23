@@ -3,6 +3,7 @@ package network;
 import com.JSonic.uneg.*;
 import com.JSonic.uneg.EntidadesVisuales.Player;
 import com.JSonic.uneg.EntidadesVisuales.Sonic;
+import com.JSonic.uneg.EntidadesVisuales.Tails;
 import com.JSonic.uneg.Pantallas.EstadisticasJugador;
 import com.JSonic.uneg.Pantallas.PantallaDeJuego;
 import com.JSonic.uneg.State.*;
@@ -557,12 +558,32 @@ public class LocalServer implements IGameServer {
                     System.out.println("[STATS] Jugador 1 recicló " + paquete.cantidad + " objetos.");
                 }
 
-                // 3. Enviamos la actualización completa al cliente.
-                Network.PaqueteActualizacionPuntuacion paquetePuntaje = new Network.PaqueteActualizacionPuntuacion();
-                paquetePuntaje.nuevosAnillos = puntajesAnillos.getOrDefault(idJugador, 0);
-                paquetePuntaje.nuevaBasura = puntajesBasura.get(idJugador); // Será 0
-                paquetePuntaje.totalBasuraReciclada = this.basuraReciclada; // Enviamos el nuevo total
-                clienteLocal.recibirPaqueteDelServidor(paquetePuntaje);
+                if (paquete.cantidad >= 5 && personajeJugable instanceof Tails) {
+                    // 2. Lógica de Curación: Si se cumplió la condición, curamos al jugador.
+                    PlayerState estadoJugador = jugadores.get(idJugador);
+                    if (estadoJugador != null) {
+                        // Sumamos 10 a la vida actual.
+                        int vidaNueva = estadoJugador.vida + 10;
+                        personajeJugable.mostrarMensaje("Basura reciclada +10 SALUD!");
+                        // Usamos Math.min para asegurarnos de que la vida no supere el máximo (¡muy importante!).
+                        estadoJugador.vida = Math.min(vidaNueva, Player.MAX_VIDA);
+
+                        System.out.println("[LOCAL SERVER] Jugador curado. Vida nueva: " + estadoJugador.vida);
+
+                        // 3. Notificación de Vida: Enviamos un paquete para que la UI de la barra de vida se actualice.
+                        Network.PaqueteActualizacionVida paqueteVida = new Network.PaqueteActualizacionVida();
+                        paqueteVida.idJugador = idJugador;
+                        paqueteVida.nuevaVida = estadoJugador.vida;
+                        clienteLocal.recibirPaqueteDelServidor(paqueteVida);
+                    }
+                    // 3. Enviamos la actualización completa al cliente.
+                    Network.PaqueteActualizacionPuntuacion paquetePuntaje = new Network.PaqueteActualizacionPuntuacion();
+                    paquetePuntaje.nuevosAnillos = puntajesAnillos.getOrDefault(idJugador, 0);
+                    paquetePuntaje.nuevaBasura = puntajesBasura.get(idJugador); // Será 0
+                    paquetePuntaje.totalBasuraReciclada = this.basuraReciclada; // Enviamos el nuevo total
+                    clienteLocal.recibirPaqueteDelServidor(paquetePuntaje);
+                } else personajeJugable.mostrarMensaje("Recoge por lo menos 5 basuras");
+
             }
            else if (objeto instanceof Network.PaqueteSolicitudHabilidadLimpieza) {
                 // --- INICIO DE LA MODIFICACIÓN ---
@@ -649,6 +670,26 @@ public class LocalServer implements IGameServer {
 
                 // Detenemos el bucle para no procesar más paquetes en este frame.
                 break;
+            }else if (objeto instanceof Network.PaqueteHabilidadDronUsada) {
+                System.out.println("[LOCAL SERVER] Recibida notificación de uso de habilidad de dron.");
+                int idJugador = 1; // En modo local, el jugador siempre es el ID 1
+
+                // a. Obtenemos la basura actual DESDE EL SERVIDOR
+                int basuraActual = puntajesBasura.getOrDefault(idJugador, 0);
+
+                // b. Comprobamos de nuevo la condición (por si acaso) y aplicamos el coste
+                if (basuraActual >= 20) {
+                    puntajesBasura.put(idJugador, basuraActual - 20);
+                }
+
+                // c. Creamos y enviamos el paquete de actualización AHORA SÍ con el valor correcto
+                Network.PaqueteActualizacionPuntuacion paquetePuntaje = new Network.PaqueteActualizacionPuntuacion();
+                paquetePuntaje.nuevosAnillos = puntajesAnillos.getOrDefault(idJugador, 0);
+                paquetePuntaje.nuevaBasura = puntajesBasura.get(idJugador); // El nuevo valor con el coste restado
+                paquetePuntaje.totalBasuraReciclada = this.basuraReciclada;
+
+                // d. Enviamos el paquete al cliente para que la UI se actualice de forma autoritaria
+                clienteLocal.recibirPaqueteDelServidor(paquetePuntaje);
             }
 
         }

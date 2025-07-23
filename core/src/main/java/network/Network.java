@@ -92,6 +92,7 @@ public class Network {
         kryo.register(PaqueteGameOver.class);
         kryo.register(ForzarFinDeJuegoDebug.class);
         kryo.register(PaqueteActualizacionVidaEnemigo.class);
+        kryo.register(PaqueteHabilidadDronUsada.class);
     }
 
     // --- Definición de los Paquetes ---
@@ -298,6 +299,10 @@ public class Network {
     public static class PaqueteActualizacionVidaEnemigo {
         public int idEnemigo;
         public int nuevaVida;
+    }
+
+    public static class PaqueteHabilidadDronUsada {
+        // No necesita contenido. Su existencia es el mensaje.
     }
 }
 
