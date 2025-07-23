@@ -4,6 +4,7 @@ package com.JSonic.uneg.Pantallas;
 import com.JSonic.uneg.JSonicJuego;
 import com.JSonic.uneg.State.PlayerState;
 import com.badlogic.gdx.Gdx;
+import com.badlogic.gdx.audio.Sound;
 import com.badlogic.gdx.graphics.GL20;
 import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.TextureAtlas;
@@ -25,6 +26,10 @@ public class PantallaSeleccionPersonaje extends PantallaBase {
     private ButtonGroup<Button> characterGroup;
     private PlayerState.CharacterType personajeSeleccionado;
 
+    private Sound sonicSonido;
+    private Sound tailsSonido;
+    private Sound knucklesSonido;
+
     public PantallaSeleccionPersonaje(JSonicJuego juegoApp) {
         super("");
         this.juegoApp = juegoApp;
@@ -45,6 +50,10 @@ public class PantallaSeleccionPersonaje extends PantallaBase {
         mainStage.addActor(new Image(new Texture("Fondos/Portada_desenfoque.png")));
         characterAtlas = new TextureAtlas(Gdx.files.internal("Atlas/seleccionPersonajes.atlas"));
 
+        sonicSonido = Gdx.audio.newSound(Gdx.files.internal("SoundsBackground/SONIC_VOZ.wav"));
+        tailsSonido = Gdx.audio.newSound(Gdx.files.internal("SoundsBackground/TAILS_VOZ.wav"));
+        knucklesSonido = Gdx.audio.newSound(Gdx.files.internal("SoundsBackground/KNUCKLES_VOZ.wav"));
+
         Table tabla = new Table();
         tabla.setFillParent(true);
         mainStage.addActor(tabla);
@@ -59,9 +68,24 @@ public class PantallaSeleccionPersonaje extends PantallaBase {
         characterGroup.setMaxCheckCount(1);
         characterGroup.setMinCheckCount(1);
 
-        sonicButton.addListener(new ClickListener() {@Override public void clicked(InputEvent e, float x, float y) {if (!sonicButton.isDisabled()) personajeSeleccionado = PlayerState.CharacterType.SONIC;}});
-        tailsButton.addListener(new ClickListener() { @Override public void clicked(InputEvent e, float x, float y) { if (!tailsButton.isDisabled()) personajeSeleccionado = PlayerState.CharacterType.TAILS; }});
-        knucklesButton.addListener(new ClickListener() { @Override public void clicked(InputEvent e, float x, float y) { if (!knucklesButton.isDisabled()) personajeSeleccionado = PlayerState.CharacterType.KNUCKLES; }});
+        sonicButton.addListener(new ClickListener() {@Override public void clicked(InputEvent e, float x, float y) {
+            if (!sonicButton.isDisabled()){
+                personajeSeleccionado = PlayerState.CharacterType.SONIC;
+                sonicSonido.play(0.8f);
+            }
+        }});
+        tailsButton.addListener(new ClickListener() { @Override public void clicked(InputEvent e, float x, float y) {
+            if (!tailsButton.isDisabled()) {
+                personajeSeleccionado = PlayerState.CharacterType.TAILS;
+                tailsSonido.play(0.8f);
+            }
+        }});
+        knucklesButton.addListener(new ClickListener() { @Override public void clicked(InputEvent e, float x, float y) {
+            if (!knucklesButton.isDisabled()) {
+                personajeSeleccionado = PlayerState.CharacterType.KNUCKLES;
+                knucklesSonido.play(0.8f);
+            }
+        }});
 
 
         Button.ButtonStyle seguirBtonEstilo = new Button.ButtonStyle();
@@ -245,5 +269,8 @@ public class PantallaSeleccionPersonaje extends PantallaBase {
     public void dispose() {
         mainStage.dispose();
         characterAtlas.dispose();
+        if (sonicSonido != null) sonicSonido.dispose();
+        if (tailsSonido != null) tailsSonido.dispose();
+        if (knucklesSonido != null) knucklesSonido.dispose();
     }
 }
