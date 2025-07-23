@@ -810,6 +810,11 @@ public class PantallaDeJuego extends PantallaBase {
                         soundManager.play("recolectar_esmeralda");
                     }
                     // Podrías añadir más `else if` para otros items como la basura
+                    else if (item instanceof BasuraVisual) {
+                        soundManager.play("recolectar_basura");
+                    }else if (item instanceof PiezaDePlasticoVisual) {
+                        soundManager.play("recolectar_basura");
+                    }
                 }
 
                 Network.PaqueteSolicitudRecogerItem paquete = new Network.PaqueteSolicitudRecogerItem();

@@ -45,8 +45,9 @@ public class JSonicJuego extends JuegoBase {
         soundManager.registerSound("golpe", "SoundsBackground/golpeGeneral.wav");
         soundManager.registerSound("habilidad_knuckles_punch", "SoundsBackground/golpeknuckle.mp3");
         soundManager.registerSound("habilidad_Tails_punch", "SoundsBackground/robotsTails.wav");
-        soundManager.registerSound("habilidad_Sonic_punch", "SoundsBackground/habilidadEspecialSonic.mp3");
-
+        soundManager.registerSound("habilidad_Sonic_punch", "SoundsBackground/spinSonic.mp3");
+        soundManager.registerSound("recolectar_basura", "SoundsBackground/recolectarBasura.mp3");
+        soundManager.registerSound("spin", "SoundsBackground/habilidadEspecialSonic.mp3");
         assetManager.finishLoading();
 
         // Inicializar la pantalla de menú al iniciar el juego

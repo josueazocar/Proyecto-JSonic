@@ -153,7 +153,7 @@ public class Sonic extends Player {
             estado.y = currentY;
         }
         else if (Gdx.input.isKeyPressed(Input.Keys.L)) {
-
+            if (soundManager != null) soundManager.play("spin");
             if (Gdx.input.isKeyPressed(Input.Keys.A)) {
                 setEstadoActual(EstadoPlayer.SPECIAL_LEFT);
                 lastDirection = EstadoPlayer.LEFT;
