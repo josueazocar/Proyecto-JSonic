@@ -149,6 +149,7 @@ public class PantallaDeJuego extends PantallaBase {
         personajeJugableEstado.y = llegada.y;
         // 1. Asigna el tipo de personaje al estado que se usará para el jugador local.
         personajeJugableEstado.characterType = miPersonaje;
+
         System.out.println("[JUEGO] Personaje recibido del menú: " + miPersonaje);
 
         // 2. Crea la instancia del personaje jugable localmente.
@@ -173,6 +174,8 @@ public class PantallaDeJuego extends PantallaBase {
 
 
         manejadorNivel.setPlayer(personajeJugable);
+        //justo despues de crear al personaje
+        personajeJugable.setSoundManager(this.soundManager);
         //assetManager = new AssetManager();
         //soundManager = new SoundManager(assetManager);
         //soundManager.loadMusic(BACKGROUND_MUSIC_PATH2);
@@ -790,6 +793,16 @@ public class PantallaDeJuego extends PantallaBase {
             Map.Entry<Integer, ItemVisual> entry = iter.next();
             ItemVisual item = entry.getValue();
             if (personajeJugable.getBounds() != null && item.getBounds() != null && Intersector.overlaps(personajeJugable.getBounds(), item.getBounds())) {
+
+                if (soundManager != null) {
+                    if (item instanceof AnillosVisual) {
+                        soundManager.play("recolectar_anillo");
+                    } else if (item instanceof EsmeraldaVisual) {
+                        soundManager.play("recolectar_esmeralda");
+                    }
+                    // Podrías añadir más `else if` para otros items como la basura
+                }
+
                 Network.PaqueteSolicitudRecogerItem paquete = new Network.PaqueteSolicitudRecogerItem();
                 paquete.idItem = item.estado.id;
 
@@ -1113,7 +1126,8 @@ public class PantallaDeJuego extends PantallaBase {
         );
         velocidad.nor().scl(180f);
         estadoBomba.estadoAnimacion = (velocidad.x >= 0) ? EnemigoState.EstadoEnemigo.RUN_RIGHT : EnemigoState.EstadoEnemigo.RUN_LEFT;
-        Bomba nuevaBomba = new Bomba(estadoBomba, velocidad, 2.5f);
+          // Cambia la línea de creación de la bomba por esta:
+          Bomba nuevaBomba = new Bomba(estadoBomba, velocidad, 2.5f, this.soundManager);
         listaDeBombas.add(nuevaBomba);
     }
 

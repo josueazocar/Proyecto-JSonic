@@ -83,6 +83,7 @@ public class Knuckles extends Player {
         // 2. Maneja las teclas de acción inmediata (J, K) que deben anular el movimiento continuo por un corto período.
         // Estas son acciones que impiden el movimiento mientras duran.
         if (Gdx.input.isKeyJustPressed(Input.Keys.J)) {
+            if (soundManager != null) soundManager.play("golpe");
             if (lastDirection == EstadoPlayer.LEFT || lastDirection == EstadoPlayer.IDLE_LEFT) {
                 setEstadoActual(EstadoPlayer.HIT_LEFT);
             } else {
@@ -97,6 +98,7 @@ public class Knuckles extends Player {
 
         //para ataque especial (ROMPER BASURA IRROMPIBLE PARA OTROS PERSONAJES)
         else if (Gdx.input.isKeyJustPressed(Input.Keys.SPACE)) { // Usamos la tecla Space para el puñetazo
+            if (soundManager != null) soundManager.play("habilidad_knuckles_punch");
             if (lastDirection == EstadoPlayer.LEFT || lastDirection == EstadoPlayer.IDLE_LEFT) {
                 setEstadoActual(EstadoPlayer.PUNCH_LEFT);
             } else {
@@ -115,6 +117,7 @@ public class Knuckles extends Player {
         // 3. Maneja el ROMPE BLOQUES - Esta es una acción continua que SÍ permite movimiento en el eje X.
         // Se usa 'else if' para que SPIN solo se active si J o K no fueron presionadas.
         else if (Gdx.input.isKeyPressed(Input.Keys.L)) {
+
             // Determina la dirección del ROMPE BLOQUES basándose en WASD si se presiona.
             if (Gdx.input.isKeyPressed(Input.Keys.A)) {
                 setEstadoActual(EstadoPlayer.SPECIAL_LEFT);

@@ -39,13 +39,13 @@ public class JSonicJuego extends JuegoBase {
         soundManager = new SoundManager(assetManager);
 
         soundManager.loadClickSound("SoundsBackground/Boton_sonido.wav");
-        soundManager.registerSound("recolectar_anillo", "SoundsBackground/recoleccionDeAnillos.mp3");
-        soundManager.registerSound("recolectar_esmeralda", "SoundsBackground/habilidadEspecialSonic.mp3");
-        soundManager.registerSound("explosion_bomba", "SoundsBackground/recoleccionDeObjetos.mp3");
-        soundManager.registerSound("golpe", "SoundsBackground/robotTails.mp3");
-        soundManager.registerSound("habilidad_knuckles_punch", "SoundsBackground/golpeGeneral.mp3");
-        soundManager.registerSound("habilidad_Tails_punch", "SoundsBackground/golpeknuckles.mp3");
-        soundManager.registerSound("habilidad_Sonic_punch", "SoundsBackground/misil.mp3");
+        soundManager.registerSound("recolectar_anillo", "SoundsBackground/RecoleccionAnillos.wav");
+        soundManager.registerSound("recolectar_esmeralda", "SoundsBackground/EsmeraldasSonido.wav");
+        soundManager.registerSound("explosion_bomba", "SoundsBackground/misil.wav");
+        soundManager.registerSound("golpe", "SoundsBackground/golpeGeneral.mp3");
+        soundManager.registerSound("habilidad_knuckles_punch", "SoundsBackground/golpeknuckle.mp3");
+        soundManager.registerSound("habilidad_Tails_punch", "SoundsBackground/robotsTails.mp3");
+        soundManager.registerSound("habilidad_Sonic_punch", "SoundsBackground/habilidadEspecialSonic.mp3");
 
         assetManager.finishLoading();
 

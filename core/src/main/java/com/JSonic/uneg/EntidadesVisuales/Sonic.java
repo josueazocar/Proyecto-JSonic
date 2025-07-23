@@ -114,6 +114,8 @@ public class Sonic extends Player {
         super.KeyHandler();
 
         if (Gdx.input.isKeyJustPressed(Input.Keys.SPACE) ) {
+
+            if (soundManager != null) soundManager.play("habilidad_Sonic_punch");
             //  this.flashDurationTimer = 0.25f;
             //  this.cleanCooldownTimer = CLEAN_COOLDOWN_SECONDS;
             Gdx.app.log("Sonic", "Habilidad activada. Cooldown de " + CLEAN_COOLDOWN_SECONDS + "s iniciado.");
@@ -128,6 +130,7 @@ public class Sonic extends Player {
         }
 
         if (Gdx.input.isKeyJustPressed(Input.Keys.J)) {
+            if (soundManager != null) soundManager.play("golpe");
             if (lastDirection == EstadoPlayer.LEFT || lastDirection == EstadoPlayer.IDLE_LEFT) {
                 setEstadoActual(EstadoPlayer.HIT_LEFT);
             } else {
@@ -138,6 +141,7 @@ public class Sonic extends Player {
             estado.x = currentX;
             estado.y = currentY;
         } else if (Gdx.input.isKeyJustPressed(Input.Keys.K)) {
+            if (soundManager != null) soundManager.play("golpe");
             if (lastDirection == EstadoPlayer.LEFT || lastDirection == EstadoPlayer.IDLE_LEFT) {
                 setEstadoActual(EstadoPlayer.KICK_LEFT);
             } else {
@@ -149,6 +153,7 @@ public class Sonic extends Player {
             estado.y = currentY;
         }
         else if (Gdx.input.isKeyPressed(Input.Keys.L)) {
+
             if (Gdx.input.isKeyPressed(Input.Keys.A)) {
                 setEstadoActual(EstadoPlayer.SPECIAL_LEFT);
                 lastDirection = EstadoPlayer.LEFT;

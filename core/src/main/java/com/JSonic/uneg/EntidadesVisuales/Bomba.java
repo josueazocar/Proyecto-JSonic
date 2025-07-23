@@ -1,6 +1,7 @@
 // Archivo: src/com/JSonic/uneg/Bomba.java
 package com.JSonic.uneg.EntidadesVisuales;
 
+import com.JSonic.uneg.SoundManager;
 import com.JSonic.uneg.State.EnemigoState;
 import com.JSonic.uneg.State.EnemigoState.EstadoEnemigo;
 import com.badlogic.gdx.Gdx;
@@ -40,13 +41,16 @@ public class Bomba {
 
     // [AGREGADO] Radio de proximidad para que la bomba explote cerca del jugador.
     private static final float RADIO_PROXIMIDAD = 50f; // Puedes ajustar este valor
+    private transient SoundManager soundManager;
 
-    public Bomba(EnemigoState estadoInicial, Vector2 velocidad, float tiempoDeVida) {
+    public Bomba(EnemigoState estadoInicial, Vector2 velocidad, float tiempoDeVida, SoundManager soundManager) {
         this.estado = estadoInicial;
         this.velocidad = velocidad;
         this.tiempoDeVida = tiempoDeVida;
+        this.soundManager = soundManager;
         this.tiempoXFrame = 0.0f;
         this.animations = new EnumMap<>(EnemigoState.EstadoEnemigo.class);
+
         CargarSprites();
     }
 
@@ -135,10 +139,14 @@ public class Bomba {
 
             // La bomba explota si se acaba el tiempo O si está lo suficientemente cerca del jugador.
             if (tiempoDeVida <= 0 || distanciaAlJugador < RADIO_PROXIMIDAD) {
+                if (soundManager != null) {
+                    soundManager.play("explosion_bomba");
+                }
                 // Iniciar explosión
                 explotando = true;
                 tiempoXFrame = 0; // Reiniciar timer de animación para la explosión
                 setEstadoActual(velocidad.x > 0 ? EstadoEnemigo.HIT_RIGHT : EstadoEnemigo.HIT_LEFT);
+
             }
         } else {
             // Fase de explosión

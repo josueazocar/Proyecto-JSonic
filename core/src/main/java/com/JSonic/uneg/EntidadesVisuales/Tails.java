@@ -134,6 +134,7 @@ public class Tails extends Player {
 
         // --- INVOCACIÓN DEL DRON CON DEPURACIÓN ---
         if (Gdx.input.isKeyJustPressed(Input.Keys.SPACE)) {
+            if (soundManager != null) soundManager.play("habilidad_Tails_punch");
             // Mensaje de diagnóstico para saber qué modo está detectando
 
             // Si la bandera isOnlineMode es verdadera, estamos en una partida MULTIJUGADOR real.
@@ -166,6 +167,7 @@ public class Tails extends Player {
         }
 
         if (Gdx.input.isKeyJustPressed(Input.Keys.J)) {
+            if (soundManager != null) soundManager.play("golpe");
             if (lastDirection == EstadoPlayer.LEFT || lastDirection == EstadoPlayer.IDLE_LEFT) {
                 setEstadoActual(EstadoPlayer.HIT_LEFT);
             } else {
@@ -177,6 +179,7 @@ public class Tails extends Player {
             estado.y = currentY;
         }
         else if (Gdx.input.isKeyPressed(Input.Keys.L)) {
+
             if (Gdx.input.isKeyPressed(Input.Keys.A)) {
                 setEstadoActual(EstadoPlayer.SPECIAL_LEFT);
                 lastDirection = EstadoPlayer.LEFT;

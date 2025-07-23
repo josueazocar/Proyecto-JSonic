@@ -16,6 +16,7 @@ public class SoundManager {
     private String currentMusicPath; // Para recordar qué música está sonando
     private Sound sonidoClick;
     private String clickSoundPath;
+    private float musicVolume = 1.0f;
 
     // Constructor que recibe el AssetManager
     public SoundManager(AssetManager assetManager) {
@@ -60,6 +61,13 @@ public class SoundManager {
 
     public void setSfxVolume(float volume) { this.sfxVolume = volume; }
 
+    public void setMusicVolume(float volume) {
+        this.musicVolume = Math.max(0, Math.min(1, volume));
+        if (backgroundMusic != null) {
+            backgroundMusic.setVolume(this.musicVolume);
+        }
+    }
+
     // Método para obtener la música una vez cargada
     private Music getLoadedMusic(String filePath) {
         if (assetManager.isLoaded(filePath, Music.class)) {
@@ -94,19 +102,9 @@ public class SoundManager {
             Gdx.app.log("SoundManager", "Error: No se pudo reproducir la música " + filePath);
         }
 
-        // --- Controles de Audio ---
 
-        public void stopBackgroundMusic() { if (backgroundMusic != null) backgroundMusic.stop(); }
-        public void pauseBackgroundMusic() { if (backgroundMusic != null) backgroundMusic.pause(); }
-        public void resumeBackgroundMusic() { if (backgroundMusic != null) backgroundMusic.play(); }
-        public void setSfxVolume(float volume) { this.sfxVolume = Math.max(0, Math.min(1, volume)); }
-        public void setMusicVolume(float volume) {
-            this.musicVolume = Math.max(0, Math.min(1, volume));
-            if (backgroundMusic != null) {
-                backgroundMusic.setVolume(this.musicVolume);
-            }
-        }
     }
+
 
 
 
