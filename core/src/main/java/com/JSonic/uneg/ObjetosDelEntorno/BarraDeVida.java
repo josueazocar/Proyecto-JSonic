@@ -44,6 +44,8 @@ public class BarraDeVida extends Table {
      * si el efecto de "daño" está activo.
      */
     public void actualizar(float vidaActual, float vidaMaxima) {
+        System.out.println("[DEBUG-HUD] El método 'actualizar' recibió vida: " + vidaActual);
+
         String nombreRegionBase = getNombreRegionVida(vidaActual, vidaMaxima);
         String nombreRegionFinal = nombreRegionBase;
 
@@ -63,16 +65,20 @@ public class BarraDeVida extends Table {
         if (vidaMaxima <= 0) return "vida0";
         float porcentaje = (vidaActual / vidaMaxima) * 100;
 
+        String regionResultante;
         if (porcentaje > 75) {
-            return "vida100";
+            regionResultante = "vida100";
         } else if (porcentaje > 50) {
-            return "vida75";
+            regionResultante = "vida75";
         } else if (porcentaje > 25) {
-            return "vida50";
+            regionResultante = "vida50";
         } else if (porcentaje > 0) {
-            return "vida25";
+            regionResultante = "vida25";
         } else {
-            return "vida0";
+            regionResultante = "vida0";
         }
+
+        System.out.println("[DEBUG-HUD] vidaActual=" + vidaActual + " -> porcentaje=" + porcentaje + " -> regionResultante='" + regionResultante + "'");
+        return regionResultante;
     }
 }

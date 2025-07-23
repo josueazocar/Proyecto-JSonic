@@ -20,7 +20,8 @@ public class GameServer implements IGameServer {
 
     private final Server servidor;
     // --- ALMACENES DE ESTADO ---
-    private final HashMap<Integer, PlayerState> jugadores = new HashMap<>();
+   // private final HashMap<Integer, PlayerState> jugadores = new HashMap<>();
+    private final Map<Integer, PlayerState> jugadores = new ConcurrentHashMap<>();
     private final EnumSet<PlayerState.CharacterType> personajesEnUso = EnumSet.noneOf(PlayerState.CharacterType.class);
     private final Map<Integer, EnemigoState> enemigosActivos = new ConcurrentHashMap<>();
     private final Map<Integer, ItemState> itemsActivos = new ConcurrentHashMap<>();

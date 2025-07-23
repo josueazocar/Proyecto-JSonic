@@ -380,8 +380,6 @@ public class PantallaDeJuego extends PantallaBase {
         }
     }
 
-
-
     @Override
     public void actualizar(float deltat) {
 
@@ -646,26 +644,22 @@ public class PantallaDeJuego extends PantallaBase {
                         contaminationLabel.setText("TOXIC: 0%");
                     }
                 } else if (paquete instanceof Network.PaqueteActualizacionVida p) {
-                    // El servidor nos informa que la vida de un jugador ha cambiado.
-
-                    // Comprobamos si la actualización de vida es para NUESTRO jugador.
                     if (personajeJugable != null && p.idJugador == personajeJugable.estado.id) {
 
-                        // Actualizamos el estado de vida de nuestro jugador.
-                        // Asumimos que tienes un método setVida que también actualiza la UI (la barra de vida).
-                        if (p.nuevaVida <= personajeJugable.estado.vida) {
-                            hudVidaJugador.mostrarPerdidaDeVida();
-                        }
+                        // Primero, mostramos el efecto visual de "parpadeo"
+                        hudVidaJugador.mostrarPerdidaDeVida();
 
+                        // Actualizamos el valor directamente en el objeto de estado del jugador
+                        personajeJugable.estado.vida = p.nuevaVida;
+
+                        // Imprimimos el log para confirmar que el valor se recibió
+                        System.out.println("¡Recibido daño! Mi vida ahora es: " + personajeJugable.estado.vida);
+
+                        // Ahora que la vida está actualizada, comprobamos si el juego terminó
                         if (personajeJugable.estado.vida <= 0) {
                             activarGameOver();
                         }
-
-                        personajeJugable.setVida(p.nuevaVida);
-                        System.out.println("¡Recibido daño! Mi vida ahora es: " + p.nuevaVida);
                     }
-                    // Nota: En este diseño, no actualizamos la vida de los otros jugadores,
-                    // pero si en el futuro quisieras mostrar sus barras de vida, la lógica iría aquí.
                 }
                   else if (paquete instanceof Network.PaqueteEntidadEliminada p) {
                     System.out.println("Recibida orden de eliminar entidad con ID: " + p.idEntidad);
@@ -948,6 +942,7 @@ public class PantallaDeJuego extends PantallaBase {
         }
 
         if (personajeJugable != null && hudVidaJugador != null) {
+            System.out.println("[DEBUG-VIDA] Pasando vida al HUD: " + personajeJugable.estado.vida);
             hudVidaJugador.actualizar(personajeJugable.estado.vida, Player.MAX_VIDA);
         }
 

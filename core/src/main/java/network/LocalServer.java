@@ -84,10 +84,8 @@ public class LocalServer implements IGameServer {
     private int basuraReciclada = 0;
 
     public LocalServer() {
-        // El constructor está vacío, la magia ocurre en start() y update()
-
         // Poblamos el mapa con la cantidad de enemigos por nivel.
-        enemigosPorMapa.put("maps/Zona1N1.tmx", 1);
+        enemigosPorMapa.put("maps/Zona1N1.tmx", 8);
         enemigosPorMapa.put("maps/ZonaJefeN1.tmx", 1);
         enemigosPorMapa.put("maps/Zona1N2.tmx", 1);
         enemigosPorMapa.put("maps/ZonaJefeN2.tmx", 1);
