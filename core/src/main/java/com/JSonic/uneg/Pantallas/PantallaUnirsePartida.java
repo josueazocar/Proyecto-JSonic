@@ -80,6 +80,7 @@ public class PantallaUnirsePartida extends PantallaBase {
         actualizarButton.addListener(new ClickListener() {
             @Override
             public void clicked(InputEvent event, float x, float y) {
+                juegoApp.reproducirSonidoClick();
                 descubrirPartidas();
             }
         });
@@ -87,6 +88,7 @@ public class PantallaUnirsePartida extends PantallaBase {
         atrasButton.addListener(new ClickListener() {
             @Override
             public void clicked(InputEvent event, float x, float y) {
+                juegoApp.reproducirSonidoClick();
                 PantallaMenu menu = new PantallaMenu(juegoApp, true);
                 menu.setEstadoMenu(PantallaMenu.EstadoMenu.CREAR_UNIRSE);
                 juegoApp.setPantallaActiva(menu);

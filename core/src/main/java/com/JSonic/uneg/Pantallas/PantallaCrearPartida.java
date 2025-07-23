@@ -63,6 +63,7 @@ public class PantallaCrearPartida extends PantallaBase {
         iniciarPartidaButton.addListener(new ClickListener() {
             @Override
             public void clicked(InputEvent event, float x, float y) {
+                juegoApp.reproducirSonidoClick();
                 String nombrePartida = nombrePartidaField.getText();
                 String tuNombre = tuNombreField.getText();
                 System.out.println("Iniciando partida con nombre: " + nombrePartida + " | Anfitrión: " + tuNombre);
@@ -79,7 +80,7 @@ public class PantallaCrearPartida extends PantallaBase {
         atrasButton.addListener(new ClickListener() {
             @Override
             public void clicked(InputEvent event, float x, float y) {
-
+                juegoApp.reproducirSonidoClick();
                 PantallaMenu pantallaMenu = new PantallaMenu(juegoApp, true);
                 pantallaMenu.setEstadoMenu(PantallaMenu.EstadoMenu.CREAR_UNIRSE);
                 juegoApp.setPantallaActiva(pantallaMenu);

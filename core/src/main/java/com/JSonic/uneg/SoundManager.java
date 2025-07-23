@@ -3,12 +3,15 @@ package com.JSonic.uneg;
 import com.badlogic.gdx.assets.AssetManager;
 import com.badlogic.gdx.audio.Music; // Importar Music para la música de fondo
 import com.badlogic.gdx.Gdx;
+import com.badlogic.gdx.audio.Sound;
 
 public class SoundManager {
 
     private final AssetManager assetManager;
     private Music backgroundMusic; // Objeto Music para la música de fondo
     private String currentMusicPath; // Para recordar qué música está sonando
+    private Sound sonidoClick;
+    private String clickSoundPath;
 
     // Constructor que recibe el AssetManager
     public SoundManager(AssetManager assetManager) {
@@ -101,4 +104,28 @@ public class SoundManager {
         // No llamamos backgroundMusic.dispose() directamente si está gestionado por AssetManager.
         // AssetManager.dispose() en Main se encargará de liberar todos los assets.
     }
+
+    public void loadClickSound(String filePath) {
+        if (!assetManager.isLoaded(filePath, Sound.class)) {
+            assetManager.load(filePath, Sound.class);
+            Gdx.app.log("SoundManager", "Poniendo en cola la carga del sonido de clic: " + filePath);
+        }
+        this.clickSoundPath = filePath;
+    }
+
+    public void playClickSound() {
+        if (sonidoClick == null) {
+            // Comprobamos si la ruta existe y si el asset ya ha sido cargado.
+            if (clickSoundPath != null && assetManager.isLoaded(clickSoundPath, Sound.class)) {
+                sonidoClick = assetManager.get(clickSoundPath, Sound.class);
+            }
+        }
+        if (sonidoClick != null) {
+            sonidoClick.play(0.8f);
+        } else {
+            Gdx.app.log("SoundManager", "Error: El sonido del clic no está disponible. ¿Se llamó a assetManager.finishLoading()?");
+        }
+    }
+
+
 }

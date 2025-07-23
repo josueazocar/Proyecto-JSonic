@@ -80,6 +80,7 @@ public class PantallaAyuda extends PantallaBase {
         btnSalir.addListener(new ClickListener() {
             @Override
             public void clicked(InputEvent event, float x, float y) {
+                juegoApp.reproducirSonidoClick();
                 juegoApp.setScreen(pantallaAnterior);
             }
         });
@@ -87,6 +88,7 @@ public class PantallaAyuda extends PantallaBase {
         btnComoJugar.addListener(new ClickListener() {
             @Override
             public void clicked(InputEvent event, float x, float y) {
+                juegoApp.reproducirSonidoClick();
                 panelDerecho.clear();
                 Table contenidoComoJugar = new Table();
 
@@ -148,6 +150,7 @@ public class PantallaAyuda extends PantallaBase {
         btnEstadisticas.addListener(new ClickListener() {
             @Override
             public void clicked(InputEvent event, float x, float y) {
+                juegoApp.reproducirSonidoClick();
                 // Obtenemos las estadísticas guardadas
                 List<EstadisticasJugador> stats = juegoApp.getEstadisticasUltimaPartida();
 
@@ -173,7 +176,7 @@ public class PantallaAyuda extends PantallaBase {
             public void clicked(InputEvent event, float x, float y) {
                 // 1. Limpiar el panel derecho
                 panelDerecho.clear();
-
+                juegoApp.reproducirSonidoClick();
                 if (estiloReglasPersonalizado == null) {
                     // A. Creamos un estilo nuevo, copiando el 'default'.
                     estiloReglasPersonalizado = new Label.LabelStyle(getSkin().get("default", Label.LabelStyle.class));

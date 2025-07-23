@@ -73,6 +73,7 @@ public class PauseMenuUI extends Table {
         btnReanudar.addListener(new ClickListener() {
             @Override
             public void clicked(InputEvent event, float x, float y) {
+                juegoApp.reproducirSonidoClick();
                 pantallaJuego.togglePause();
             }
         });
@@ -80,6 +81,7 @@ public class PauseMenuUI extends Table {
         btnSalir.addListener(new ClickListener() {
             @Override
             public void clicked(InputEvent event, float x, float y) {
+                juegoApp.reproducirSonidoClick();
                 if (juegoApp.getClient() != null) {
                     juegoApp.getClient().send(new Network.PaqueteSalidaDePartida());
                     juegoApp.getClient().disconnect();
@@ -115,6 +117,7 @@ public class PauseMenuUI extends Table {
         return new ClickListener() {
             @Override
             public void clicked(InputEvent event, float x, float y) {
+                juegoApp.reproducirSonidoClick();
                 // Obtenemos las estadísticas guardadas
                 List<EstadisticasJugador> stats = juegoApp.getEstadisticasUltimaPartida();
 
@@ -143,6 +146,7 @@ public class PauseMenuUI extends Table {
         return new ClickListener() {
             @Override
             public void clicked(InputEvent event, float x, float y) {
+                juegoApp.reproducirSonidoClick();
                 panelDerecho.clear();
                 // Llama al método que construye el contenido visual
                 panelDerecho.add(construirContenidoComoJugar()).expand().fill();
@@ -154,6 +158,7 @@ public class PauseMenuUI extends Table {
         return new ClickListener() {
             @Override
             public void clicked(InputEvent event, float x, float y) {
+                juegoApp.reproducirSonidoClick();
                 panelDerecho.clear();
                 // Llama al método que construye el contenido visual
                 panelDerecho.add(construirContenidoReglas()).expand().fill();

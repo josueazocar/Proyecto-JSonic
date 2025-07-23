@@ -37,6 +37,10 @@ public class JSonicJuego extends JuegoBase {
 
         assetManager = new AssetManager();
         soundManager = new SoundManager(assetManager);
+
+        soundManager.loadClickSound("SoundsBackground/Boton_sonido.wav");
+        assetManager.finishLoading();
+
         // Inicializar la pantalla de menú al iniciar el juego
         setPantallaActiva(new PantallaMenu(this));
 
@@ -103,6 +107,12 @@ public class JSonicJuego extends JuegoBase {
 
     public List<EstadisticasJugador> getEstadisticasUltimaPartida() {
         return this.estadisticasUltimaPartida;
+    }
+
+    public void reproducirSonidoClick() {
+        if (soundManager != null) {
+            soundManager.playClickSound();
+        }
     }
 
     public IGameClient getClient() {

@@ -64,7 +64,7 @@ public class PantallaMenu extends PantallaBase {
         botonOnline = crearBotonConEstados("boton_online", "boton_online_down", "boton_online_hover");
         botonCrear = crearBotonConEstados("boton_crear", "boton_crear_down", "boton_crear_hover");
         botonUnirse = crearBotonConEstados("boton_unirse", "boton_unirse_down", "boton_unirse_hover");
-        botonAtras = crearBoton("boton_atras");
+        botonAtras = crearBotonConEstados("boton_atras", "boton_atras_down", "boton_atras_hover");
         botonOpciones = crearBotonConEstados("boton_opciones", "boton_opciones_down", "boton_opciones_hover");
         botonSalir = crearBotonConEstados("boton_salir", "boton_salir_down", "boton_salir_hover");
         botonAyuda = crearBotonConEstados("boton_ayuda", "boton_ayuda_down", "boton_ayuda_hover");
@@ -145,7 +145,7 @@ public class PantallaMenu extends PantallaBase {
         tablaAtras.setFillParent(true);
         uiStage.addActor(tablaAtras);
         tablaAtras.top().left();
-        tablaAtras.add(botonAtras).size(125, 125).pad(20);
+        tablaAtras.add(botonAtras).size(105, 105).pad(20);
     }
 
     private void configurarListeners() {
@@ -355,18 +355,23 @@ public class PantallaMenu extends PantallaBase {
         botonAyuda.setVisible(true);
     }
 
-    private Button crearBoton(String nombreRegion) {
-        Button.ButtonStyle estilo = new Button.ButtonStyle();
-        estilo.up = new TextureRegionDrawable(atlasBotones.findRegion(nombreRegion));
-        return new Button(estilo);
-    }
+
 
     private Button crearBotonConEstados(String up, String down, String over) {
         Button.ButtonStyle estilo = new Button.ButtonStyle();
         estilo.up = new TextureRegionDrawable(atlasBotones.findRegion(up));
         estilo.down = new TextureRegionDrawable(atlasBotones.findRegion(down));
         estilo.over = new TextureRegionDrawable(atlasBotones.findRegion(over));
-        return new Button(estilo);
+        Button boton = new Button(estilo);
+
+        boton.addListener(new ClickListener() {
+            @Override
+            public void clicked(InputEvent event, float x, float y) {
+                juegoApp.reproducirSonidoClick();
+            }
+        });
+
+        return boton;
     }
 
     @Override

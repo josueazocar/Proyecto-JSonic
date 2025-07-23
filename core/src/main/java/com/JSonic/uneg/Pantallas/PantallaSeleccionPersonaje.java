@@ -4,6 +4,7 @@ package com.JSonic.uneg.Pantallas;
 import com.JSonic.uneg.JSonicJuego;
 import com.JSonic.uneg.State.PlayerState;
 import com.badlogic.gdx.Gdx;
+import com.badlogic.gdx.Input;
 import com.badlogic.gdx.audio.Sound;
 import com.badlogic.gdx.graphics.GL20;
 import com.badlogic.gdx.graphics.Texture;
@@ -97,6 +98,7 @@ public class PantallaSeleccionPersonaje extends PantallaBase {
         seguirBoton.addListener(new ClickListener() {
             @Override
             public void clicked(InputEvent event, float x, float y) {
+                juegoApp.reproducirSonidoClick();
                 if (personajeSeleccionado != null && !seguirBoton.isDisabled()) {
                     PantallaDeJuego.miPersonaje = personajeSeleccionado; // Guardamos la elección
 
@@ -178,6 +180,17 @@ public class PantallaSeleccionPersonaje extends PantallaBase {
 
     @Override
     public void actualizar(float delta) {
+        if (Gdx.input.isKeyJustPressed(Input.Keys.ESCAPE)) {
+            // Crea una instancia de la pantalla de menú
+            PantallaMenu menu = new PantallaMenu(juegoApp, true);
+            // Le dice al menú que debe empezar en el submenú "Jugar"
+            menu.setEstadoMenu(PantallaMenu.EstadoMenu.JUGAR);
+            // Cambia la pantalla activa
+            juegoApp.setPantallaActiva(menu);
+            // Detenemos la actualización de esta pantalla para evitar errores
+            return;
+        }
+
         mainStage.act(delta);
 
         // Si no estamos en modo multijugador o no tenemos cliente de red, no hacemos nada.

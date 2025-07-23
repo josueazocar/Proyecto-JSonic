@@ -74,6 +74,8 @@ public class PantallaAcercaDe extends PantallaBase {
         // --- Botón de Volver ---
         Button.ButtonStyle estiloBotonVolver = new Button.ButtonStyle();
         estiloBotonVolver.up = new TextureRegionDrawable(botonesMenuAtlas.findRegion("boton_atras"));
+        estiloBotonVolver.down = new TextureRegionDrawable(botonesMenuAtlas.findRegion("boton_atras_down"));
+        estiloBotonVolver.over = new TextureRegionDrawable(botonesMenuAtlas.findRegion("boton_atras_hover"));
         Button botonVolver = new Button(estiloBotonVolver);
 
         botonVolver.addListener(new ClickListener() {
@@ -82,6 +84,7 @@ public class PantallaAcercaDe extends PantallaBase {
 
                 PantallaMenu pantallaMenu = new PantallaMenu(juegoApp, true);
                 pantallaMenu.setEstadoMenu(PantallaMenu.EstadoMenu.OPCIONES);
+                juegoApp.reproducirSonidoClick();
                 juegoApp.setPantallaActiva(pantallaMenu);
             }
         });
@@ -91,7 +94,7 @@ public class PantallaAcercaDe extends PantallaBase {
         tablaVolver.setFillParent(true);
         uiStage.addActor(tablaVolver);
         tablaVolver.top().left();
-        tablaVolver.add(botonVolver).size(125, 125).pad(20);
+        tablaVolver.add(botonVolver).size(105, 105).pad(20);
     }
 
     @Override
