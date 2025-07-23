@@ -87,8 +87,8 @@ public class GameServer implements IGameServer {
 
     public GameServer() {
         servidor = new Server();
-        enemigosPorMapa.put("maps/Zona1N1.tmx", 8);
-        enemigosPorMapa.put("maps/ZonaJefeN1.tmx", 3);
+        enemigosPorMapa.put("maps/Zona1N1.tmx", 1);
+        enemigosPorMapa.put("maps/ZonaJefeN1.tmx", 1);
         enemigosPorMapa.put("maps/Zona1N2.tmx", 15);
         enemigosPorMapa.put("maps/ZonaJefeN2.tmx", 5);
         enemigosPorMapa.put("maps/Zona1N3.tmx", 25);
@@ -832,8 +832,17 @@ public class GameServer implements IGameServer {
                     enemigo.estadoAnimacion = enemigo.mirandoDerecha ? EnemigoState.EstadoEnemigo.IDLE_RIGHT : EnemigoState.EstadoEnemigo.IDLE_LEFT;
                     if (enemigo.puedeAtacar()) {
                         enemigo.reiniciarCooldownAtaque();
-                        jugadorMasCercano.vida -= 5; // Daño del jefe.
-                        System.out.println("[SERVER] JEFE atacó a Jugador ID " + jugadorMasCercano.id + ". Vida restante: " + jugadorMasCercano.vida);
+
+                        int idJugador = jugadorMasCercano.id;
+                        int anillosActuales = puntajesAnillosIndividuales.getOrDefault(idJugador, 0);
+
+                        if (anillosActuales == 0) {
+                            jugadorMasCercano.vida -= 15; // Daño aumentado sin anillos
+                        } else {
+                            jugadorMasCercano.vida -= 5;  // Daño normal del jefe con anillos
+                        }
+
+                        System.out.println("[SERVER] JEFE atacó a Jugador ID " + idJugador + ". Vida restante: " + jugadorMasCercano.vida);
 
                         // Notifica al jugador sobre su nueva vida.
                         Network.PaqueteActualizacionVida paqueteVida = new Network.PaqueteActualizacionVida();
@@ -885,8 +894,17 @@ public class GameServer implements IGameServer {
 
                 if (enemigo.puedeAtacar()) {
                     enemigo.reiniciarCooldownAtaque();
-                    jugadorMasCercano.vida -= 1;
-                    System.out.println("[SERVER] Robot atacó a Jugador ID " + jugadorMasCercano.id + ". Vida restante: " + jugadorMasCercano.vida);
+
+                    int idJugador = jugadorMasCercano.id;
+                    int anillosActuales = puntajesAnillosIndividuales.getOrDefault(idJugador, 0);
+
+                    if (anillosActuales == 0) {
+                        jugadorMasCercano.vida -= 15; // Daño aumentado sin anillos
+                    } else {
+                        jugadorMasCercano.vida -= 1;  // Daño normal con anillos
+                    }
+
+                    System.out.println("[SERVER] Robot atacó a Jugador ID " + idJugador + ". Vida restante: " + jugadorMasCercano.vida);
 
                     Network.PaqueteActualizacionVida paqueteVida = new Network.PaqueteActualizacionVida();
                     paqueteVida.idJugador = jugadorMasCercano.id;
@@ -1248,7 +1266,7 @@ public class GameServer implements IGameServer {
                         // 3. Enviamos el mensaje de éxito SOLO al propietario
                         Network.PaqueteMensajeUI paqueteMsg = new Network.PaqueteMensajeUI();
                         paqueteMsg.mensaje = "¡Árbol sembrado!";
-                        contaminationState.decrease(5);
+                        contaminationState.decrease(10);
                         servidor.sendToTCP(dron.ownerId, paqueteMsg);
                     }
                 }
