@@ -124,6 +124,14 @@ public class PantallaDeJuego extends PantallaBase {
     private ShapeRenderer shapeRendererPausa;
     private Table pauseWrapper;
 
+    private Label labelNombreNivel;
+    private BitmapFont fuenteTituloNivel;
+    private float temporizadorTituloNivel;
+    private static final float DURACION_FADE_IN = 2.5f;  // 1 segundo para aparecer
+    private static final float DURACION_VISIBLE = 2.0f;  // 2 segundos visible
+    private static final float DURACION_FADE_OUT = 1.0f; // 1 segundo para desaparecer
+    private static final float DURACION_TOTAL_TITULO = DURACION_FADE_IN + DURACION_VISIBLE + DURACION_FADE_OUT;
+
     public PantallaDeJuego(JSonicJuego juego, IGameServer server) {
         super("");
         this.juegoPrincipal = juego;
@@ -327,6 +335,27 @@ public class PantallaDeJuego extends PantallaBase {
 
         // 4. El wrapper (y por tanto el menú) empieza invisible.
         this.pauseWrapper.setVisible(false);
+
+        fuenteTituloNivel = new BitmapFont(Gdx.files.internal("Fuentes/juego_fuente2.fnt")); // Asegúrate de que esta fuente exista
+        fuenteTituloNivel.getData().setScale(1.2f); // Hacemos la fuente un poco más grande
+        Label.LabelStyle estiloTitulo = new Label.LabelStyle(fuenteTituloNivel, Color.WHITE);
+
+        labelNombreNivel = new Label("", estiloTitulo);
+        labelNombreNivel.getColor().a = 0f; // Empieza transparente
+
+// Crea una tabla que llenará toda la pantalla
+        Table tablaTitulo = new Table();
+        tablaTitulo.setFillParent(true);
+
+// Añade el label a la tabla y dile que se centre
+        tablaTitulo.center();
+        tablaTitulo.add(labelNombreNivel);
+
+// Finalmente, añade la tabla (no el label directamente) al stage
+        mainStage.addActor(tablaTitulo);
+
+// Llama al método para el primer nivel
+        mostrarNombreDeNivel();
     }
 
     private void gestionarMusicaPorNivel() {
@@ -391,6 +420,28 @@ public class PantallaDeJuego extends PantallaBase {
 
     @Override
     public void actualizar(float deltat) {
+
+        if (temporizadorTituloNivel < DURACION_TOTAL_TITULO) {
+            temporizadorTituloNivel += deltat;
+            Color colorLabel = labelNombreNivel.getColor();
+            float alpha = 0;
+
+            if (temporizadorTituloNivel < DURACION_FADE_IN) {
+                // Fase 1: Fade In
+                alpha = temporizadorTituloNivel / DURACION_FADE_IN;
+            } else if (temporizadorTituloNivel < DURACION_FADE_IN + DURACION_VISIBLE) {
+                // Fase 2: Visible
+                alpha = 1;
+            } else {
+                // Fase 3: Fade Out
+                float tiempoEnFadeOut = temporizadorTituloNivel - (DURACION_FADE_IN + DURACION_VISIBLE);
+                alpha = 1.0f - (tiempoEnFadeOut / DURACION_FADE_OUT);
+            }
+
+            // Aplicamos la transparencia, asegurándonos de que esté entre 0 y 1.
+            colorLabel.a = Math.max(0, Math.min(1, alpha));
+            labelNombreNivel.setColor(colorLabel);
+        }
 
         if (Gdx.input.isKeyJustPressed(Input.Keys.ESCAPE)) {
             togglePause();
@@ -540,6 +591,7 @@ public class PantallaDeJuego extends PantallaBase {
                     enviarInformacionDelMapaActualAlServidor();
 
                     gestionarMusicaPorNivel();//Metodo para cambiar musica por nivel
+                    mostrarNombreDeNivel();
 
                 } else if (paquete instanceof Network.PaqueteActualizacionPuntuacion p) {
                     this.anillosTotal = p.nuevosAnillos;
@@ -1497,6 +1549,20 @@ public class PantallaDeJuego extends PantallaBase {
             otrosJugadores.remove(id);
         } else {
             System.err.println("[CLIENT] Se intentó eliminar al jugador " + id + " pero no se encontró en la lista.");
+        }
+    }
+
+    public void mostrarNombreDeNivel() {
+        if (manejadorNivel != null && labelNombreNivel != null) {
+            String nombreMapa = manejadorNivel.getNombreMapaActual();
+            nombreMapa = nombreMapa.substring(nombreMapa.lastIndexOf("/") + 1, nombreMapa.lastIndexOf("."));
+            nombreMapa = nombreMapa.replace("N", " - Nivel ");
+
+            labelNombreNivel.setText(nombreMapa);
+
+            // Reiniciamos el temporizador y la transparencia para que el "fade in" comience correctamente
+            temporizadorTituloNivel = 0f;
+            labelNombreNivel.getColor().a = 0f;
         }
     }
 

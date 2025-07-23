@@ -747,7 +747,7 @@ public class LocalServer implements IGameServer {
             // Nota: Esto es opcional si quieres que Robotnik aparezca en todos los mapas.
             // Si no, puedes eliminar estas líneas.
             if (mapaActual.contains("ZonaJefe")) {
-                EnemigoState estadoRobotnik = new EnemigoState(999, 300, 100, 100, EnemigoState.EnemigoType.ROBOTNIK);
+                EnemigoState estadoRobotnik = new EnemigoState(999, 300, 100, 1, EnemigoState.EnemigoType.ROBOTNIK);
                 this.enemigosActivos.put(estadoRobotnik.id, estadoRobotnik);
                 Network.PaqueteEnemigoNuevo paqueteRobotnik = new Network.PaqueteEnemigoNuevo();
                 paqueteRobotnik.estadoEnemigo = estadoRobotnik;
