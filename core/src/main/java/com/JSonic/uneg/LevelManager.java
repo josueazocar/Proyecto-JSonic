@@ -590,45 +590,6 @@ public class LevelManager {
     }
 
 
-   /* public Vector2 encontrarPosicionValida() {
-        MapObjects objetosColision = getCollisionObjects();
-        float mapWidth = getAnchoMapaPixels();
-        float mapHeight = getAltoMapaPixels();
-
-        boolean posicionValida = false;
-        float x = 0, y = 0;
-        int intentos = 0; // Para evitar un bucle infinito si el mapa está muy lleno
-
-        while (!posicionValida && intentos < 100) {
-            intentos++;
-            // Genera una posición aleatoria dentro del mapa
-            x = (float) (Math.random() * mapWidth);
-            y = (float) (Math.random() * mapHeight);
-
-            // Crea un rectángulo para la posición del animal (asumimos 32x32)
-            Rectangle animalBounds = new Rectangle(x, y, 32, 32);
-
-            // Revisa si choca con alguna pared
-            boolean chocaConPared = false;
-            if (objetosColision != null) {
-                for (com.badlogic.gdx.maps.MapObject obj : objetosColision) {
-                    if (obj instanceof RectangleMapObject) {
-                        if (Intersector.overlaps(((RectangleMapObject) obj).getRectangle(), animalBounds)) {
-                            chocaConPared = true;
-                            break;
-                        }
-                    }
-                }
-            }
-
-            if (!chocaConPared) {
-                posicionValida = true; // ¡Lugar encontrado!
-            }
-        }
-
-        // Si después de 100 intentos no encuentra lugar, al menos devuelve la última posición intentada.
-        return new Vector2(x, y);
-    }*/
 
     /**
      * Busca en la capa de objetos "Esmeraldas" y devuelve la posición del primer
