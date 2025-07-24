@@ -1189,6 +1189,16 @@ public class PantallaDeJuego extends PantallaBase {
             uiCamera.update();
 
         }
+
+        if (quadMesh != null) {
+            float[] vertices = {
+                0, 0, 0,         // Vértice 0: Abajo-izquierda
+                width, 0, 0,     // Vértice 1: Abajo-derecha
+                0, height, 0,    // Vértice 2: Arriba-izquierda
+                width, height, 0 // Vértice 3: Arriba-derecha
+            };
+            quadMesh.setVertices(vertices);
+        }
     }
 
 

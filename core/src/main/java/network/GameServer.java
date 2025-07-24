@@ -41,8 +41,8 @@ public class GameServer implements IGameServer {
     public int totalBasuraGlobal = 0;
 
     //  Variables de control para la contaminación.
-    private static final float CONTAMINATION_RATE_PER_SECOND = 1; // El % sube 0.65 puntos por segundo.
-    private static final float TRASH_CLEANUP_VALUE = 3f; // Cada basura recogida reduce el % en 3 puntos.
+    private static final float CONTAMINATION_RATE_PER_SECOND = 1.25f; // El % sube 0.65 puntos por segundo.
+    private static final float TRASH_CLEANUP_VALUE = 2f; // Cada basura recogida reduce el % en 3 puntos.
     private float tiempoDesdeUltimaContaminacion = 0f;
     private static final float INTERVALO_ACTUALIZACION_CONTAMINACION = 1.0f; // Enviaremos una actualización cada segundo.
 
@@ -62,7 +62,7 @@ public class GameServer implements IGameServer {
     private float tiempoSpawnAnillo = 0f;
     private float tiempoSpawnBasura = 0f;
     private float tiempoSpawnPlastico = 0f;
-    private static final int ROBOT_SPEED = 1;
+    private static final float ROBOT_SPEED = 1.3f;
     private static final float ROBOT_DETECTION_RANGE = 300f;
     private static final float ROBOT_ATTACK_RANGE = 10f;
     private float tiempoGeneracionTeleport = 0f;
@@ -72,7 +72,7 @@ public class GameServer implements IGameServer {
     private final HashMap<Integer, AnimalState> animalesActivos = new HashMap<>();
     private final HashMap<Integer, Float> cooldownsHabilidadLimpieza = new HashMap<>();
     private final HashMap<Integer, EstadisticasJugador> estadisticasJugadores = new HashMap<>();
-    private static final float COOLDOWN_HABILIDAD_SONIC = 40.0f; // Cooldown real
+    private static final float COOLDOWN_HABILIDAD_SONIC = 50.0f; // Cooldown real
     private int proximoIdAnimal = 20000; // ID base para evitar colisiones con otros IDs
 
     // Variables para la lógica de muerte por contaminación
@@ -87,13 +87,13 @@ public class GameServer implements IGameServer {
 
     public GameServer() {
         servidor = new Server();
-        enemigosPorMapa.put("maps/Zona1N1.tmx", 1);
-        enemigosPorMapa.put("maps/ZonaJefeN1.tmx", 1);
+        enemigosPorMapa.put("maps/Zona1N1.tmx", 12);
+        enemigosPorMapa.put("maps/ZonaJefeN1.tmx", 8);
         enemigosPorMapa.put("maps/Zona1N2.tmx", 15);
-        enemigosPorMapa.put("maps/ZonaJefeN2.tmx", 5);
+        enemigosPorMapa.put("maps/ZonaJefeN2.tmx", 8);
         enemigosPorMapa.put("maps/Zona1N3.tmx", 25);
         enemigosPorMapa.put("maps/Zona2N3.tmx", 35);
-        enemigosPorMapa.put("maps/ZonaJefeN3.tmx", 7);
+        enemigosPorMapa.put("maps/ZonaJefeN3.tmx", 8);
     }
 
     @Override
@@ -1167,7 +1167,7 @@ public class GameServer implements IGameServer {
             }
 
             if (!hayColision) {
-                EnemigoState nuevoEstado = new EnemigoState(proximoIdEnemigo++, bounds.x, bounds.y, 3, EnemigoState.EnemigoType.ROBOT);
+                EnemigoState nuevoEstado = new EnemigoState(proximoIdEnemigo++, bounds.x, bounds.y, 4, EnemigoState.EnemigoType.ROBOT);
                 enemigosActivos.put(nuevoEstado.id, nuevoEstado);
                 Network.PaqueteEnemigoNuevo paquete = new Network.PaqueteEnemigoNuevo();
                 paquete.estadoEnemigo = nuevoEstado;
