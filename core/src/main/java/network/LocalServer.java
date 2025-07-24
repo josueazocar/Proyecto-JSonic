@@ -54,7 +54,7 @@ public class LocalServer implements IGameServer {
     private float tiempoSpawnAnillo = 0f;
     private float tiempoSpawnBasura = 0f;
     private float tiempoSpawnPlastico = 0f;
-    private static final float CONTAMINATION_RATE_PER_SECOND = 0.65f; // El % sube 0.65 puntos por segundo
+    private static final float CONTAMINATION_RATE_PER_SECOND = 0.80f; // El % sube 0.80 puntos por segundo
     private static final float TRASH_CLEANUP_VALUE = 3f; // Cada basura recogida reduce el % en 2 puntos
     private float tiempoDesdeUltimaContaminacion = 0f;
     private static final float INTERVALO_ACTUALIZACION_CONTAMINACION = 1.0f; // 1 segundo
@@ -76,7 +76,7 @@ public class LocalServer implements IGameServer {
     private boolean alMenosUnJugadorHaEnviadoPosicion = false;
     // Referencia directa al único cliente que existirá en este modo
     private float cooldownHabilidadLimpieza = 0f;
-    private static final float COOLDOWN_HABILIDAD_SONIC = 40.0f;
+    private static final float COOLDOWN_HABILIDAD_SONIC = 45.0f;
     private LocalClient clienteLocal;
     private int proximoIdJugador = 1; // En modo local, siempre empezamos en 1
     private static final int ROBOT_SPEED = 1;
@@ -86,13 +86,13 @@ public class LocalServer implements IGameServer {
 
     public LocalServer() {
         // Poblamos el mapa con la cantidad de enemigos por nivel.
-        enemigosPorMapa.put("maps/Zona1N1.tmx", 1);
-        enemigosPorMapa.put("maps/ZonaJefeN1.tmx", 1);
-        enemigosPorMapa.put("maps/Zona1N2.tmx", 1);
-        enemigosPorMapa.put("maps/ZonaJefeN2.tmx", 1);
-        enemigosPorMapa.put("maps/Zona1N3.tmx", 1);
-        enemigosPorMapa.put("maps/Zona2N3.tmx", 1);
-        enemigosPorMapa.put("maps/ZonaJefeN3.tmx", 1);
+        enemigosPorMapa.put("maps/Zona1N1.tmx", 8);
+        enemigosPorMapa.put("maps/ZonaJefeN1.tmx", 5);
+        enemigosPorMapa.put("maps/Zona1N2.tmx", 10);
+        enemigosPorMapa.put("maps/ZonaJefeN2.tmx", 8);
+        enemigosPorMapa.put("maps/Zona1N3.tmx", 15);
+        enemigosPorMapa.put("maps/Zona2N3.tmx", 20);
+        enemigosPorMapa.put("maps/ZonaJefeN3.tmx", 10);
     }
 
     public static void decreaseContamination(float porcentaje) {
@@ -754,7 +754,7 @@ public class LocalServer implements IGameServer {
             // Nota: Esto es opcional si quieres que Robotnik aparezca en todos los mapas.
             // Si no, puedes eliminar estas líneas.
             if (mapaActual.contains("ZonaJefe")) {
-                EnemigoState estadoRobotnik = new EnemigoState(999, 300, 100, 1, EnemigoState.EnemigoType.ROBOTNIK);
+                EnemigoState estadoRobotnik = new EnemigoState(999, 300, 100, 100, EnemigoState.EnemigoType.ROBOTNIK);
                 this.enemigosActivos.put(estadoRobotnik.id, estadoRobotnik);
                 Network.PaqueteEnemigoNuevo paqueteRobotnik = new Network.PaqueteEnemigoNuevo();
                 paqueteRobotnik.estadoEnemigo = estadoRobotnik;
