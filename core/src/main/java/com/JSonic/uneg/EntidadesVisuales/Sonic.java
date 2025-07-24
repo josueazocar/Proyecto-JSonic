@@ -153,13 +153,21 @@ public class Sonic extends Player {
             estado.y = currentY;
         }
         else if (Gdx.input.isKeyPressed(Input.Keys.L)) {
-            if (soundManager != null) soundManager.play("spin");
+            if (Gdx.input.isKeyJustPressed(Input.Keys.L)) {
+                if (soundManager != null) {
+                    soundManager.play("spin");
+                }
+            }
             if (Gdx.input.isKeyPressed(Input.Keys.A)) {
+
                 setEstadoActual(EstadoPlayer.SPECIAL_LEFT);
                 lastDirection = EstadoPlayer.LEFT;
                 // [PROFESOR] Usamos 'currentSpeed' en lugar de 'speed'
                 estado.x -= currentSpeed;
             } else if (Gdx.input.isKeyPressed(Input.Keys.D)) {
+
+
+
                 setEstadoActual(EstadoPlayer.SPECIAL_RIGHT);
                 lastDirection = EstadoPlayer.RIGHT;
                 // [PROFESOR] Usamos 'currentSpeed' en lugar de 'speed'

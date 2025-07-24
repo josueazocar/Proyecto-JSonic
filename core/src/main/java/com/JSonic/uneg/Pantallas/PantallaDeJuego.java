@@ -871,7 +871,6 @@ public class PantallaDeJuego extends PantallaBase {
                     } else if (item instanceof EsmeraldaVisual) {
                         soundManager.play("recolectar_esmeralda");
                     }
-                    // Podrías añadir más `else if` para otros items como la basura
                     else if (item instanceof BasuraVisual) {
                         soundManager.play("recolectar_basura");
                     }else if (item instanceof PiezaDePlasticoVisual) {
