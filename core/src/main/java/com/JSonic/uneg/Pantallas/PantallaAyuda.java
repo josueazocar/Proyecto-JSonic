@@ -54,11 +54,11 @@ public class PantallaAyuda extends PantallaBase {
         // --- Creación de Estilos ---
         TextButton.TextButtonStyle estiloBoton = new TextButton.TextButtonStyle(getSkin().get(TextButton.TextButtonStyle.class));
         estiloBoton.font = fuenteBoton;
-        estiloBoton.font.getData().setScale(1.2f);
+        estiloBoton.font.getData().setScale(0.9f);
 
         final Label.LabelStyle estiloReglas = new Label.LabelStyle(getSkin().get("default", Label.LabelStyle.class));
         estiloReglas.font = fuenteReglas;
-        estiloReglas.font.getData().setScale(1.1f);
+        estiloReglas.font.getData().setScale(0.9f);
         estiloReglas.font.getData().setLineHeight(estiloReglas.font.getLineHeight() * 1.5f);
 
         // --- Contenedor Principal (Wrapper) ---
@@ -91,7 +91,7 @@ public class PantallaAyuda extends PantallaBase {
         tablaOpciones.add(btnSalir).fillX().height(80).pad(20).row();
 
         final Label contenidoInicialLabel = new Label("Selecciona una opcion a la izquierda.", getSkin());
-        contenidoInicialLabel.setFontScale(1.5f);
+        contenidoInicialLabel.setFontScale(1.3f);
         contenidoInicialLabel.setWrap(true);
         panelDerecho.add(contenidoInicialLabel).expand().fill().pad(20);
 
@@ -136,20 +136,41 @@ public class PantallaAyuda extends PantallaBase {
             public void clicked(InputEvent event, float x, float y) {
                 juegoApp.reproducirSonidoClick();
                 panelDerecho.clear();
-                String textoReglas =
-                    "OBJETIVO PRINCIPAL: RESTAURACION ECOLOGICA\n\n" +
-                        "Tu mision es limpiar cada nivel de la contaminacion generada por el Dr. Robotnik. " +
-                        "Para ganar, debes recolectar basura, derrotar enemigos y restaurar el equilibrio natural de la zona.\n\n" +
-                        "EL CICLO DE LIMPIEZA\n\n" +
-                        "- Recolectar: Corre por el mapa para recoger toda la basura.\n" +
-                        "- Reciclar: Lleva la basura a las plantas de tratamiento para procesarla y ganar puntos.\n" +
-                        "- Combatir: Derrota a los robots para detener la fuente de contaminacion.\n\n" +
-                        "SISTEMA DE VIDAS Y ANILLOS\n\n" +
-                        "Los anillos dorados son tu proteccion. Si un enemigo te golpea teniendo al menos un anillo, solo perderas los anillos. " +
-                        "Si te golpean sin anillos, perderas una vida. ¡Gestiona tus anillos con cuidado!\n\n" +
-                        "PUNTUACION\n\n" +
-                        "Ganas puntos por cada pieza de basura reciclada, cada enemigo derrotado y cada habilidad especial que uses para ayudar al medio ambiente.";
+                String textoReglas = """
+                    OBJETIVO PRINCIPAL: RESTAURACIÓN ECOLÓGICA
 
+                    Tu misión es limpiar cada nivel de la contaminación generada por el Dr. Robotnik. Para ganar, debes recolectar basura, derrotar a sus robots y restaurar el equilibrio natural de cada zona.
+
+                    EL CICLO DE LIMPIEZA
+
+                    - Recolectar: Corre por el mapa para recoger toda la basura y piezas de plástico que encuentres.
+                    - Combatir: Derrota a los robots para detener la fuente de contaminación y proteger a los animales de la zona.
+                    - Progresar: Vence al jefe de cada zona para desbloquear el siguiente nivel y continuar tu aventura.
+
+                    SISTEMA DE ANILLOS Y DAÑO
+
+                    Los anillos son tu recurso más valioso para sobrevivir a los ataques.
+                    - Daño con Anillos: Si un enemigo te golpea, recibirás un daño mínimo (1-2 puntos de vida).
+                    - Daño SIN Anillos: Si te golpean con 0 anillos, ¡el golpe será crítico y perderás 15 puntos de vida!
+                    - Vida Extra: Al recolectar 100 anillos, tu vida se restaurará por completo.
+
+                    HABILIDADES DE PERSONAJES
+
+                    Cada héroe contribuye de una manera única a la misión:
+
+                    - Sonic: Su objetivo es encontrar las 7 Esmeraldas del Caos, ocultas una en cada mapa. Reunirlas le permitirá transformarse en Súper Sonic para la batalla final, volviéndose invencible y restaurando su vida. Además, puede usar una habilidad especial para limpiar toda la contaminación de golpe.
+
+                    - Tails: Es el especialista en reciclaje. Siendo Tails, al llevar 5 o más piezas de basura a una planta de tratamiento, ¡todos los jugadores recuperarán 10 puntos de vida! También puede usar 20 piezas de basura para invocar un dron de apoyo o plantar un árbol que ayude al ecosistema.
+
+                    - Knuckles: Gracias a su fuerza, puede destruir ciertos bloques y obstáculos, limpiando el camino y obteniendo los materiales de reciclaje que contienen.
+
+                    PUNTUACIÓN
+
+                    Ganas puntos por cada acción que ayuda al medio ambiente.
+                    - Limpiar una Zona (Habilidad/Bloque): 100 Puntos
+                    - Reciclar un Lote de Basura: 50 Puntos
+                    - Derrotar un Enemigo: 20 Puntos
+                    """;
                 Label labelReglas = new Label(textoReglas, estiloReglas);
                 labelReglas.setWrap(true);
                 labelReglas.setAlignment(Align.left);
