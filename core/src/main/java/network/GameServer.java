@@ -1522,6 +1522,7 @@ public class GameServer implements IGameServer {
                                     System.out.println("[STATS] Jugador " + paquete.idJugador + " derrotó a un enemigo.");
                                 }
                                 if (enemigo.tipo == EnemigoState.EnemigoType.ROBOTNIK) {
+                                    generarPortal();
                                     if ("maps/ZonaJefeN3.tmx".equals(mapaActualServidor)) {
                                         finalizarPartidaYEnviarResultados();
                                         return;
@@ -1596,6 +1597,28 @@ public class GameServer implements IGameServer {
         });
         gameLoopThread.setName("GameLoopThread");
         gameLoopThread.start();
+    }
+
+    /**
+     * Genera portales en el mapa basándose en la información recibida.
+     * Crea un ítem de teletransporte para cada portal y lo notifica a todos los clientes.
+     */
+    public void generarPortal(){
+
+        if (infoPortales != null && !infoPortales.isEmpty()) {
+            for (Network.PortalInfo info : infoPortales.values()) {
+                // Creamos el estado del ítem para el portal.
+                ItemState estadoPortal = new ItemState(proximoIdItem++, info.x, info.y, ItemState.ItemType.TELETRANSPORTE);
+
+                // Lo añadimos a la lista de ítems del servidor.
+                itemsActivos.put(estadoPortal.id, estadoPortal);
+
+                // Creamos el paquete para notificar a TODOS los clientes.
+                Network.PaqueteItemNuevo paqueteNuevoItem = new Network.PaqueteItemNuevo();
+                paqueteNuevoItem.estadoItem = estadoPortal;
+                servidor.sendToAllTCP(paqueteNuevoItem);
+            }
+        }
     }
 
     /**
