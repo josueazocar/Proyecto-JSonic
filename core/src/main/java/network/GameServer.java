@@ -72,7 +72,7 @@ public class GameServer implements IGameServer {
     private final HashMap<Integer, AnimalState> animalesActivos = new HashMap<>();
     private final HashMap<Integer, Float> cooldownsHabilidadLimpieza = new HashMap<>();
     private final HashMap<Integer, EstadisticasJugador> estadisticasJugadores = new HashMap<>();
-    private static final float COOLDOWN_HABILIDAD_SONIC = 50.0f; // Cooldown real
+    private static final float COOLDOWN_HABILIDAD_SONIC = 40.0f; // Cooldown real
     private int proximoIdAnimal = 20000; // ID base para evitar colisiones con otros IDs
 
     // Variables para la lógica de muerte por contaminación

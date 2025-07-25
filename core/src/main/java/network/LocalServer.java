@@ -76,7 +76,7 @@ public class LocalServer implements IGameServer {
     private boolean alMenosUnJugadorHaEnviadoPosicion = false;
     // Referencia directa al único cliente que existirá en este modo
     private float cooldownHabilidadLimpieza = 0f;
-    private static final float COOLDOWN_HABILIDAD_SONIC = 45.0f;
+    private static final float COOLDOWN_HABILIDAD_SONIC = 40.0f;
     private LocalClient clienteLocal;
     private int proximoIdJugador = 1; // En modo local, siempre empezamos en 1
     private static final int ROBOT_SPEED = 1;

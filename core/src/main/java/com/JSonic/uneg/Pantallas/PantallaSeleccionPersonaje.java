@@ -271,8 +271,22 @@ public class PantallaSeleccionPersonaje extends PantallaBase {
     @Override
     public void show() {
         Gdx.input.setInputProcessor(mainStage);
-    }
 
+        // --- INICIO DE LA CORRECCIÓN ---
+
+        // Verificamos si estamos en modo "Un Jugador". La variable esAnfitrion es null en este caso.
+        if (esAnfitrion == null) {
+            // 1. Limpiamos la lista estática. Este es el paso CRUCIAL para olvidar el estado de la partida multijugador anterior.
+            JSonicJuego.personajesYaSeleccionados.clear();
+
+            // 2. Volvemos a llamar a la función que habilita y pre-selecciona los botones para el modo de un jugador.
+            actualizarEstadoBotones();
+        }
+        // Para el modo multijugador no es necesario hacer nada aquí, ya que su lógica
+        // se gestiona al recibir los paquetes del servidor en el método 'actualizar(delta)'.
+
+        // --- FIN DE LA CORRECCIÓN ---
+    }
     @Override
     public void hide() {
         Gdx.input.setInputProcessor(null);
