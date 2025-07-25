@@ -18,7 +18,9 @@ import java.util.concurrent.ConcurrentHashMap;
 
 public class GameServer implements IGameServer {
 
-    private final Server servidor;
+    private Server servidor;
+    private volatile boolean serverThreadActive = false;
+    private Thread gameLoopThread;
     // --- ALMACENES DE ESTADO ---
    // private final HashMap<Integer, PlayerState> jugadores = new HashMap<>();
     private final Map<Integer, PlayerState> jugadores = new ConcurrentHashMap<>();
@@ -98,663 +100,8 @@ public class GameServer implements IGameServer {
 
     @Override
     public void start() {
-        Network.registrar(servidor);
-        servidor.addListener(new Listener() {
-            public void connected(Connection conexion) {
-                System.out.println("[SERVER] Un cliente se ha conectado: ID " + conexion.getID());
-                PlayerState nuevoEstado = new PlayerState();
-                nuevoEstado.id = conexion.getID();
-                nuevoEstado.x = 100;
-                nuevoEstado.y = 100;
-
-                // --- [CAMBIO PROFESOR] --- Lógica de asignación de personajes mejorada.
-                // Ahora es dinámica y no depende del número de jugadores, sino de qué personaje está libre.
-                if (!personajesEnUso.contains(PlayerState.CharacterType.SONIC)) {
-                    nuevoEstado.characterType = PlayerState.CharacterType.SONIC;
-                } else if (!personajesEnUso.contains(PlayerState.CharacterType.TAILS)) {
-                    nuevoEstado.characterType = PlayerState.CharacterType.TAILS;
-                } else if (!personajesEnUso.contains(PlayerState.CharacterType.KNUCKLES)) {
-                    nuevoEstado.characterType = PlayerState.CharacterType.KNUCKLES;
-                } else {
-                    // --- [CAMBIO PROFESOR] --- Lógica para cuando el servidor está lleno.
-                    // Aquí podrías enviar un paquete de "ServidorLleno" y cerrar la conexión.
-                    // Por ahora, simplemente lo logueamos y no asignamos personaje.
-                    System.out.println("[SERVER] Intento de conexión rechazado: No hay personajes disponibles.");
-                    conexion.close();
-                    return; // Salimos del método para no procesar a este jugador.
-                }
-
-                personajesEnUso.add(nuevoEstado.characterType); // Marcamos el personaje como "en uso".
-                System.out.println("[SERVER] Asignado " + nuevoEstado.characterType + " al jugador " + nuevoEstado.id);
-
-                jugadores.put(conexion.getID(), nuevoEstado);
-                puntajesAnillosIndividuales.put(conexion.getID(), 0);
-                puntajesBasuraIndividuales.put(conexion.getID(), 0);
-                cooldownsHabilidadLimpieza.put(conexion.getID(), 0f);
-
-                EstadisticasJugador stats = new EstadisticasJugador("Jugador " + nuevoEstado.characterType.toString());
-                estadisticasJugadores.put(conexion.getID(), stats);
-                System.out.println("[STATS] Objeto de estadísticas creado para el jugador " + nuevoEstado.characterType.toString());
-
-                Network.PaqueteTuID paqueteID = new Network.PaqueteTuID();
-                paqueteID.id = conexion.getID();
-                conexion.sendTCP(paqueteID);
-            }
-
-            public void received(Connection conexion, Object objeto) {
-                if (objeto instanceof Network.PaqueteSalidaDePartida) {
-                    System.out.println("[SERVER] Recibida notificación de salida voluntaria del jugador ID: " + conexion.getID());
-                    // Llamamos a nuestro nuevo método centralizado de desconexión.
-                    desconectarJugador(conexion);
-                    return; // Importante para no seguir procesando más paquetes de este jugador.
-                }
-                if (objeto instanceof Network.SolicitudAccesoPaquete) {
-                    Network.SolicitudAccesoPaquete solicitud = (Network.SolicitudAccesoPaquete) objeto;
-                    System.out.println("[SERVER] Recibida solicitud de acceso del jugador: " + solicitud.nombreJugador);
-
-                    // Obtenemos el estado del jugador que ya fue creado en connected().
-                    PlayerState estadoAsignado = jugadores.get(conexion.getID());
-                    if (estadoAsignado == null) return;
-
-                    // Le asignamos el nombre que viene en el paquete.
-                    estadoAsignado.nombreJugador = solicitud.nombreJugador;
-                    EstadisticasJugador stats = estadisticasJugadores.get(conexion.getID());
-                    if (stats != null) {
-                        stats.setNombreJugador(solicitud.nombreJugador);
-                    }
-
-                    // Enviamos la respuesta de bienvenida al cliente.
-                    Network.RespuestaAccesoPaquete respuesta = new Network.RespuestaAccesoPaquete();
-                    respuesta.mensajeRespuesta = "¡Bienvenido, " + solicitud.nombreJugador + "!";
-                    respuesta.tuEstado = estadoAsignado; // Le enviamos su estado completo, incluyendo el personaje que le asignamos.
-                    conexion.sendTCP(respuesta);
-
-                    // --- AHORA SÍ: ANUNCIAMOS AL JUGADOR AL RESTO DEL MUNDO ---
-                    // La información está completa (ID, Personaje, Nombre).
-                    Network.PaqueteJugadorConectado packetNuevoJugador = new Network.PaqueteJugadorConectado();
-                    packetNuevoJugador.nuevoJugador = estadoAsignado;
-                    servidor.sendToAllExceptTCP(conexion.getID(), packetNuevoJugador);
-
-                    // Y le informamos al nuevo jugador de los que ya estaban.
-                    for (PlayerState jugadorExistente : jugadores.values()) {
-                        if (jugadorExistente.id != conexion.getID() && jugadorExistente.characterType != null) {
-                            Network.PaqueteJugadorConectado packetJugadorExistente = new Network.PaqueteJugadorConectado();
-                            packetJugadorExistente.nuevoJugador = jugadorExistente;
-                            conexion.sendTCP(packetJugadorExistente);
-                        }
-                    }
-                }
-                if (objeto instanceof Network.PaquetePosicionJugador paquete) {
-                    PlayerState estadoJugador = jugadores.get(paquete.id);
-
-                  //  System.out.println("-----> [DEBUGGER 4 - RECEPTOR SERVIDOR] Recibida posición del jugador " + paquete.id + ": (" + paquete.x + ", " + paquete.y + ")");
-                    if (estadoJugador != null) {
-                        estadoJugador.x = paquete.x;
-                        estadoJugador.y = paquete.y;
-                        estadoJugador.estadoAnimacion = paquete.estadoAnimacion;
-                        servidor.sendToAllExceptTCP(conexion.getID(), paquete);
-
-                        if (!alMenosUnJugadorHaEnviadoPosicion) {
-                            System.out.println("[SERVER] Primera posición real recibida. ¡La IA puede comenzar!");
-                            alMenosUnJugadorHaEnviadoPosicion = true;
-                        }
-                    }
-                }
-                if (objeto instanceof Network.PaqueteSolicitudRecogerItem paquete) {
-                    // Usamos 'synchronized' para evitar que dos jugadores interactúen con el mismo ítem a la vez.
-                    synchronized (itemsActivos) {
-                        // 1. PRIMERO VERIFICAMOS el ítem con .get() en lugar de .remove() para poder saber su tipo.
-                        ItemState itemRecogido = itemsActivos.get(paquete.idItem);
-
-                        // Si el ítem realmente existe...
-                        if (itemRecogido != null) {
-
-                            if (itemRecogido.tipo == ItemState.ItemType.ESMERALDA) {
-
-                                itemsActivos.remove(paquete.idItem); // 1. La quitamos del juego.
-                                esmeraldasRecogidasGlobal++; // 2. Incrementamos el contador global.
-                                System.out.println("[GAMESERVER] ¡Esmeralda recogida! Total global: " + esmeraldasRecogidasGlobal);
-
-                                // 3. Notificamos a TODOS los clientes del nuevo total de esmeraldas.
-                                Network.PaqueteActualizacionEsmeraldas paqueteEsmeraldas = new Network.PaqueteActualizacionEsmeraldas();
-                                paqueteEsmeraldas.totalEsmeraldas = esmeraldasRecogidasGlobal;
-                                servidor.sendToAllTCP(paqueteEsmeraldas);
-
-                                // 4. Notificamos a TODOS que el ítem específico fue eliminado del mapa.
-                                Network.PaqueteItemEliminado paqueteEliminado = new Network.PaqueteItemEliminado();
-                                paqueteEliminado.idItem = paquete.idItem;
-                                servidor.sendToAllTCP(paqueteEliminado);
-
-                                if (esmeraldasRecogidasGlobal >= 7) {
-                                    System.out.println("[GAMESERVER] ¡LAS 7 ESMERALDAS REUNIDAS! Activando Super Sonic...");
-
-                                    // Buscamos a todos los jugadores que son Sonic.
-                                    for (PlayerState jugador : jugadores.values()) {
-                                        if (jugador.characterType == PlayerState.CharacterType.SONIC) {
-
-                                            // 1. Actualizamos el estado del jugador EN EL SERVIDOR.
-                                            jugador.isSuper = true;
-
-                                            jugador.vida = Player.MAX_VIDA;
-                                            System.out.println("[GAMESERVER] Vida del jugador " + jugador.id + " restaurada al máximo: " + jugador.vida);
-
-                                            // 2. Notificamos al cliente de Sonic sobre su nueva vida.
-                                            Network.PaqueteActualizacionVida paqueteVida = new Network.PaqueteActualizacionVida();
-                                            paqueteVida.idJugador = jugador.id;
-                                            paqueteVida.nuevaVida = jugador.vida;
-                                            servidor.sendToTCP(jugador.id, paqueteVida);
-
-                                            // 3. Creamos el "anuncio oficial".
-                                            Network.PaqueteTransformacionSuper paqueteSuper = new Network.PaqueteTransformacionSuper();
-                                            paqueteSuper.idJugador = jugador.id;
-                                            paqueteSuper.esSuper = true;
-
-                                            // 4. Lo enviamos a TODOS los jugadores.
-                                            servidor.sendToAllTCP(paqueteSuper);
-                                            System.out.println("[GAMESERVER] Notificando a todos que el jugador " + jugador.id + " es ahora Super Sonic.");
-                                        }
-                                    }
-                                }
-
-                            }
-
-                            // 2. AHORA DECIDIMOS QUÉ HACER BASADO EN SU TIPO.
-                            // CASO ESPECIAL: Es un teletransportador.
-                           else if (itemRecogido.tipo == ItemState.ItemType.TELETRANSPORTE) {
-
-                                System.out.println("[SERVER] Jugador " + conexion.getID() + " ha activado el teletransportador.");
-
-                                // --- INICIO DE LA MODIFICACIÓN ---
-                                // Construimos la clave a partir de las coordenadas del ítem que fue tocado.
-                                String claveCoordenadas = itemRecogido.x + "," + itemRecogido.y;
-                                Network.PortalInfo infoDestino = infoPortales.get(claveCoordenadas);
-
-                                if (infoDestino == null) {
-                                    // El mensaje de error ahora es más claro sobre qué está buscando.
-                                    System.err.println("[SERVER] Error: No se encontró información de destino para el portal en las coordenadas: " + claveCoordenadas);
-                                    return; // Salimos para evitar un crash.
-                                }
-
-                                // Eliminamos el ítem de la lista de ítems activos del mundo.
-                                itemsActivos.remove(paquete.idItem);
-
-                                // Eliminamos la información del portal de nuestro mapa de consulta usando la misma clave de coordenadas.
-                                infoPortales.remove(claveCoordenadas);
-                                // --- FIN DE LA MODIFICACIÓN ---
-
-
-                                // Creamos la ORDEN de cambio de mapa.
-                                Network.PaqueteOrdenCambiarMapa orden = new Network.PaqueteOrdenCambiarMapa();
-                                orden.nuevoMapa = infoDestino.destinoMapa;
-                                mapaActualServidor = orden.nuevoMapa;
-                                reiniciarContadoresDeNivel();
-                                // Enviamos la orden de cambio de mapa a TODOS los jugadores.
-                                servidor.sendToAllTCP(orden);
-
-                                // Limpiamos los enemigos del mapa anterior.
-                                enemigosActivos.clear();
-
-                                System.out.println("[SERVER] Enviando paquetes de posición autoritativos para forzar la sincronización.");
-                                for (PlayerState jugador : jugadores.values()) {
-                                    Network.PaquetePosicionJugador paquetePosicion = new Network.PaquetePosicionJugador();
-                                    paquetePosicion.id = jugador.id;
-                                    paquetePosicion.x = jugador.x;
-                                    paquetePosicion.y = jugador.y;
-                                    paquetePosicion.estadoAnimacion = jugador.estadoAnimacion;
-                                    servidor.sendToAllTCP(paquetePosicion);
-                                }
-
-                                // ¡LÓGICA CLAVE! Comprobamos si el nuevo mapa es una zona de jefe.
-                                if (orden.nuevoMapa.contains("ZonaJefe")) {
-                                    System.out.println("[SERVER] Detectado mapa de jefe. ¡Creando a Robotnik!");
-
-                                    // Solo si es un mapa de jefe, creamos y enviamos la instancia del jefe.
-                                    EnemigoState estadoRobotnik = new EnemigoState(999, 300, 100, 100, EnemigoState.EnemigoType.ROBOTNIK);
-                                    enemigosActivos.put(estadoRobotnik.id, estadoRobotnik);
-
-                                    Network.PaqueteEnemigoNuevo paqueteRobotnik = new Network.PaqueteEnemigoNuevo();
-                                    paqueteRobotnik.estadoEnemigo = estadoRobotnik;
-                                    servidor.sendToAllTCP(paqueteRobotnik);
-                                }
-
-                                // Notificamos a todos que el portal ha sido eliminado.
-                                Network.PaqueteItemEliminado paqueteEliminado = new Network.PaqueteItemEliminado();
-                                paqueteEliminado.idItem = paquete.idItem;
-                                servidor.sendToAllTCP(paqueteEliminado);
-
-                                // El servidor "olvida" las paredes del mapa anterior para poder cargar las nuevas.
-                                paredesDelMapa = null;
-                            }
-                            // CASO GENERAL: Es cualquier otro ítem (anillo, basura, etc.).
-                            else {
-                                itemsActivos.remove(paquete.idItem); // Lo eliminamos de la lista.
-                                System.out.println("[SERVER] Ítem con ID " + paquete.idItem + " recogido por jugador " + conexion.getID());
-
-                                if (itemRecogido.tipo == ItemState.ItemType.ANILLO) {
-                                    int puntajeActual = puntajesAnillosIndividuales.getOrDefault(conexion.getID(), 0);
-                                    puntajesAnillosIndividuales.put(conexion.getID(), puntajeActual + 1);
-
-                                    // Actualizamos el puntaje GLOBAL del equipo.
-                                    totalAnillosGlobal++;
-                                    System.out.println("[SERVER] Anillo recogido. Total de equipo: " + totalAnillosGlobal);
-
-                                    int anillosAhora = puntajesAnillosIndividuales.get(conexion.getID());
-                                    if (anillosAhora >= 100) {
-                                        System.out.println("[GAMESERVER] Jugador " + conexion.getID() + " tiene 100 anillos. Canjeando por vida.");
-
-                                        // 1. Restamos los 100 anillos al jugador EN EL SERVIDOR.
-                                        puntajesAnillosIndividuales.put(conexion.getID(), anillosAhora - 100);
-
-                                        // 2. Obtenemos el estado del jugador y aumentamos su vida EN EL SERVIDOR.
-                                        PlayerState estadoJugador = jugadores.get(conexion.getID());
-                                        if (estadoJugador != null) {
-                                            estadoJugador.vida = Math.min(estadoJugador.vida + 100, Player.MAX_VIDA);
-
-                                            // 3. Notificamos al jugador de su nueva vida.
-                                            Network.PaqueteActualizacionVida paqueteVida = new Network.PaqueteActualizacionVida();
-                                            paqueteVida.idJugador = conexion.getID();
-                                            paqueteVida.nuevaVida = estadoJugador.vida;
-                                            servidor.sendToTCP(conexion.getID(), paqueteVida);
-                                        }
-                                    }
-
-                                } else if (itemRecogido.tipo == ItemState.ItemType.BASURA || itemRecogido.tipo == ItemState.ItemType.PIEZA_PLASTICO) {
-                                    int puntajeActual = puntajesBasuraIndividuales.getOrDefault(conexion.getID(), 0);
-                                    puntajesBasuraIndividuales.put(conexion.getID(), puntajeActual + 1);
-
-                                    // Actualizamos el puntaje GLOBAL del equipo.
-                                    totalBasuraGlobal++;
-
-                                    // ¡La acción individual impacta el estado GLOBAL de la contaminación!
-                                    contaminationState.decrease(TRASH_CLEANUP_VALUE);
-                                    System.out.println("[SERVER] Basura recogida. Total de equipo: " + totalBasuraGlobal +
-                                        ". Contaminación GLOBAL reducida a: " + String.format("%.2f", contaminationState.getPercentage()) + "%!");
-
-                                    // Como la contaminación cambió, enviamos una actualización inmediata a TODOS.
-                                    Network.PaqueteActualizacionContaminacion paqueteContaminacion = new Network.PaqueteActualizacionContaminacion();
-                                    paqueteContaminacion.contaminationPercentage = contaminationState.getPercentage();
-                                    servidor.sendToAllTCP(paqueteContaminacion);
-                                }
-
-                                // Creamos y enviamos el paquete de actualización de puntuación SOLO al jugador que recogió el ítem.
-                                Network.PaqueteActualizacionPuntuacion paquetePuntaje = new Network.PaqueteActualizacionPuntuacion();
-                                paquetePuntaje.nuevosAnillos = puntajesAnillosIndividuales.get(conexion.getID());
-                                paquetePuntaje.nuevaBasura = puntajesBasuraIndividuales.get(conexion.getID());
-                                conexion.sendTCP(paquetePuntaje);
-
-                                // Notificamos a TODOS los jugadores que el ítem ya no existe.
-                                Network.PaqueteItemEliminado paqueteEliminado = new Network.PaqueteItemEliminado();
-                                paqueteEliminado.idItem = paquete.idItem;
-                                servidor.sendToAllTCP(paqueteEliminado);
-                            }
-                        }
-                    }
-                }
-                if (objeto instanceof Network.PaqueteAnimacionEnemigoTerminada paquete) {
-                    // Un cliente nos informa que la animación de un enemigo terminó.
-                    EnemigoState enemigo = enemigosActivos.get(paquete.idEnemigo);
-                    if (enemigo != null) {
-                        // Ponemos al enemigo en el estado especial para que la IA lo reevalúe.
-                        enemigo.estadoAnimacion = EnemigoState.EstadoEnemigo.POST_ATAQUE;
-                        enemigo.tiempoEnEstado = 0;
-                    }
-                }
-                if (objeto instanceof Network.PaqueteInformacionMapa paquete) {
-                    // El primer cliente que se conecta nos envía el plano del mapa.
-                    // Solo lo guardamos si aún no lo tenemos.
-                    System.out.println("[SERVER] <== PAQUETE DE MAPA RECIBIDO!");
-                    if (paredesDelMapa == null) {
-                        paredesDelMapa = paquete.paredes;
-
-                        if (mapaActualServidor == null || mapaActualServidor.isEmpty()) {
-                            mapaActualServidor = paquete.nombreMapa;
-                            System.out.println("[GAMESERVER] Establecido mapa inicial a: " + mapaActualServidor);
-                        }
-                        System.out.println("[SERVER] Plano del mapa recibido con " + paredesDelMapa.size() + " paredes.");
-
-                        if (paquete.posEsmeralda != null) {
-                            System.out.println("[GAMESERVER] Posición de esmeralda recibida. Generando ítem en el mapa.");
-
-                            // Creamos el estado del ítem para la esmeralda.
-                            ItemState estadoEsmeralda = new ItemState(proximoIdItem++, paquete.posEsmeralda.x, paquete.posEsmeralda.y, ItemState.ItemType.ESMERALDA);
-                            itemsActivos.put(estadoEsmeralda.id, estadoEsmeralda);
-
-                            // Notificamos a TODOS los clientes para que la dibujen en sus pantallas.
-                            Network.PaqueteItemNuevo paqueteItem = new Network.PaqueteItemNuevo();
-                            paqueteItem.estadoItem = estadoEsmeralda;
-                            servidor.sendToAllTCP(paqueteItem);
-                        }
-
-                        // --- INICIO DE LA LÓGICA AÑADIDA ---
-                        if (paquete.portales != null && !paquete.portales.isEmpty()) {
-                            System.out.println("[SERVER] Recibida información de " + paquete.portales.size() + " portales. Creándolos...");
-
-                            // Iteramos sobre la información de cada portal recibida.
-                            infoPortales.clear();
-
-                            // Solo guardamos la información, NO creamos los ítems.
-                            for (Network.PortalInfo info : paquete.portales) {
-                                String claveCoordenadas = info.x + "," + info.y;
-                                infoPortales.put(claveCoordenadas, info);
-                            }
-                        }
-                        // --- FIN DE LA LÓGICA AÑADIDA ---
-
-                        // La lógica para generar bloques y animales se mantiene.
-                        generarBloquesParaElNivel();
-                        generarAnimales();
-                        sincronizarBloquesConClientes();
-                    }
-                }
-                if (objeto instanceof Network.PaqueteInvocarDron) {
-                    int jugadorId = conexion.getID();
-                    PlayerState jugador = jugadores.get(jugadorId);
-
-                    // 1. Verificación de seguridad: El jugador debe existir, ser Tails y no tener ya un dron activo.
-                    if (jugador != null && jugador.characterType == PlayerState.CharacterType.TAILS && !dronesActivos.containsKey(jugadorId)) {
-
-                        // 2. Obtenemos la cantidad de basura DESDE LOS REGISTROS DEL SERVIDOR (la fuente de la verdad).
-                        int basuraActual = puntajesBasuraIndividuales.getOrDefault(jugadorId, 0);
-
-                        // 3. El SERVIDOR comprueba si se cumple la condición.
-                        if (basuraActual >= 20) {
-                            // --- ACCIÓN APROBADA ---
-
-                            // a. El servidor aplica el coste de la habilidad.
-                            puntajesBasuraIndividuales.put(jugadorId, basuraActual - 20);
-
-                            // b. El servidor notifica al jugador de su nuevo total de basura para actualizar su UI.
-                            Network.PaqueteActualizacionPuntuacion paquetePuntaje = new Network.PaqueteActualizacionPuntuacion();
-                            paquetePuntaje.nuevosAnillos = puntajesAnillosIndividuales.getOrDefault(jugadorId, 0);
-                            paquetePuntaje.nuevaBasura = puntajesBasuraIndividuales.get(jugadorId);
-                            paquetePuntaje.totalBasuraReciclada = basuraReciclada;
-                            conexion.sendTCP(paquetePuntaje);
-
-                            // c. El servidor ejecuta la acción: crea el estado del dron (tu código original).
-                            DronState nuevoDron = new DronState(proximoIdDron++, jugadorId, jugador.x, jugador.y);
-                            dronesActivos.put(jugadorId, nuevoDron);
-
-                            System.out.println("[SERVER DEBUG] Dron CREADO para jugador " + jugadorId + ". Timer inicial: " + nuevoDron.temporizador);
-
-                            // d. El servidor notifica a TODOS los clientes que el dron ha aparecido.
-                            Network.PaqueteDronEstado paqueteEstado = new Network.PaqueteDronEstado();
-                            paqueteEstado.ownerId = jugador.id;
-                            paqueteEstado.nuevoEstado = DronState.EstadoDron.APARECIENDO;
-                            paqueteEstado.x = jugador.x; // Posición inicial
-                            paqueteEstado.y = jugador.y;
-                            servidor.sendToAllTCP(paqueteEstado);
-
-                            // e. El servidor envía un mensaje de confirmación al jugador que lo invocó.
-                            Network.PaqueteMensajeUI msg = new Network.PaqueteMensajeUI();
-                            msg.mensaje = "Sembrando árbol...";
-                            conexion.sendTCP(msg);
-
-                            System.out.println("[SERVER] Jugador " + jugadorId + " ha invocado un dron.");
-
-                        } else {
-                            // --- ACCIÓN DENEGADA ---
-                            // Si no tiene suficiente basura, el servidor le envía un mensaje de error solo a él.
-                            Network.PaqueteMensajeUI msg = new Network.PaqueteMensajeUI();
-                            msg.mensaje = "Necesitas recoger 20 basuras";
-                            conexion.sendTCP(msg);
-                        }
-                    }
-                } if (objeto instanceof Network.PaqueteBasuraDepositada) {
-                    System.out.println("[SERVER] ¡Recibido PaqueteBasuraDepositada!");
-
-                    int idJugadorQueActivo = conexion.getID();
-                    PlayerState estadoJugador = jugadores.get(idJugadorQueActivo);
-
-                    // 1. VALIDACIÓN: Nos aseguramos de que fue Tails quien tocó la planta.
-                    if (estadoJugador != null ) {
-                        System.out.println("[SERVER] Tails (ID: " + idJugadorQueActivo + ") ha activado la planta de tratamiento.");
-
-                        // 2. CÁLCULO: Sumamos toda la basura que tienen todos los jugadores.
-                        int basuraDepositadaEstaVez = 0;
-                        for (int basuraDeJugador : puntajesBasuraIndividuales.values()) {
-                            basuraDepositadaEstaVez += basuraDeJugador;
-                        }
-                        // 3. CONDICIÓN Y CURACIÓN: Si se recicló basura, curamos a TODOS los jugadores.
-                        if (basuraDepositadaEstaVez >=5) {
-                            System.out.println("[SERVER] Reciclando " + basuraDepositadaEstaVez + " de basura. Curando a todos los jugadores.");
-
-                            // Iteramos sobre cada jugador conectado para aplicarle la curación.
-                            for (PlayerState jugadorACurar : jugadores.values()) {
-                                // a. Calculamos la nueva vida sin exceder el máximo.
-                                int vidaNueva = jugadorACurar.vida + 10;
-                                jugadorACurar.vida = Math.min(vidaNueva, Player.MAX_VIDA);
-
-                                // b. Creamos un paquete de actualización de vida PARA ESE JUGADOR.
-                                Network.PaqueteActualizacionVida paqueteVida = new Network.PaqueteActualizacionVida();
-                                paqueteVida.idJugador = jugadorACurar.id;
-                                paqueteVida.nuevaVida = jugadorACurar.vida;
-
-                                // c. Enviamos la notificación de su nueva vida a cada jugador individualmente.
-                                servidor.sendToTCP(jugadorACurar.id, paqueteVida);
-                            }
-
-                            Network.PaqueteMensajeUI msg = new Network.PaqueteMensajeUI();
-                            msg.mensaje = "Basura reciclada +10 SALUD A TODOS!";
-                            conexion.sendTCP(msg);
-
-                            // 3. ACTUALIZACIÓN DE TOTALES:
-                            basuraReciclada += basuraDepositadaEstaVez;
-                            EstadisticasJugador stats = estadisticasJugadores.get(idJugadorQueActivo);
-                            if (stats != null && basuraDepositadaEstaVez > 0) {
-                                // Actualizamos sus puntos sumando la cantidad de basura reciclada.
-                                stats.sumarObjetosReciclados(basuraDepositadaEstaVez);
-                                System.out.println("[STATS] Jugador " + idJugadorQueActivo + " recicló " + basuraDepositadaEstaVez + " objetos.");
-                            }
-                            // 4. REINICIO DE CONTADORES:
-                            puntajesBasuraIndividuales.replaceAll((id, valorActual) -> 0);
-                            System.out.println("[SERVER DEBUG] Mapa de basuras después del reinicio: " + puntajesBasuraIndividuales.toString());
-
-                            // 5. NOTIFICACIÓN A TODOS:
-                            for (Integer idJugadorConectado : jugadores.keySet()) {
-                                Network.PaqueteActualizacionPuntuacion paquetePuntaje = new Network.PaqueteActualizacionPuntuacion();
-                                paquetePuntaje.nuevosAnillos = puntajesAnillosIndividuales.getOrDefault(idJugadorConectado, 0);
-                                paquetePuntaje.nuevaBasura = puntajesBasuraIndividuales.getOrDefault(idJugadorConectado, 0);
-                                paquetePuntaje.totalBasuraReciclada = basuraReciclada;
-                                servidor.sendToTCP(idJugadorConectado, paquetePuntaje);
-                            }
-                            System.out.println("[SERVER] Paquetes de actualización de puntuación enviados a todos los jugadores.");
-                        } else {
-                            Network.PaqueteMensajeUI msg = new Network.PaqueteMensajeUI();
-                            msg.mensaje = "Necesitan recoger 5 Basuras para Curarse!";
-                            conexion.sendTCP(msg);
-                        }
-
-                    }
-                } if (objeto instanceof Network.PaqueteBloqueDestruido paquete) {
-                    PlayerState jugador = jugadores.get(paquete.idJugador);
-
-                    // --- VALIDACIÓN (¡Muy importante para la seguridad!) ---
-                    // Aquí comprobamos si la petición es válida.
-                    // Por ahora, solo comprobaremos que el bloque exista en nuestra lista.
-                    if (jugador != null && bloquesRompibles.containsKey(paquete.idBloque)) {
-
-                        // ¡Petición válida! Destruimos el bloque en el estado del servidor.
-                        bloquesRompibles.remove(paquete.idBloque);
-                        System.out.println("[SERVER] El jugador " + paquete.idJugador + " (Knuckles) ha destruido el bloque ID: " + paquete.idBloque);
-
-                        // --- LÓGICA DE JUEGO (copiada de tu LocalServer) ---
-                        // Le damos al jugador los puntos de basura por destruir el bloque.
-                        int puntajeActual = puntajesBasuraIndividuales.getOrDefault(paquete.idJugador, 0);
-                        puntajesBasuraIndividuales.put(paquete.idJugador, puntajeActual + 1);
-                        totalBasuraGlobal++; // Actualizamos el total del equipo
-                        contaminationState.decrease(TRASH_CLEANUP_VALUE);
-                        System.out.println("[SERVER] Basura recogida. Contaminación reducida a " + contaminationState.getPercentage());
-                        // (Aquí deberías enviar los paquetes de actualización de puntuación y contaminación a todos)
-                        EstadisticasJugador stats = estadisticasJugadores.get(paquete.idJugador);
-                        if (stats != null) {
-                            // Le damos los puntos correspondientes a limpiar una zona.
-                            stats.sumarZonaLimpiada();
-                            System.out.println("[STATS] Jugador " + paquete.idJugador + " (Knuckles) limpió una zona al destruir un bloque.");
-                        }
-                        // --- ORDENAR A TODOS LOS CLIENTES QUE DESTRUYAN EL BLOQUE ---
-                        Network.PaqueteBloqueConfirmadoDestruido respuesta = new Network.PaqueteBloqueConfirmadoDestruido();
-                        respuesta.idBloque = paquete.idBloque;
-                        servidor.sendToAllTCP(respuesta); // ¡Enviamos la confirmación a todos!
-                    }
-                }  if (objeto instanceof Network.PaqueteSolicitudMatarAnimal paquete) {
-                    // La lógica es prácticamente idéntica a la del LocalServer.
-                    // Usamos 'synchronized' para evitar condiciones de carrera si dos eventos
-                    // intentan matar al mismo animal a la vez.
-                    synchronized (animalesActivos) {
-                        AnimalState animal = animalesActivos.get(paquete.idAnimal);
-                        if (animal != null && animal.estaVivo) {
-                            animal.estaVivo = false;
-                            System.out.println("[SERVER] Recibida solicitud para matar al animal ID: " + animal.id);
-
-                            // No necesitamos crear un paquete nuevo. Como nuestro bucle principal ya envía
-                            // el estado completo de 'animalesActivos' constantemente, este cambio
-                            // se propagará automáticamente a todos los clientes en el siguiente tick.
-                        }
-                    }
-                }
-                if (objeto instanceof Network.PaqueteSolicitudHabilidadLimpieza) {
-                    int jugadorId = conexion.getID();
-                    float cooldownActual = cooldownsHabilidadLimpieza.getOrDefault(jugadorId, 0f);
-
-                    // ¡El servidor es la autoridad! Comprueba si el cooldown ha terminado.
-                    if (cooldownActual <= 0) {
-                        System.out.println("[SERVER] Jugador " + jugadorId + " usó la habilidad de limpieza. ¡Aprobado!");
-
-                        // 1. Aplicar el efecto al estado del juego.
-                        contaminationState.decrease(100.0f);
-
-                        // 2. RECOGER TODOS LOS ÍTEMS DE BASURA DEL MAPA.
-                        // Creamos una copia de las claves para iterar de forma segura mientras eliminamos elementos.
-                        ArrayList<Integer> idsItemsARecoger = new ArrayList<>();
-                        synchronized (itemsActivos) { // Sincronizamos para evitar problemas de concurrencia
-                            for (ItemState item : itemsActivos.values()) {
-                                if (item.tipo == ItemState.ItemType.BASURA || item.tipo == ItemState.ItemType.PIEZA_PLASTICO) {
-                                    idsItemsARecoger.add(item.id);
-                                }
-                            }
-                        }
-
-                        // Procesamos la recogida de cada ítem.
-                        for (Integer idItem : idsItemsARecoger) {
-                            // Para cada ítem de basura, aplicamos la misma lógica que si el jugador
-                            // lo hubiera recogido normalmente.
-                            procesarRecogidaItem(jugadorId, idItem);
-                        }
-
-                        // 2. Reiniciar el cooldown para este jugador.
-                        cooldownsHabilidadLimpieza.put(jugadorId, COOLDOWN_HABILIDAD_SONIC);
-                        EstadisticasJugador stats = estadisticasJugadores.get(jugadorId);
-                        if (stats != null) {
-                            stats.sumarZonaLimpiada(); // Suma los puntos definidos en EstadisticasJugador
-                            System.out.println("[STATS] Jugador " + jugadorId + " (Sonic) limpió una zona con su habilidad.");
-                        }
-                        // 3. Notificar a TODOS los clientes del efecto.
-                        // Usamos el paquete que ya tenías para esto.
-                        Network.PaqueteHabilidadLimpiezaSonic notificacion = new Network.PaqueteHabilidadLimpiezaSonic();
-                        servidor.sendToAllTCP(notificacion);
-
-                        // También enviamos la actualización de contaminación inmediatamente.
-                        Network.PaqueteActualizacionContaminacion paqueteContaminacion = new Network.PaqueteActualizacionContaminacion();
-                        paqueteContaminacion.contaminationPercentage = contaminationState.getPercentage();
-                        servidor.sendToAllTCP(paqueteContaminacion);
-
-                    } else {
-                        // Si el jugador intenta usar la habilidad antes de tiempo, el servidor simplemente lo ignora.
-                        System.out.println("[SERVER] Jugador " + jugadorId + " intentó usar la habilidad, pero está en cooldown. ¡Ignorado!");
-                    }
-                }  if (objeto instanceof Network.PaqueteAtaqueJugadorAEnemigo paquete) {
-                    synchronized (enemigosActivos) {
-                        EnemigoState enemigo = enemigosActivos.get(paquete.idEnemigo);
-                        if (enemigo != null && enemigo.vida > 0) {
-                            enemigo.vida -= paquete.danio;
-                            System.out.println("[SERVER] Enemigo ID " + enemigo.id + " recibió " + paquete.danio + " de daño. Vida restante: " + enemigo.vida);
-
-                            // 1. Creamos el paquete de actualización de vida del enemigo.
-                            Network.PaqueteActualizacionVidaEnemigo paqueteVida = new Network.PaqueteActualizacionVidaEnemigo();
-                            paqueteVida.idEnemigo = enemigo.id;
-                            paqueteVida.nuevaVida = enemigo.vida;
-
-                            // 2. Lo enviamos a TODOS los clientes para que actualicen sus barras de vida.
-                            servidor.sendToAllTCP(paqueteVida);
-
-                            if (enemigo.vida <= 0) {
-                                System.out.println("[SERVER] ¡Enemigo ID " + enemigo.id + " ha sido derrotado!");
-                                enemigosActivos.remove(enemigo.id);
-                                Network.PaqueteEntidadEliminada notificacionMuerte = new Network.PaqueteEntidadEliminada();
-                                notificacionMuerte.idEntidad = enemigo.id;
-                                notificacionMuerte.esJugador = false;
-                                servidor.sendToAllTCP(notificacionMuerte);
-                                EstadisticasJugador stats = estadisticasJugadores.get(paquete.idJugador);
-                                if (stats != null) {
-                                    stats.sumarEnemigoDerrotado();
-                                    System.out.println("[STATS] Jugador " + paquete.idJugador + " derrotó a un enemigo.");
-                                }
-                                if (enemigo.tipo == EnemigoState.EnemigoType.ROBOTNIK) {
-                                    // Y si estamos en el mapa correcto.
-                                    if ("maps/ZonaJefeN3.tmx".equals(mapaActualServidor)) {
-                                        finalizarPartidaYEnviarResultados();
-                                        return; // Salimos para no procesar más lógica (como generar portales).
-                                    }
-                                }
-                                comprobarYGenerarPortalSiCorresponde();
-                            }
-                        }
-                    }
-                } if (objeto instanceof Network.ForzarFinDeJuegoDebug) {
-                    System.out.println("[GAMESERVER] ¡Recibida orden de forzar fin de juego!");
-                    // Simplemente llamamos a la función que ya hace todo el trabajo.
-                    finalizarPartidaYEnviarResultados();
-                }
-            }
-
-            public void disconnected(Connection conexion) {
-                System.out.println("[SERVER] Conexión física perdida con el cliente ID: " + conexion.getID());
-                desconectarJugador(conexion);
-            }
-        });
-
-
-        try {
-            servidor.bind(Network.PORT);
-        } catch (IOException e) {
-            e.printStackTrace();
-            return;
-        }
-        servidor.start();
-
-        new Thread(() -> {
-            System.out.println("[SERVER] Hilo de juego iniciado. Esperando el plano del mapa del primer cliente...");
-
-            // Este bucle se ejecutará hasta que la variable 'paredesDelMapa' sea llenada
-            // por el paquete que envía el primer cliente.
-            while (paredesDelMapa == null) {
-
-                try {
-                    // Esperamos un corto tiempo para no consumir 100% de la CPU mientras esperamos.
-                    Thread.sleep(100);
-                } catch (InterruptedException e) {
-                    e.printStackTrace();
-                    Thread.currentThread().interrupt();
-                    return; // Salimos del hilo si es interrumpido.
-                }
-            }
-
-            System.out.println("[SERVER] ¡Plano del mapa detectado! Iniciando bucle de juego principal.");
-
-            final float FIXED_DELTA_TIME = 1 / 60f;
-            while (true) {
-                try {
-                    updateServerLogic(FIXED_DELTA_TIME);
-                    Thread.sleep((long) (FIXED_DELTA_TIME * 1000));
-                } catch (InterruptedException e) {
-                    e.printStackTrace();
-                    Thread.currentThread().interrupt();
-                }
-            }
-        }).start();
-
-
-        System.out.println("[SERVER] Servidor online iniciado y escuchando en el puerto " + Network.PORT);
+        System.out.println("[SERVER] Iniciando GameServer...");
+        iniciarInstanciaServidor();
     }
 
     private void procesarRecogidaItem(int idJugador, int idItem) {
@@ -1450,6 +797,11 @@ public class GameServer implements IGameServer {
         // 7. CERRAMOS LA CONEXIÓN (si no estuviera ya cerrada).
         // Esto asegura que el servidor no mantenga conexiones inactivas.
         conexion.close();
+
+        if (jugadores.isEmpty()) {
+            // Si no quedan jugadores, llamamos al método para reiniciar todo el estado del juego.
+            reiniciarServidor();
+        }
     }
 
     private void comprobarDerrotaDelEquipo() {
@@ -1496,6 +848,651 @@ public class GameServer implements IGameServer {
 
         // MUY IMPORTANTE: Forzamos a que el primer cliente del nuevo mapa envíe su plano.
         this.paredesDelMapa = null;
+    }
+
+    /**
+     * Reinicia el servidor completamente, limpiando todo el estado del juego
+     * y volviendo a iniciar una nueva instancia del servidor KryoNet.
+     */
+    private void reiniciarServidor() {
+        System.out.println("------------------------------------------------------");
+        System.out.println("[SERVER RESTART] No hay jugadores conectados. Reiniciando servidor...");
+        System.out.println("------------------------------------------------------");
+
+        // --- 1. DETENER EL HILO DE LÓGICA DE JUEGO ---
+        serverThreadActive = false; // Le decimos al bucle 'while' que debe parar
+        try {
+            if (gameLoopThread != null) {
+                gameLoopThread.join(1000); // Esperamos hasta 1 segundo a que el hilo muera
+            }
+        } catch (InterruptedException e) {
+            System.err.println("[SERVER RESTART] El hilo fue interrumpido mientras se esperaba su finalización.");
+            Thread.currentThread().interrupt();
+        }
+        System.out.println("[SERVER RESTART] Hilo de juego anterior detenido.");
+
+        // --- 2. DETENER Y CERRAR LA INSTANCIA ACTUAL DEL SERVIDOR KRYONET ---
+        if (servidor != null) {
+            servidor.close(); // Cierra las conexiones y libera el puerto
+            servidor.stop();
+            System.out.println("[SERVER RESTART] Instancia de KryoNet detenida y liberada.");
+        }
+
+        // --- 3. LIMPIEZA DE TODO EL ESTADO DEL JUEGO ---
+        jugadores.clear();
+        personajesEnUso.clear();
+        enemigosActivos.clear();
+        itemsActivos.clear();
+        paredesDelMapa = null;
+        puntajesAnillosIndividuales.clear();
+        puntajesBasuraIndividuales.clear();
+        dronesActivos.clear();
+        colisionesDinamicas.clear();
+        infoPortales.clear();
+        bloquesRompibles.clear();
+        animalesActivos.clear();
+        cooldownsHabilidadLimpieza.clear();
+        estadisticasJugadores.clear();
+
+        // -- Reinicio de IDs de entidades
+        proximoIdDron = 20000;
+        proximoIdBloque = 30000;
+        proximoIdEnemigo = 0;
+        proximoIdItem = 0;
+        proximoIdAnimal = 20000;
+
+        // -- Reinicio de estado global
+        contaminationState.decrease(1000);
+        totalAnillosGlobal = 0;
+        totalBasuraGlobal = 0;
+        esmeraldasRecogidasGlobal = 0;
+        basuraReciclada = 0;
+
+        // -- Reinicio de flags y contadores
+        alMenosUnJugadorHaEnviadoPosicion = false;
+        enemigosGeneradosEnNivelActual = 0;
+        mapaActualServidor = "";
+        teleportGenerado = false;
+
+        System.out.println("[SERVER RESTART] Estado de la partida limpiado.");
+
+        // --- 4. INICIAR UNA INSTANCIA COMPLETAMENTE NUEVA DEL SERVIDOR ---
+        iniciarInstanciaServidor();
+    }
+
+    private void iniciarInstanciaServidor() {
+        System.out.println("[SERVER BOOT] Creando nueva instancia del servidor...");
+        // 1. CREACIÓN Y CONFIGURACIÓN DEL SERVIDOR
+        servidor = new Server(); // Creamos un objeto Server NUEVO
+        Network.registrar(servidor);
+
+        // 2. CONFIGURACIÓN DE LOS LISTENERS (Eventos de conexión, recepción, etc.)
+        servidor.addListener(new Listener() {
+            // --- COPIA AQUÍ TODO EL CONTENIDO DE TU .addListener() ORIGINAL ---
+            // Desde: public void connected(Connection conexion) { ... }
+            // Hasta la llave de cierre: }
+            public void connected(Connection conexion) {
+                System.out.println("[SERVER] Un cliente se ha conectado: ID " + conexion.getID());
+                PlayerState nuevoEstado = new PlayerState();
+                nuevoEstado.id = conexion.getID();
+                nuevoEstado.x = 100;
+                nuevoEstado.y = 100;
+
+                if (!personajesEnUso.contains(PlayerState.CharacterType.SONIC)) {
+                    nuevoEstado.characterType = PlayerState.CharacterType.SONIC;
+                } else if (!personajesEnUso.contains(PlayerState.CharacterType.TAILS)) {
+                    nuevoEstado.characterType = PlayerState.CharacterType.TAILS;
+                } else if (!personajesEnUso.contains(PlayerState.CharacterType.KNUCKLES)) {
+                    nuevoEstado.characterType = PlayerState.CharacterType.KNUCKLES;
+                } else {
+                    System.out.println("[SERVER] Intento de conexión rechazado: No hay personajes disponibles.");
+                    conexion.close();
+                    return;
+
+                }
+
+                personajesEnUso.add(nuevoEstado.characterType);
+                System.out.println("[SERVER] Asignado " + nuevoEstado.characterType + " al jugador " + nuevoEstado.id);
+
+                jugadores.put(conexion.getID(), nuevoEstado);
+                puntajesAnillosIndividuales.put(conexion.getID(), 0);
+                puntajesBasuraIndividuales.put(conexion.getID(), 0);
+                cooldownsHabilidadLimpieza.put(conexion.getID(), 0f);
+
+                EstadisticasJugador stats = new EstadisticasJugador("Jugador " + nuevoEstado.characterType.toString());
+                estadisticasJugadores.put(conexion.getID(), stats);
+                System.out.println("[STATS] Objeto de estadísticas creado para el jugador " + nuevoEstado.characterType.toString());
+
+                Network.PaqueteTuID paqueteID = new Network.PaqueteTuID();
+                paqueteID.id = conexion.getID();
+                conexion.sendTCP(paqueteID);
+            }
+
+            public void received(Connection conexion, Object objeto) {
+                if (objeto instanceof Network.PaqueteSalidaDePartida) {
+                    System.out.println("[SERVER] Recibida notificación de salida voluntaria del jugador ID: " + conexion.getID());
+
+                    desconectarJugador(conexion);
+                    return;
+                }
+                if (objeto instanceof Network.SolicitudAccesoPaquete) {
+                    Network.SolicitudAccesoPaquete solicitud = (Network.SolicitudAccesoPaquete) objeto;
+                    System.out.println("[SERVER] Recibida solicitud de acceso del jugador: " + solicitud.nombreJugador);
+
+
+                    PlayerState estadoAsignado = jugadores.get(conexion.getID());
+                    if (estadoAsignado == null) return;
+
+
+                    estadoAsignado.nombreJugador = solicitud.nombreJugador;
+                    EstadisticasJugador stats = estadisticasJugadores.get(conexion.getID());
+                    if (stats != null) {
+                        stats.setNombreJugador(solicitud.nombreJugador);
+                    }
+
+
+                    Network.RespuestaAccesoPaquete respuesta = new Network.RespuestaAccesoPaquete();
+                    respuesta.mensajeRespuesta = "¡Bienvenido, " + solicitud.nombreJugador + "!";
+                    respuesta.tuEstado = estadoAsignado;
+                    conexion.sendTCP(respuesta);
+
+                    Network.PaqueteJugadorConectado packetNuevoJugador = new Network.PaqueteJugadorConectado();
+                    packetNuevoJugador.nuevoJugador = estadoAsignado;
+                    servidor.sendToAllExceptTCP(conexion.getID(), packetNuevoJugador);
+
+
+                    for (PlayerState jugadorExistente : jugadores.values()) {
+                        if (jugadorExistente.id != conexion.getID() && jugadorExistente.characterType != null) {
+                            Network.PaqueteJugadorConectado packetJugadorExistente = new Network.PaqueteJugadorConectado();
+                            packetJugadorExistente.nuevoJugador = jugadorExistente;
+                            conexion.sendTCP(packetJugadorExistente);
+                        }
+                    }
+                }
+                if (objeto instanceof Network.PaquetePosicionJugador paquete) {
+                    PlayerState estadoJugador = jugadores.get(paquete.id);
+
+                    if (estadoJugador != null) {
+                        estadoJugador.x = paquete.x;
+                        estadoJugador.y = paquete.y;
+                        estadoJugador.estadoAnimacion = paquete.estadoAnimacion;
+                        servidor.sendToAllExceptTCP(conexion.getID(), paquete);
+
+                        if (!alMenosUnJugadorHaEnviadoPosicion) {
+                            System.out.println("[SERVER] Primera posición real recibida. ¡La IA puede comenzar!");
+                            alMenosUnJugadorHaEnviadoPosicion = true;
+                        }
+                    }
+                }
+                if (objeto instanceof Network.PaqueteSolicitudRecogerItem paquete) {
+                    synchronized (itemsActivos) {
+                        ItemState itemRecogido = itemsActivos.get(paquete.idItem);
+
+
+                        if (itemRecogido != null) {
+
+                            if (itemRecogido.tipo == ItemState.ItemType.ESMERALDA) {
+
+                                itemsActivos.remove(paquete.idItem);
+                                esmeraldasRecogidasGlobal++;
+                                System.out.println("[GAMESERVER] ¡Esmeralda recogida! Total global: " + esmeraldasRecogidasGlobal);
+
+
+                                Network.PaqueteActualizacionEsmeraldas paqueteEsmeraldas = new Network.PaqueteActualizacionEsmeraldas();
+                                paqueteEsmeraldas.totalEsmeraldas = esmeraldasRecogidasGlobal;
+                                servidor.sendToAllTCP(paqueteEsmeraldas);
+
+
+                                Network.PaqueteItemEliminado paqueteEliminado = new Network.PaqueteItemEliminado();
+                                paqueteEliminado.idItem = paquete.idItem;
+                                servidor.sendToAllTCP(paqueteEliminado);
+
+                                if (esmeraldasRecogidasGlobal >= 7) {
+                                    System.out.println("[GAMESERVER] ¡LAS 7 ESMERALDAS REUNIDAS! Activando Super Sonic...");
+
+
+                                    for (PlayerState jugador : jugadores.values()) {
+                                        if (jugador.characterType == PlayerState.CharacterType.SONIC) {
+
+
+                                            jugador.isSuper = true;
+
+                                            jugador.vida = Player.MAX_VIDA;
+                                            System.out.println("[GAMESERVER] Vida del jugador " + jugador.id + " restaurada al máximo: " + jugador.vida);
+
+
+                                            Network.PaqueteActualizacionVida paqueteVida = new Network.PaqueteActualizacionVida();
+                                            paqueteVida.idJugador = jugador.id;
+                                            paqueteVida.nuevaVida = jugador.vida;
+                                            servidor.sendToTCP(jugador.id, paqueteVida);
+
+
+                                            Network.PaqueteTransformacionSuper paqueteSuper = new Network.PaqueteTransformacionSuper();
+                                            paqueteSuper.idJugador = jugador.id;
+                                            paqueteSuper.esSuper = true;
+
+                                            servidor.sendToAllTCP(paqueteSuper);
+                                            System.out.println("[GAMESERVER] Notificando a todos que el jugador " + jugador.id + " es ahora Super Sonic.");
+                                        }
+                                    }
+                                }
+
+                            }
+
+                            else if (itemRecogido.tipo == ItemState.ItemType.TELETRANSPORTE) {
+
+                                System.out.println("[SERVER] Jugador " + conexion.getID() + " ha activado el teletransportador.");
+
+
+                                String claveCoordenadas = itemRecogido.x + "," + itemRecogido.y;
+                                Network.PortalInfo infoDestino = infoPortales.get(claveCoordenadas);
+
+                                if (infoDestino == null) {
+                                    System.err.println("[SERVER] Error: No se encontró información de destino para el portal en las coordenadas: " + claveCoordenadas);
+                                    return;
+                                }
+
+
+                                itemsActivos.remove(paquete.idItem);
+
+                                infoPortales.remove(claveCoordenadas);
+
+                                Network.PaqueteOrdenCambiarMapa orden = new Network.PaqueteOrdenCambiarMapa();
+                                orden.nuevoMapa = infoDestino.destinoMapa;
+                                mapaActualServidor = orden.nuevoMapa;
+                                reiniciarContadoresDeNivel();
+                                servidor.sendToAllTCP(orden);
+
+                                enemigosActivos.clear();
+
+                                System.out.println("[SERVER] Enviando paquetes de posición autoritativos para forzar la sincronización.");
+                                for (PlayerState jugador : jugadores.values()) {
+                                    Network.PaquetePosicionJugador paquetePosicion = new Network.PaquetePosicionJugador();
+                                    paquetePosicion.id = jugador.id;
+                                    paquetePosicion.x = jugador.x;
+                                    paquetePosicion.y = jugador.y;
+                                    paquetePosicion.estadoAnimacion = jugador.estadoAnimacion;
+                                    servidor.sendToAllTCP(paquetePosicion);
+                                }
+
+                                if (orden.nuevoMapa.contains("ZonaJefe")) {
+                                    System.out.println("[SERVER] Detectado mapa de jefe. ¡Creando a Robotnik!");
+
+                                    EnemigoState estadoRobotnik = new EnemigoState(999, 300, 100, 100, EnemigoState.EnemigoType.ROBOTNIK);
+                                    enemigosActivos.put(estadoRobotnik.id, estadoRobotnik);
+
+                                    Network.PaqueteEnemigoNuevo paqueteRobotnik = new Network.PaqueteEnemigoNuevo();
+                                    paqueteRobotnik.estadoEnemigo = estadoRobotnik;
+                                    servidor.sendToAllTCP(paqueteRobotnik);
+                                }
+
+                                Network.PaqueteItemEliminado paqueteEliminado = new Network.PaqueteItemEliminado();
+                                paqueteEliminado.idItem = paquete.idItem;
+                                servidor.sendToAllTCP(paqueteEliminado);
+
+                                paredesDelMapa = null;
+                            }
+                            else {
+                                itemsActivos.remove(paquete.idItem);
+                                System.out.println("[SERVER] Ítem con ID " + paquete.idItem + " recogido por jugador " + conexion.getID());
+
+                                if (itemRecogido.tipo == ItemState.ItemType.ANILLO) {
+                                    int puntajeActual = puntajesAnillosIndividuales.getOrDefault(conexion.getID(), 0);
+                                    puntajesAnillosIndividuales.put(conexion.getID(), puntajeActual + 1);
+
+
+                                    totalAnillosGlobal++;
+                                    System.out.println("[SERVER] Anillo recogido. Total de equipo: " + totalAnillosGlobal);
+
+                                    int anillosAhora = puntajesAnillosIndividuales.get(conexion.getID());
+                                    if (anillosAhora >= 100) {
+                                        System.out.println("[GAMESERVER] Jugador " + conexion.getID() + " tiene 100 anillos. Canjeando por vida.");
+
+                                        puntajesAnillosIndividuales.put(conexion.getID(), anillosAhora - 100);
+
+                                        PlayerState estadoJugador = jugadores.get(conexion.getID());
+                                        if (estadoJugador != null) {
+                                            estadoJugador.vida = Math.min(estadoJugador.vida + 100, Player.MAX_VIDA);
+
+                                            Network.PaqueteActualizacionVida paqueteVida = new Network.PaqueteActualizacionVida();
+                                            paqueteVida.idJugador = conexion.getID();
+                                            paqueteVida.nuevaVida = estadoJugador.vida;
+                                            servidor.sendToTCP(conexion.getID(), paqueteVida);
+                                        }
+                                    }
+
+                                } else if (itemRecogido.tipo == ItemState.ItemType.BASURA || itemRecogido.tipo == ItemState.ItemType.PIEZA_PLASTICO) {
+                                    int puntajeActual = puntajesBasuraIndividuales.getOrDefault(conexion.getID(), 0);
+                                    puntajesBasuraIndividuales.put(conexion.getID(), puntajeActual + 1);
+
+                                    totalBasuraGlobal++;
+
+                                    contaminationState.decrease(TRASH_CLEANUP_VALUE);
+                                    System.out.println("[SERVER] Basura recogida. Total de equipo: " + totalBasuraGlobal +
+                                        ". Contaminación GLOBAL reducida a: " + String.format("%.2f", contaminationState.getPercentage()) + "%!");
+
+                                    Network.PaqueteActualizacionContaminacion paqueteContaminacion = new Network.PaqueteActualizacionContaminacion();
+                                    paqueteContaminacion.contaminationPercentage = contaminationState.getPercentage();
+                                    servidor.sendToAllTCP(paqueteContaminacion);
+                                }
+
+
+                                Network.PaqueteActualizacionPuntuacion paquetePuntaje = new Network.PaqueteActualizacionPuntuacion();
+                                paquetePuntaje.nuevosAnillos = puntajesAnillosIndividuales.get(conexion.getID());
+                                paquetePuntaje.nuevaBasura = puntajesBasuraIndividuales.get(conexion.getID());
+                                conexion.sendTCP(paquetePuntaje);
+
+
+                                Network.PaqueteItemEliminado paqueteEliminado = new Network.PaqueteItemEliminado();
+                                paqueteEliminado.idItem = paquete.idItem;
+                                servidor.sendToAllTCP(paqueteEliminado);
+                            }
+                        }
+                    }
+                }
+                if (objeto instanceof Network.PaqueteAnimacionEnemigoTerminada paquete) {
+                    EnemigoState enemigo = enemigosActivos.get(paquete.idEnemigo);
+                    if (enemigo != null) {
+                        enemigo.estadoAnimacion = EnemigoState.EstadoEnemigo.POST_ATAQUE;
+                        enemigo.tiempoEnEstado = 0;
+                    }
+                }
+                if (objeto instanceof Network.PaqueteInformacionMapa paquete) {
+
+                    System.out.println("[SERVER] <== PAQUETE DE MAPA RECIBIDO!");
+                    if (paredesDelMapa == null) {
+                        paredesDelMapa = paquete.paredes;
+
+                        if (mapaActualServidor == null || mapaActualServidor.isEmpty()) {
+                            mapaActualServidor = paquete.nombreMapa;
+                            System.out.println("[GAMESERVER] Establecido mapa inicial a: " + mapaActualServidor);
+                        }
+                        System.out.println("[SERVER] Plano del mapa recibido con " + paredesDelMapa.size() + " paredes.");
+
+                        if (paquete.posEsmeralda != null) {
+                            System.out.println("[GAMESERVER] Posición de esmeralda recibida. Generando ítem en el mapa.");
+
+                            ItemState estadoEsmeralda = new ItemState(proximoIdItem++, paquete.posEsmeralda.x, paquete.posEsmeralda.y, ItemState.ItemType.ESMERALDA);
+                            itemsActivos.put(estadoEsmeralda.id, estadoEsmeralda);
+
+
+                            Network.PaqueteItemNuevo paqueteItem = new Network.PaqueteItemNuevo();
+                            paqueteItem.estadoItem = estadoEsmeralda;
+                            servidor.sendToAllTCP(paqueteItem);
+                        }
+
+                        if (paquete.portales != null && !paquete.portales.isEmpty()) {
+                            System.out.println("[SERVER] Recibida información de " + paquete.portales.size() + " portales. Creándolos...");
+
+                            infoPortales.clear();
+
+                            for (Network.PortalInfo info : paquete.portales) {
+                                String claveCoordenadas = info.x + "," + info.y;
+                                infoPortales.put(claveCoordenadas, info);
+                            }
+                        }
+
+                        generarBloquesParaElNivel();
+                        generarAnimales();
+                        sincronizarBloquesConClientes();
+                    }
+                }
+                if (objeto instanceof Network.PaqueteInvocarDron) {
+                    int jugadorId = conexion.getID();
+                    PlayerState jugador = jugadores.get(jugadorId);
+
+                    if (jugador != null && jugador.characterType == PlayerState.CharacterType.TAILS && !dronesActivos.containsKey(jugadorId)) {
+
+                        int basuraActual = puntajesBasuraIndividuales.getOrDefault(jugadorId, 0);
+
+                        if (basuraActual >= 20) {
+
+                            puntajesBasuraIndividuales.put(jugadorId, basuraActual - 20);
+
+                            Network.PaqueteActualizacionPuntuacion paquetePuntaje = new Network.PaqueteActualizacionPuntuacion();
+                            paquetePuntaje.nuevosAnillos = puntajesAnillosIndividuales.getOrDefault(jugadorId, 0);
+                            paquetePuntaje.nuevaBasura = puntajesBasuraIndividuales.get(jugadorId);
+                            paquetePuntaje.totalBasuraReciclada = basuraReciclada;
+                            conexion.sendTCP(paquetePuntaje);
+
+                            DronState nuevoDron = new DronState(proximoIdDron++, jugadorId, jugador.x, jugador.y);
+                            dronesActivos.put(jugadorId, nuevoDron);
+
+                            System.out.println("[SERVER DEBUG] Dron CREADO para jugador " + jugadorId + ". Timer inicial: " + nuevoDron.temporizador);
+
+                            Network.PaqueteDronEstado paqueteEstado = new Network.PaqueteDronEstado();
+                            paqueteEstado.ownerId = jugador.id;
+                            paqueteEstado.nuevoEstado = DronState.EstadoDron.APARECIENDO;
+                            paqueteEstado.x = jugador.x;
+                            paqueteEstado.y = jugador.y;
+                            servidor.sendToAllTCP(paqueteEstado);
+
+                            Network.PaqueteMensajeUI msg = new Network.PaqueteMensajeUI();
+                            msg.mensaje = "Sembrando árbol...";
+                            conexion.sendTCP(msg);
+
+                            System.out.println("[SERVER] Jugador " + jugadorId + " ha invocado un dron.");
+
+                        } else {
+                            Network.PaqueteMensajeUI msg = new Network.PaqueteMensajeUI();
+                            msg.mensaje = "Necesitas recoger 20 basuras";
+                            conexion.sendTCP(msg);
+                        }
+                    }
+                } if (objeto instanceof Network.PaqueteBasuraDepositada) {
+                    System.out.println("[SERVER] ¡Recibido PaqueteBasuraDepositada!");
+
+                    int idJugadorQueActivo = conexion.getID();
+                    PlayerState estadoJugador = jugadores.get(idJugadorQueActivo);
+
+                    if (estadoJugador != null ) {
+                        System.out.println("[SERVER] Tails (ID: " + idJugadorQueActivo + ") ha activado la planta de tratamiento.");
+
+                        int basuraDepositadaEstaVez = 0;
+                        for (int basuraDeJugador : puntajesBasuraIndividuales.values()) {
+                            basuraDepositadaEstaVez += basuraDeJugador;
+                        }
+                        if (basuraDepositadaEstaVez >=5) {
+                            System.out.println("[SERVER] Reciclando " + basuraDepositadaEstaVez + " de basura. Curando a todos los jugadores.");
+
+                            for (PlayerState jugadorACurar : jugadores.values()) {
+                                int vidaNueva = jugadorACurar.vida + 10;
+                                jugadorACurar.vida = Math.min(vidaNueva, Player.MAX_VIDA);
+
+                                Network.PaqueteActualizacionVida paqueteVida = new Network.PaqueteActualizacionVida();
+                                paqueteVida.idJugador = jugadorACurar.id;
+                                paqueteVida.nuevaVida = jugadorACurar.vida;
+
+                                servidor.sendToTCP(jugadorACurar.id, paqueteVida);
+                            }
+
+                            Network.PaqueteMensajeUI msg = new Network.PaqueteMensajeUI();
+                            msg.mensaje = "Basura reciclada +10 SALUD A TODOS!";
+                            conexion.sendTCP(msg);
+
+                            basuraReciclada += basuraDepositadaEstaVez;
+                            EstadisticasJugador stats = estadisticasJugadores.get(idJugadorQueActivo);
+                            if (stats != null && basuraDepositadaEstaVez > 0) {
+                                stats.sumarObjetosReciclados(basuraDepositadaEstaVez);
+                                System.out.println("[STATS] Jugador " + idJugadorQueActivo + " recicló " + basuraDepositadaEstaVez + " objetos.");
+                            }
+                            puntajesBasuraIndividuales.replaceAll((id, valorActual) -> 0);
+                            System.out.println("[SERVER DEBUG] Mapa de basuras después del reinicio: " + puntajesBasuraIndividuales.toString());
+
+                            for (Integer idJugadorConectado : jugadores.keySet()) {
+                                Network.PaqueteActualizacionPuntuacion paquetePuntaje = new Network.PaqueteActualizacionPuntuacion();
+                                paquetePuntaje.nuevosAnillos = puntajesAnillosIndividuales.getOrDefault(idJugadorConectado, 0);
+                                paquetePuntaje.nuevaBasura = puntajesBasuraIndividuales.getOrDefault(idJugadorConectado, 0);
+                                paquetePuntaje.totalBasuraReciclada = basuraReciclada;
+                                servidor.sendToTCP(idJugadorConectado, paquetePuntaje);
+                            }
+                            System.out.println("[SERVER] Paquetes de actualización de puntuación enviados a todos los jugadores.");
+                        } else {
+                            Network.PaqueteMensajeUI msg = new Network.PaqueteMensajeUI();
+                            msg.mensaje = "Necesitan recoger 5 Basuras para Curarse!";
+                            conexion.sendTCP(msg);
+                        }
+
+                    }
+                } if (objeto instanceof Network.PaqueteBloqueDestruido paquete) {
+                    PlayerState jugador = jugadores.get(paquete.idJugador);
+
+                    if (jugador != null && bloquesRompibles.containsKey(paquete.idBloque)) {
+
+                        bloquesRompibles.remove(paquete.idBloque);
+                        System.out.println("[SERVER] El jugador " + paquete.idJugador + " (Knuckles) ha destruido el bloque ID: " + paquete.idBloque);
+
+                        int puntajeActual = puntajesBasuraIndividuales.getOrDefault(paquete.idJugador, 0);
+                        puntajesBasuraIndividuales.put(paquete.idJugador, puntajeActual + 1);
+                        totalBasuraGlobal++;
+                        contaminationState.decrease(TRASH_CLEANUP_VALUE);
+                        System.out.println("[SERVER] Basura recogida. Contaminación reducida a " + contaminationState.getPercentage());
+                        EstadisticasJugador stats = estadisticasJugadores.get(paquete.idJugador);
+                        if (stats != null) {
+                            stats.sumarZonaLimpiada();
+                            System.out.println("[STATS] Jugador " + paquete.idJugador + " (Knuckles) limpió una zona al destruir un bloque.");
+                        }
+                        Network.PaqueteBloqueConfirmadoDestruido respuesta = new Network.PaqueteBloqueConfirmadoDestruido();
+                        respuesta.idBloque = paquete.idBloque;
+                        servidor.sendToAllTCP(respuesta);
+                    }
+                }  if (objeto instanceof Network.PaqueteSolicitudMatarAnimal paquete) {
+                    synchronized (animalesActivos) {
+                        AnimalState animal = animalesActivos.get(paquete.idAnimal);
+                        if (animal != null && animal.estaVivo) {
+                            animal.estaVivo = false;
+                            System.out.println("[SERVER] Recibida solicitud para matar al animal ID: " + animal.id);
+
+                        }
+                    }
+                }
+                if (objeto instanceof Network.PaqueteSolicitudHabilidadLimpieza) {
+                    int jugadorId = conexion.getID();
+                    float cooldownActual = cooldownsHabilidadLimpieza.getOrDefault(jugadorId, 0f);
+
+                    if (cooldownActual <= 0) {
+                        System.out.println("[SERVER] Jugador " + jugadorId + " usó la habilidad de limpieza. ¡Aprobado!");
+
+                        contaminationState.decrease(100.0f);
+
+                        ArrayList<Integer> idsItemsARecoger = new ArrayList<>();
+                        synchronized (itemsActivos) {
+                            for (ItemState item : itemsActivos.values()) {
+                                if (item.tipo == ItemState.ItemType.BASURA || item.tipo == ItemState.ItemType.PIEZA_PLASTICO) {
+                                    idsItemsARecoger.add(item.id);
+                                }
+                            }
+                        }
+
+                        for (Integer idItem : idsItemsARecoger) {
+                            procesarRecogidaItem(jugadorId, idItem);
+                        }
+
+                        cooldownsHabilidadLimpieza.put(jugadorId, COOLDOWN_HABILIDAD_SONIC);
+                        EstadisticasJugador stats = estadisticasJugadores.get(jugadorId);
+                        if (stats != null) {
+                            stats.sumarZonaLimpiada();
+                            System.out.println("[STATS] Jugador " + jugadorId + " (Sonic) limpió una zona con su habilidad.");
+                        }
+                        Network.PaqueteHabilidadLimpiezaSonic notificacion = new Network.PaqueteHabilidadLimpiezaSonic();
+                        servidor.sendToAllTCP(notificacion);
+
+                        Network.PaqueteActualizacionContaminacion paqueteContaminacion = new Network.PaqueteActualizacionContaminacion();
+                        paqueteContaminacion.contaminationPercentage = contaminationState.getPercentage();
+                        servidor.sendToAllTCP(paqueteContaminacion);
+
+                    } else {
+                        System.out.println("[SERVER] Jugador " + jugadorId + " intentó usar la habilidad, pero está en cooldown. ¡Ignorado!");
+                    }
+                }  if (objeto instanceof Network.PaqueteAtaqueJugadorAEnemigo paquete) {
+                    synchronized (enemigosActivos) {
+                        EnemigoState enemigo = enemigosActivos.get(paquete.idEnemigo);
+                        if (enemigo != null && enemigo.vida > 0) {
+                            enemigo.vida -= paquete.danio;
+                            System.out.println("[SERVER] Enemigo ID " + enemigo.id + " recibió " + paquete.danio + " de daño. Vida restante: " + enemigo.vida);
+
+                            Network.PaqueteActualizacionVidaEnemigo paqueteVida = new Network.PaqueteActualizacionVidaEnemigo();
+                            paqueteVida.idEnemigo = enemigo.id;
+                            paqueteVida.nuevaVida = enemigo.vida;
+
+                            servidor.sendToAllTCP(paqueteVida);
+
+                            if (enemigo.vida <= 0) {
+                                System.out.println("[SERVER] ¡Enemigo ID " + enemigo.id + " ha sido derrotado!");
+                                enemigosActivos.remove(enemigo.id);
+                                Network.PaqueteEntidadEliminada notificacionMuerte = new Network.PaqueteEntidadEliminada();
+                                notificacionMuerte.idEntidad = enemigo.id;
+                                notificacionMuerte.esJugador = false;
+                                servidor.sendToAllTCP(notificacionMuerte);
+                                EstadisticasJugador stats = estadisticasJugadores.get(paquete.idJugador);
+                                if (stats != null) {
+                                    stats.sumarEnemigoDerrotado();
+                                    System.out.println("[STATS] Jugador " + paquete.idJugador + " derrotó a un enemigo.");
+                                }
+                                if (enemigo.tipo == EnemigoState.EnemigoType.ROBOTNIK) {
+                                    if ("maps/ZonaJefeN3.tmx".equals(mapaActualServidor)) {
+                                        finalizarPartidaYEnviarResultados();
+                                        return;
+                                    }
+                                }
+                                comprobarYGenerarPortalSiCorresponde();
+                            }
+                        }
+                    }
+                } if (objeto instanceof Network.ForzarFinDeJuegoDebug) {
+                    System.out.println("[GAMESERVER] ¡Recibida orden de forzar fin de juego!");
+
+                    finalizarPartidaYEnviarResultados();
+                }
+            }
+
+            public void disconnected(Connection conexion) {
+                System.out.println("[SERVER] Conexión física perdida con el cliente ID: " + conexion.getID());
+                desconectarJugador(conexion);
+            }
+        });
+
+        // 3. ARRANQUE DEL SERVIDOR Y VINCULACIÓN AL PUERTO
+        try {
+            servidor.bind(Network.PORT);
+            servidor.start();
+            System.out.println("[SERVER BOOT] Servidor escuchando en el puerto " + Network.PORT);
+        } catch (IOException e) {
+            System.err.println("[SERVER BOOT] ERROR: No se pudo vincular el servidor al puerto. ¿Ya está en uso?");
+            e.printStackTrace();
+            return;
+        }
+
+        // 4. CREACIÓN Y ARRANQUE DEL HILO DE LÓGICA DE JUEGO
+        serverThreadActive = true;
+        gameLoopThread = new Thread(() -> {
+            System.out.println("[GAMELOOP] Hilo de juego iniciado. Esperando el plano del mapa del primer cliente...");
+
+            while (paredesDelMapa == null && serverThreadActive) {
+                try {
+                    Thread.sleep(100);
+                } catch (InterruptedException e) {
+                    serverThreadActive = false; // Salimos si el hilo es interrumpido
+                }
+            }
+
+            if(serverThreadActive) {
+                System.out.println("[GAMELOOP] ¡Plano del mapa detectado! Iniciando bucle de juego principal.");
+            }
+
+            final float FIXED_DELTA_TIME = 1 / 60f;
+            while (serverThreadActive) { // El bucle ahora depende de nuestra variable de control
+                try {
+                    updateServerLogic(FIXED_DELTA_TIME);
+                    Thread.sleep((long) (FIXED_DELTA_TIME * 1000));
+                } catch (InterruptedException e) {
+                    serverThreadActive = false; // Salimos si el hilo es interrumpido
+                }
+            }
+            System.out.println("[GAMELOOP] Hilo de juego detenido.");
+        });
+        gameLoopThread.setName("GameLoopThread");
+        gameLoopThread.start();
     }
 
     @Override
