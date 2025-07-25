@@ -4,6 +4,10 @@ import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.OrthographicCamera;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 
+/** * Clase que representa una barra de vida para los villanos del juego.
+ * Esta barra se dibuja en la pantalla y muestra la vida actual del villano.
+ * Se actualiza en cada fotograma desde PantallaDeJuego.
+ */
 public class BarraDeVidaVillanos {
     private ShapeRenderer shapeRenderer;
     private float vidaActual;
@@ -38,13 +42,13 @@ public class BarraDeVidaVillanos {
         // Le decimos al ShapeRenderer que use la misma vista que la cámara del juego.
         shapeRenderer.setProjectionMatrix(camara.combined);
 
-        // --- Dibuja el fondo de la barra (la vida que falta) ---
+        //  Dibuja el fondo de la barra (la vida que falta)
         shapeRenderer.begin(ShapeRenderer.ShapeType.Filled);
         shapeRenderer.setColor(Color.FIREBRICK); // Un rojo oscuro
         shapeRenderer.rect(x, y, anchoBarra, altoBarra);
         shapeRenderer.end();
 
-        // --- Dibuja la vida actual encima ---
+        // Dibuja la vida actual encima
         float anchoVidaActual = (vidaActual / vidaMaxima) * anchoBarra;
 
         shapeRenderer.begin(ShapeRenderer.ShapeType.Filled);
@@ -52,7 +56,7 @@ public class BarraDeVidaVillanos {
         shapeRenderer.rect(x, y, anchoVidaActual, altoBarra);
         shapeRenderer.end();
 
-        // --- Opcional: Dibuja un borde para que se vea más nítido ---
+        // Dibuja un borde para que se vea más nítido
         shapeRenderer.begin(ShapeRenderer.ShapeType.Line);
         shapeRenderer.setColor(Color.WHITE); // Borde blanco
         shapeRenderer.rect(x, y, anchoBarra, altoBarra);
@@ -60,7 +64,7 @@ public class BarraDeVidaVillanos {
     }
 
     /**
-     * Libera la memoria del ShapeRenderer. ¡Muy importante!
+     * Libera la memoria del ShapeRenderer.
      */
     public void dispose() {
         shapeRenderer.dispose();

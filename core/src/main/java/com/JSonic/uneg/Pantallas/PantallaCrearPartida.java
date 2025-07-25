@@ -8,14 +8,21 @@ import com.badlogic.gdx.scenes.scene2d.InputEvent;
 import com.badlogic.gdx.scenes.scene2d.Stage;
 import com.badlogic.gdx.scenes.scene2d.ui.*;
 import com.badlogic.gdx.scenes.scene2d.utils.ClickListener;
-import network.GameClient;
 
+/**
+ * Pantalla para crear una nueva partida multijugador.
+ * Permite introducir el nombre de la partida y el nombre del usuario.
+ */
 public class PantallaCrearPartida extends PantallaBase {
     private Texture texturaFondo;
     private Stage stage;
     private TextureAtlas texturesAtlas;
     static String tuNombre = "";
 
+    /**
+     * Constructor que inicializa la pantalla de creación de partida.
+     * @param juegoApp Instancia principal del juego.
+     */
     public PantallaCrearPartida(final JSonicJuego juegoApp) {
         super();
         stage = new Stage(getViewport());
@@ -90,15 +97,26 @@ public class PantallaCrearPartida extends PantallaBase {
         inicializar();
     }
 
-   static public String getTuNombre() {
+    /**
+     * Devuelve el nombre del usuario que creó la partida.
+     * @return Nombre del usuario.
+     */
+    static public String getTuNombre() {
         return tuNombre;
     }
 
+    /**
+     * Configura el procesador de entrada para la pantalla.
+     */
     @Override
     public void show() {
         Gdx.input.setInputProcessor(stage);
     }
 
+    /**
+     * Renderiza la pantalla y actualiza el escenario.
+     * @param delta Tiempo en segundos desde el último frame.
+     */
     @Override
     public void render(float delta) {
         super.render(delta);
@@ -106,11 +124,19 @@ public class PantallaCrearPartida extends PantallaBase {
         stage.draw();
     }
 
+    /**
+     * Ajusta el viewport al cambiar el tamaño de la ventana.
+     * @param width Nuevo ancho.
+     * @param height Nuevo alto.
+     */
     @Override
     public void resize(int width, int height) {
         stage.getViewport().update(width, height, true);
     }
 
+    /**
+     * Libera los recursos de la pantalla.
+     */
     @Override
     public void dispose() {
         stage.dispose();
@@ -118,6 +144,9 @@ public class PantallaCrearPartida extends PantallaBase {
         if (texturesAtlas != null) texturesAtlas.dispose();
     }
 
+    /**
+     * Inicializa los elementos de la pantalla, como el fondo y el atlas de texturas.
+     */
     @Override
     public void inicializar() {
         texturaFondo = new Texture(Gdx.files.internal("Fondos/Portada_desenfoque.png"));
@@ -129,6 +158,10 @@ public class PantallaCrearPartida extends PantallaBase {
         texturesAtlas = new TextureAtlas(Gdx.files.internal("Atlas/textures.atlas"));
     }
 
+    /**
+     * Actualiza la lógica de la pantalla.
+     * @param delta Tiempo en segundos desde el último update.
+     */
     @Override
     public void actualizar(float delta) {
 

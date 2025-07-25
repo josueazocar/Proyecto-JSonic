@@ -23,12 +23,22 @@ public class PantallaAcercaDe extends PantallaBase {
     private TextureAtlas botonesMenuAtlas;
     private Texture texturaFondo;
 
+    /**
+     * Constructor para la pantalla "Acerca De".
+     *
+     * @param juegoApp La instancia principal del juego, utilizada para cambiar de pantalla y reproducir sonidos.
+     */
     public PantallaAcercaDe(JSonicJuego juegoApp) {
         super();
         this.juegoApp = juegoApp;
         inicializar();
     }
 
+    /**
+     * Inicializa los elementos visuales de la pantalla "Acerca De".
+     * Carga las texturas, configura el fondo, crea las etiquetas de texto con la información
+     * y establece el botón para volver al menú de opciones.
+     */
     @Override
     public void inicializar() {
         // --- Cargar Atlas ---
@@ -40,7 +50,7 @@ public class PantallaAcercaDe extends PantallaBase {
         imagenFondoPrincipal.setSize(mainStage.getWidth(), mainStage.getHeight());
         mainStage.addActor(imagenFondoPrincipal);
 
-        // --- Panel de Contenido con Fondo Redondeado (¡LA NUEVA LÓGICA!) ---
+        // --- Panel de Contenido con Fondo Redondeado
         Table panelContenido = new Table();
         panelContenido.setBackground(getSkin().getDrawable("default-round"));
         float anchoDelPanel = 950; // Ancho en píxeles
@@ -89,7 +99,7 @@ public class PantallaAcercaDe extends PantallaBase {
             }
         });
 
-        // --- Posicionamiento del botón Volver (en una tabla nueva) ---
+        // --- Posicionamiento del botón Volver ---
         Table tablaVolver = new Table();
         tablaVolver.setFillParent(true);
         uiStage.addActor(tablaVolver);
@@ -97,11 +107,20 @@ public class PantallaAcercaDe extends PantallaBase {
         tablaVolver.add(botonVolver).size(105, 105).pad(20);
     }
 
+    /**
+     * Actualiza el estado de la pantalla. Este método se llama en cada fotograma.
+     * En esta pantalla, no se requiere ninguna lógica de actualización.
+     *
+     * @param delta El tiempo en segundos desde el último fotograma.
+     */
     @Override
     public void actualizar(float delta) {
-
     }
 
+    /**
+     * Libera los recursos utilizados por esta pantalla cuando ya no se necesita.
+     * Se encarga de desechar el atlas de texturas y la textura de fondo para evitar fugas de memoria.
+     */
     @Override
     public void dispose() {
         super.dispose();

@@ -3,6 +3,11 @@ package network.interfaces;
 import com.JSonic.uneg.LevelManager;
 import com.JSonic.uneg.EntidadesVisuales.Player;
 
+/**
+ * Interfaz que define las operaciones básicas de un servidor de juego.
+ * Incluye métodos para iniciar el servidor, actualizar la lógica del juego
+ * y liberar recursos al finalizar.
+ */
 public interface IGameServer {
 
     void start();

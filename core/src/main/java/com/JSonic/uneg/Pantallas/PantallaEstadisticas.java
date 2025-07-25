@@ -17,21 +17,32 @@ import network.Network;
 import java.util.Comparator;
 import java.util.List;
 
-public class PantallaEstadisticas extends PantallaBase{
+/**
+ * Pantalla para mostrar las estadísticas de los jugadores en orden descendente de puntuación.
+ */
+public class PantallaEstadisticas extends PantallaBase {
     private List<EstadisticasJugador> listaEstadisticas;
-    private Texture texturaFondo; // Guardamos la textura para poder liberarla después
+    private Texture texturaFondo;
     private JSonicJuego juegoApp;
 
+    /**
+     * Constructor de PantallaEstadisticas.
+     *
+     * @param juego        instancia del juego JSonic.
+     * @param estadisticas lista de estadísticas de los jugadores a mostrar.
+     */
     public PantallaEstadisticas(JSonicJuego juego, List<EstadisticasJugador> estadisticas) {
         super();
-        this.juegoApp = juego; // <-- Guardamos la referencia
+        this.juegoApp = juego;
         this.listaEstadisticas = estadisticas;
         this.listaEstadisticas.sort(
             Comparator.comparingInt(EstadisticasJugador::getPuntuacionTotal).reversed()
         );
     }
 
-
+    /**
+     * Configura y muestra los elementos visuales de la pantalla de estadísticas.
+     */
     @Override
     public void show() {
         super.show();
@@ -50,7 +61,7 @@ public class PantallaEstadisticas extends PantallaBase{
         panelContenido.setBackground(skin.getDrawable("default-round"));
         Table tablaStats = new Table();
 
-        // Estilos de fuente... (sin cambios aquí)
+        // Estilos de fuente...
         BitmapFont fuenteTitulo = new BitmapFont(Gdx.files.internal("Fuentes/juego_fuente2.fnt"));
         fuenteTitulo.getData().setScale(1.1f);
         Label.LabelStyle estiloTitulo = new Label.LabelStyle(fuenteTitulo, Color.WHITE);
@@ -59,7 +70,7 @@ public class PantallaEstadisticas extends PantallaBase{
         Label.LabelStyle estiloDatos = new Label.LabelStyle(skin.getFont("body-font"), Color.GOLD);
         estiloDatos.font.getData().setScale(0.8f);
 
-        // Contenido de la tabla de estadísticas... (sin cambios aquí)
+        // Contenido de la tabla de estadísticas...
         tablaStats.add(new Label("Estadisticas", estiloTitulo)).colspan(2).center().padTop(-300);
         tablaStats.row();
         tablaStats.add(new Label("Jugador", estiloEncabezado)).padTop(-160).padBottom(20);
@@ -73,8 +84,7 @@ public class PantallaEstadisticas extends PantallaBase{
             tablaStats.row();
         }
 
-        // --- BOTÓN DE VOLVER (CREACIÓN) ---
-        // Solo creamos el botón y su listener, pero NO lo añadimos a la tabla.
+        // --- BOTÓN DE VOLVER ---
         TextButton.TextButtonStyle estiloBotonPequeno = new TextButton.TextButtonStyle(skin.get("default", TextButton.TextButtonStyle.class));
         estiloBotonPequeno.font = new BitmapFont(Gdx.files.internal("Fuentes/juego_fuente2.fnt"));
         estiloBotonPequeno.font.getData().setScale(0.55f);
@@ -118,6 +128,9 @@ public class PantallaEstadisticas extends PantallaBase{
         mainStage.addActor(botonVolver);
     }
 
+    /**
+     * Libera los recursos utilizados por esta pantalla, como la textura de fondo.
+     */
     @Override
     public void dispose() {
         super.dispose();
@@ -126,11 +139,19 @@ public class PantallaEstadisticas extends PantallaBase{
         }
     }
 
+    /**
+     * Inicializa los elementos de la pantalla (vacío en esta implementación).
+     */
     @Override
     public void inicializar() {
         // Se mantiene vacío
     }
 
+    /**
+     * Actualiza la lógica de la pantalla cada frame (vacío en esta implementación).
+     *
+     * @param deltat tiempo transcurrido desde el último frame en segundos.
+     */
     @Override
     public void actualizar(float deltat) {
         // Se mantiene vacío

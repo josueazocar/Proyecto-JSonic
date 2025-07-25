@@ -19,18 +19,29 @@ import com.badlogic.gdx.utils.Align;
 import java.util.ArrayList;
 import java.util.List;
 
+/**
+ * Pantalla para unirse a partidas disponibles en red, muestra una lista con ScrollPane y diálogos de entrada de nombre.
+ */
 public class PantallaUnirsePartida extends PantallaBase {
 
     private final JSonicJuego juegoApp;
     private Texture texturaFondo;
-    private Table partidasTable; // La tabla que contendrá los botones de las partidas
+    private Table partidasTable; // Tabla que contendrá los botones de las partidas disponibles
     private TextureAtlas texturesAtlas; // Atlas para los fondos de los botones
 
+    /**
+     * Constructor que asigna la instancia del juego y inicializa la pantalla.
+     *
+     * @param juegoApp instancia de JSonicJuego.
+     */
     public PantallaUnirsePartida(final JSonicJuego juegoApp) {
         this.juegoApp = juegoApp;
         inicializar();
     }
 
+    /**
+     * Configura el fondo, la tabla de partidas, botones de actualizar y regresar, y llama a descubrirPartidas.
+     */
     @Override
     public void inicializar() {
         texturaFondo = new Texture(Gdx.files.internal("Fondos/Portada_desenfoque.png"));
@@ -98,15 +109,15 @@ public class PantallaUnirsePartida extends PantallaBase {
         descubrirPartidas(); // Descubre partidas al entrar en la pantalla
     }
 
+    /**
+     * Descubre las partidas disponibles, actualiza la tabla y muestra diálogos para unirse.
+     */
     private void descubrirPartidas() {
         partidasTable.clear(); // Limpia solo la tabla de partidas
 
         // --- Lógica de ejemplo ---
-        // Aquí es donde se integrará la búsqueda de servidores.
-        // Por ahora, es una lista de ejemplo para el frontend.
-
         List<String> hosts = new ArrayList<>();
-        hosts.add("Partida en Servidor");         // Simularemos que no tiene a nadie
+        hosts.add("Partida en Servidor");
 
         if (hosts.isEmpty()) {
             partidasTable.add(new Label("No se encontraron partidas.", getSkin())).center();
@@ -117,20 +128,16 @@ public class PantallaUnirsePartida extends PantallaBase {
                 unirseButton.getLabel().setWrap(true);
                 unirseButton.getLabel().setAlignment(Align.center);
 
-                // --- INICIO DE LA LÓGICA INTEGRADA ---
                 unirseButton.addListener(new ClickListener() {
                     @Override
                     public void clicked(InputEvent event, float x, float y) {
-                        // Primero, manejamos el caso especial de error
                         if (host.contains("(Simulacion)")) {
                             new Dialog("Error al unirse", getSkin(), "dialog")
                                 .text("No se pudo unir, la partida ya ha comenzado.")
                                 .button("Aceptar")
                                 .show(uiStage);
-                            return; // Salimos del listener
+                            return;
                         }
-
-                        // Si no es el caso de error, mostramos el diálogo para pedir el nombre
                         final TextField nombreJugadorField = new TextField("", getSkin());
                         nombreJugadorField.setMessageText("Tu nombre...");
                         nombreJugadorField.setMaxLength(15);
@@ -145,7 +152,7 @@ public class PantallaUnirsePartida extends PantallaBase {
                                         System.out.println("Jugador '" + nombreJugador + "' se prepara para unirse a: " + host);
 
                                         // --- SIMULACIÓN Y NAVEGACIÓN ---
-                                        // 1. Simulamos que obtenemos los personajes ocupados de esta partida
+                                        // Simulamos que obtenemos los personajes ocupados de esta partida
                                         JSonicJuego.personajesYaSeleccionados.clear();
                                         if (host.contains("Mega Pro")) {
                                             System.out.println("SIMULACIÓN: La partida 'Mega Pro' ya tiene a SONIC.");
@@ -156,7 +163,7 @@ public class PantallaUnirsePartida extends PantallaBase {
                                             JSonicJuego.personajesYaSeleccionados.add(PlayerState.CharacterType.TAILS);
                                         }
 
-                                        // 2. Navegamos a la pantalla de selección de personaje
+                                        // Navegamos a la pantalla de selección de personaje
                                         //    'true' indica que es el flujo online.
                                         juegoApp.setPantallaActiva(new PantallaSeleccionPersonaje(juegoApp, false));
                                     }
@@ -164,7 +171,7 @@ public class PantallaUnirsePartida extends PantallaBase {
                             }
                         };
 
-                        // Configuración del diálogo (se mantiene tu código)
+                        // Configuración del diálogo
                         dialog.text("Introduce tu nombre para unirte:");
                         dialog.getContentTable().row();
                         dialog.getContentTable().add(nombreJugadorField).size(400, 50).pad(20);
@@ -182,21 +189,26 @@ public class PantallaUnirsePartida extends PantallaBase {
                         dialog.show(uiStage);
                     }
                 });
-                // --- FIN DE LA LÓGICA INTEGRADA ---
 
                 partidasTable.add(unirseButton).pad(10).size(350, 60).center().row();
             }
         }
 
 
-
     }
 
+    /**
+     * Actualiza la lógica de la pantalla cada frame (vacío en esta implementación).
+     *
+     * @param delta tiempo transcurrido desde el último frame en segundos.
+     */
     @Override
     public void actualizar(float delta) {
-        // No se necesita lógica de actualización específica aquí por ahora
     }
 
+    /**
+     * Libera los recursos gráficos de la pantalla, como texturas y atlas.
+     */
     @Override
     public void dispose() {
         super.dispose();
@@ -204,7 +216,7 @@ public class PantallaUnirsePartida extends PantallaBase {
             texturaFondo.dispose();
         }
         if (texturesAtlas != null) {
-            texturesAtlas.dispose(); // Liberar el atlas de la memoria
+            texturesAtlas.dispose();
         }
     }
 }

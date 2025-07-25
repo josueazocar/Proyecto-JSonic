@@ -11,12 +11,13 @@ import com.badlogic.gdx.graphics.g2d.Animation;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.graphics.g2d.TextureRegion;
 import com.badlogic.gdx.math.Rectangle;
-import com.badlogic.gdx.math.Matrix4; // <-- NUEVA IMPORTACIÓN NECESARIA
+import com.badlogic.gdx.math.Matrix4;
 
 import java.util.EnumMap;
-import java.util.HashMap;
 
-
+/**
+ * Clase para el personaje Sonic, con animaciones, habilidades CLEAN y transformación a Super Sonic.
+ */
 public class Sonic extends Player {
 
     protected TextureRegion[] frameSpinRight;
@@ -35,13 +36,12 @@ public class Sonic extends Player {
     private float cooldownIndicatorTime = 0f; // Tiempo para la animación del indicador
     private static final float INDICATOR_SIZE = 32f; // Tamaño del icono del tornado
 
-    // --- NUEVA VARIABLE PARA LA MATRIZ DE PROYECCIÓN ---
     private Matrix4 screenProjectionMatrix;
 
     // --- ESTADO Y ATRIBUTOS DE SUPER SONIC ---
     private boolean esSuperSonic = false;
-    private static final float VELOCIDAD_NORMAL = 2.5f; // Ajusten este valor a su velocidad base actual
-    private static final float VELOCIDAD_SUPER = 3.5f;  // Un poco más rápido
+    private static final float VELOCIDAD_NORMAL = 2.5f;
+    private static final float VELOCIDAD_SUPER = 3.5f;
 
     // --- RECURSOS PARA SUPER SONIC ---
     private Texture superSonicSpriteSheet;
@@ -71,10 +71,8 @@ public class Sonic extends Player {
         }
     }
 
-
-
     /**
-     * Inicializa recursos adicionales como la textura del destello y el indicador de habilidad.
+     * Inicializa recursos adicionales como textura de flash y animación de indicador.
      */
     private void inicializarRecursosAdicionales() {
         // Inicializar textura del destello
@@ -94,30 +92,29 @@ public class Sonic extends Player {
         screenProjectionMatrix = new Matrix4();
     }
 
+    /**
+     * Activa el efecto de destello en pantalla.
+     */
     public void activarEfectoFlash() {
         this.flashDurationTimer = 0.25f;
     }
 
-
+    /**
+     * Maneja la entrada de teclado de Sonic, incluyendo movimiento y habilidades.
+     */
     @Override
     public void KeyHandler() {
-        // [PROFESOR] Determinar la velocidad actual basada en el estado de Super Sonic
+
         float currentSpeed = esSuperSonic ? VELOCIDAD_SUPER : VELOCIDAD_NORMAL;
 
         float currentX = estado.x;
         float currentY = estado.y;
-
-        // [PROFESOR] Llamamos al KeyHandler del padre, que ahora usará la nueva velocidad.
-        // Asegúrense que su Player.KeyHandler usa la variable 'speed' de la clase Player
-        // y nosotros la modificamos aquí antes de llamar a super.KeyHandler()
         this.speed = currentSpeed;
         super.KeyHandler();
 
         if (Gdx.input.isKeyJustPressed(Input.Keys.SPACE) ) {
 
             if (soundManager != null) soundManager.play("habilidad_Sonic_punch");
-            //  this.flashDurationTimer = 0.25f;
-            //  this.cleanCooldownTimer = CLEAN_COOLDOWN_SECONDS;
             Gdx.app.log("Sonic", "Habilidad activada. Cooldown de " + CLEAN_COOLDOWN_SECONDS + "s iniciado.");
         }
 
@@ -162,15 +159,12 @@ public class Sonic extends Player {
 
                 setEstadoActual(EstadoPlayer.SPECIAL_LEFT);
                 lastDirection = EstadoPlayer.LEFT;
-                // [PROFESOR] Usamos 'currentSpeed' en lugar de 'speed'
+
                 estado.x -= currentSpeed;
             } else if (Gdx.input.isKeyPressed(Input.Keys.D)) {
-
-
-
                 setEstadoActual(EstadoPlayer.SPECIAL_RIGHT);
                 lastDirection = EstadoPlayer.RIGHT;
-                // [PROFESOR] Usamos 'currentSpeed' en lugar de 'speed'
+
                 estado.x += currentSpeed;
             } else {
                 if (lastDirection == EstadoPlayer.LEFT || lastDirection == EstadoPlayer.IDLE_LEFT) {
@@ -195,22 +189,40 @@ public class Sonic extends Player {
         }
     }
 
+    /**
+     * Inicia el cooldown visual de la habilidad CLEAN.
+     */
     public void iniciarCooldownVisual() {
         this.cleanCooldownTimer = CLEAN_COOLDOWN_SECONDS;
     }
 
+    /**
+     * Obtiene la ruta del sprite sheet de Sonic.
+     * @return ruta del sprite sheet.
+     */
     protected String getSpriteSheetPath() {
         return "Entidades/Player/Sonic/sonic.png";
     }
 
+    /**
+     * Indica si la habilidad CLEAN está lista.
+     * @return true si el cooldown ha terminado.
+     */
     public boolean isCleanAbilityReady() {
         return cleanCooldownTimer <= 0;
     }
 
+    /**
+     * Obtiene el frame actual del indicador de cooldown.
+     * @return región de textura del indicador.
+     */
     public TextureRegion getCooldownIndicatorFrame() {
         return this.cooldownIndicatorFrame;
     }
 
+    /**
+     * Carga los sprites y animaciones de Sonic normal.
+     */
     @Override
     protected void CargarSprites() {
         Texture coleccionDeSprites = new Texture(Gdx.files.internal(getSpriteSheetPath()));
@@ -327,18 +339,18 @@ public class Sonic extends Player {
         }
     }
 
-    // [PROFESOR] >>> REEMPLAZA TU MÉTODO CargarSuperSprites CON ESTE <<<
+
+    /**
+     * Carga las animaciones y sprites de Super Sonic.
+     */
     private void CargarSuperSprites() {
         Gdx.app.log("Sonic_SuperSprites", "Iniciando carga de recursos para Super Sonic...");
         try {
-            // [PROFESOR] Para la prueba, usamos "sonic.png". Cuando tengas el archivo final, cámbialo a "superSonic.png".
+
             superSonicSpriteSheet = new Texture(Gdx.files.internal("Entidades/Player/Sonic/sonicS.png"));
 
-            // [PROFESOR] ¡CORRECCIÓN CLAVE! Usamos las mismas dimensiones de división que en CargarSprites (8x30)
-            // porque estamos usando la misma hoja de sprites para la prueba.
             TextureRegion[][] matrizDeSprites = TextureRegion.split(superSonicSpriteSheet, superSonicSpriteSheet.getWidth() / 8, superSonicSpriteSheet.getHeight() / 30);
 
-            // --- Reutilizamos los arrays de frames (esta parte es correcta) ---
             TextureRegion[] frameIdleRight = new TextureRegion[8]; TextureRegion[] frameIdleLeft = new TextureRegion[8];
             TextureRegion[] frameUpRight = new TextureRegion[8]; TextureRegion[] frameUpLeft = new TextureRegion[8];
             TextureRegion[] frameDownRight = new TextureRegion[8]; TextureRegion[] frameDownLeft = new TextureRegion[8];
@@ -347,7 +359,6 @@ public class Sonic extends Player {
             TextureRegion[] frameKickRight = new TextureRegion[8]; TextureRegion[] frameKickLeft = new TextureRegion[8];
             TextureRegion[] frameSpinRight = new TextureRegion[24]; TextureRegion[] frameSpinLeft = new TextureRegion[24];
 
-            // --- Lógica de carga (Copiada 1:1 de CargarSprites para GARANTIZAR que no falle) ---
             for (int i = 0; i < 4; i++) { frameIdleLeft[i] = matrizDeSprites[0][i]; }
             for (int i = 0; i < 4; i++) { frameIdleLeft[i + 4] = matrizDeSprites[0][3 - i]; }
             for (int i = 0; i < 8; i++) { frameIdleRight[i] = new TextureRegion(frameIdleLeft[i]); frameIdleRight[i].flip(true, false); }
@@ -406,16 +417,13 @@ public class Sonic extends Player {
         Gdx.app.log("Sonic", "Offsets del hitbox: x=" + collisionOffsetX + ", y=" + collisionOffsetY);
     }
 
-    // Reemplazar todo el método update con esta versión
+
+    /**
+     * Actualiza lógica, animaciones y timers de Sonic.
+     * @param deltaTime tiempo transcurrido desde el último frame.
+     */
     @Override
     public void update(float deltaTime) {
-        // Leemos el contador de gemas desde el objeto 'estado' heredado de Player.
-//        if (gemas >= 7 && !esSuperSonic) {
-//            esSuperSonic = true;
-//            Gdx.app.log("Sonic", "¡TRANSFORMACIÓN A SUPER SONIC ACTIVADA!");
-//            estado.vida += MAX_VIDA; // O el valor máximo de vida que tengan definido
-//        }
-
         // Determinamos el mapa de animaciones correcto. Ahora no será nulo.
         EnumMap<EstadoPlayer, Animation<TextureRegion>> currentAnimations = esSuperSonic ? animationsSuper : animations;
 
@@ -455,7 +463,6 @@ public class Sonic extends Player {
 
         tiempoXFrame += deltaTime;
 
-        // ... (El resto de su lógica de update se mantiene igual) ...
         if ((estado.estadoAnimacion == EstadoPlayer.HIT_RIGHT || estado.estadoAnimacion == EstadoPlayer.HIT_LEFT ||
             estado.estadoAnimacion == EstadoPlayer.KICK_RIGHT || estado.estadoAnimacion == EstadoPlayer.KICK_LEFT) && animacion != null) {
 
@@ -477,6 +484,10 @@ public class Sonic extends Player {
             frameActual = null;
         }
     }
+    /**
+     * Dibuja a Sonic, el indicador de cooldown y el efecto de flash en pantalla.
+     * @param batch lote de sprites para renderizar.
+     */
     @Override
     public void draw(SpriteBatch batch) {
         // Dibuja a Sonic y el indicador con la cámara del juego.
@@ -487,35 +498,41 @@ public class Sonic extends Player {
         }
 
         if (flashDurationTimer > 0) {
-            // 1. Dibuja todo lo que estaba pendiente (Sonic y el indicador) con la cámara del juego.
+            // Dibuja todo lo que estaba pendiente (Sonic y el indicador) con la cámara del juego.
             batch.flush();
 
-            // 2. Guarda la matriz de la cámara del juego actual.
+            // Guarda la matriz de la cámara del juego actual.
             Matrix4 oldProjection = batch.getProjectionMatrix().cpy();
 
-            // 3. Configura y aplica una nueva matriz que dibuja en coordenadas de pantalla.
+            // Configura y aplica una nueva matriz que dibuja en coordenadas de pantalla.
             //    Se actualiza cada vez por si la ventana cambia de tamaño.
             screenProjectionMatrix.setToOrtho2D(0, 0, Gdx.graphics.getWidth(), Gdx.graphics.getHeight());
             batch.setProjectionMatrix(screenProjectionMatrix);
 
-            // 4. Dibuja el destello. Ahora sí ocupará toda la pantalla.
+            // Dibuja el destello. Ahora sí ocupará toda la pantalla.
             Color colorOriginal = batch.getColor().cpy();
             batch.setColor(1, 1, 1, 0.8f);
             batch.draw(texturaBlanca, 0, 0, Gdx.graphics.getWidth(), Gdx.graphics.getHeight());
             batch.setColor(colorOriginal);
 
-            // 5. Dibuja el destello inmediatamente.
+            // Dibuja el destello inmediatamente.
             batch.flush();
 
-            // 6. ¡MUY IMPORTANTE! Restaura la matriz de la cámara del juego original.
             batch.setProjectionMatrix(oldProjection);
         }
     }
 
+    /**
+     * Obtiene el tiempo restante del efecto de flash.
+     * @return tiempo en segundos.
+     */
     public float getFlashDurationTimer() {
         return this.flashDurationTimer;
     }
 
+    /**
+     * Libera los recursos de Sonic, incluyendo texturas adicionales.
+     */
     @Override
     public void dispose() {
         super.dispose(); // Llama al dispose del padre (Player)
@@ -527,19 +544,22 @@ public class Sonic extends Player {
             tornadoSheet.dispose();
             Gdx.app.log("Sonic", "Textura del indicador de cooldown liberada.");
         }
-        // [PROFESOR] >>> INICIO: LIBERAR RECURSOS DE SUPER SONIC
         if (superSonicSpriteSheet != null) {
             superSonicSpriteSheet.dispose();
             Gdx.app.log("Sonic", "Textura de Super Sonic liberada.");
         }
     }
 
+    /**
+     * Activa o desactiva el modo Super Sonic.
+     * @param esSuper true para activar Super Sonic.
+     */
     @Override
     public void setSuper(boolean esSuper) {
         // Comprobamos si hay un cambio de estado real para no loguear innecesariamente.
         if (this.esSuperSonic != esSuper) {
             this.esSuperSonic = esSuper;
-            this.estado.isSuper = esSuper; // Actualizamos también el estado local
+            this.estado.isSuper = esSuper;
             if (esSuper) {
                 Gdx.app.log("Sonic", "¡ORDEN RECIBIDA! Transformando a Super Sonic.");
                 // Aquí podrías añadir un efecto de sonido o visual si quisieras

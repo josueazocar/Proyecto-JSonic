@@ -1,4 +1,3 @@
-// Archivo: src/com/JSonic/uneg/PantallaSeleccionPersonaje.java
 package com.JSonic.uneg.Pantallas;
 
 import com.JSonic.uneg.JSonicJuego;
@@ -17,6 +16,9 @@ import network.Network;
 
 import static com.JSonic.uneg.Pantallas.PantallaCrearPartida.getTuNombre;
 
+/**
+ * Pantalla para seleccionar el personaje, gestiona la UI y la lógica en modo un jugador y multijugador.
+ */
 public class PantallaSeleccionPersonaje extends PantallaBase {
 
     private final JSonicJuego juegoApp;
@@ -33,6 +35,10 @@ public class PantallaSeleccionPersonaje extends PantallaBase {
     private Sound tailsSonido;
     private Sound knucklesSonido;
 
+    /**
+     * Constructor para modo un jugador.
+     * @param juegoApp instancia del juego JSonic.
+     */
     public PantallaSeleccionPersonaje(JSonicJuego juegoApp) {
         super("");
         this.juegoApp = juegoApp;
@@ -40,6 +46,11 @@ public class PantallaSeleccionPersonaje extends PantallaBase {
         inicializar();
     }
 
+    /**
+     * Constructor para modo multijugador.
+     * @param juegoApp instancia del juego JSonic.
+     * @param esAnfitrion indica si el jugador es anfitrión de la partida.
+     */
     public PantallaSeleccionPersonaje(JSonicJuego juegoApp, boolean esAnfitrion) {
         super("");
         this.juegoApp = juegoApp;
@@ -48,6 +59,9 @@ public class PantallaSeleccionPersonaje extends PantallaBase {
         inicializar();
     }
 
+    /**
+     * Inicializa la interfaz y recursos necesarios para la selección de personajes.
+     */
     @Override
     public void inicializar() {
         mainStage.addActor(new Image(new Texture("Fondos/Portada_desenfoque.png")));
@@ -61,34 +75,43 @@ public class PantallaSeleccionPersonaje extends PantallaBase {
         tabla.setFillParent(true);
         mainStage.addActor(tabla);
 
-        tabla.add(new Image(new Texture(Gdx.files.internal("Fondos/Titulo_seleccion_personaje.png")))).size(396,110).colspan(3).padBottom(10).row();
+        tabla.add(new Image(new Texture(Gdx.files.internal("Fondos/Titulo_seleccion_personaje.png")))).size(396, 110).colspan(3).padBottom(10).row();
 
-        sonicButton = crearBotonPersonaje("sonic_seleccion", "sonic_seleccion_oscuro",  "sonic_seleccionado", "sonic_disabled");
-        tailsButton = crearBotonPersonaje("tails_seleccion", "tails_seleccion_oscuro",  "tails_seleccionado", "tails_disabled");
+        sonicButton = crearBotonPersonaje("sonic_seleccion", "sonic_seleccion_oscuro", "sonic_seleccionado", "sonic_disabled");
+        tailsButton = crearBotonPersonaje("tails_seleccion", "tails_seleccion_oscuro", "tails_seleccionado", "tails_disabled");
         knucklesButton = crearBotonPersonaje("knuckles_seleccion", "knuckles_seleccion_oscuro", "knuckles_seleccionado", "knuckles_disabled");
 
         characterGroup = new ButtonGroup<>(sonicButton, tailsButton, knucklesButton);
         characterGroup.setMaxCheckCount(1);
         characterGroup.setMinCheckCount(1);
 
-        sonicButton.addListener(new ClickListener() {@Override public void clicked(InputEvent e, float x, float y) {
-            if (!sonicButton.isDisabled()){
-                personajeSeleccionado = PlayerState.CharacterType.SONIC;
-                sonicSonido.play(0.8f);
+        sonicButton.addListener(new ClickListener() {
+            @Override
+            public void clicked(InputEvent e, float x, float y) {
+                if (!sonicButton.isDisabled()) {
+                    personajeSeleccionado = PlayerState.CharacterType.SONIC;
+                    sonicSonido.play(0.8f);
+                }
             }
-        }});
-        tailsButton.addListener(new ClickListener() { @Override public void clicked(InputEvent e, float x, float y) {
-            if (!tailsButton.isDisabled()) {
-                personajeSeleccionado = PlayerState.CharacterType.TAILS;
-                tailsSonido.play(0.8f);
+        });
+        tailsButton.addListener(new ClickListener() {
+            @Override
+            public void clicked(InputEvent e, float x, float y) {
+                if (!tailsButton.isDisabled()) {
+                    personajeSeleccionado = PlayerState.CharacterType.TAILS;
+                    tailsSonido.play(0.8f);
+                }
             }
-        }});
-        knucklesButton.addListener(new ClickListener() { @Override public void clicked(InputEvent e, float x, float y) {
-            if (!knucklesButton.isDisabled()) {
-                personajeSeleccionado = PlayerState.CharacterType.KNUCKLES;
-                knucklesSonido.play(0.8f);
+        });
+        knucklesButton.addListener(new ClickListener() {
+            @Override
+            public void clicked(InputEvent e, float x, float y) {
+                if (!knucklesButton.isDisabled()) {
+                    personajeSeleccionado = PlayerState.CharacterType.KNUCKLES;
+                    knucklesSonido.play(0.8f);
+                }
             }
-        }});
+        });
 
 
         Button.ButtonStyle seguirBtonEstilo = new Button.ButtonStyle();
@@ -115,7 +138,7 @@ public class PantallaSeleccionPersonaje extends PantallaBase {
                         if (esAnfitrion) {
                             // Si es el ANFITRIÓN, el siguiente paso es ELEGIR EL NIVEL.
                             Network.SolicitudAccesoPaquete solicitud = new Network.SolicitudAccesoPaquete();
-                            solicitud.nombreJugador = personajeSeleccionado.toString() + " - "+ getTuNombre();
+                            solicitud.nombreJugador = personajeSeleccionado.toString() + " - " + getTuNombre();
                             solicitud.characterType = personajeSeleccionado;
                             juegoApp.getGameClient().send(solicitud);
 
@@ -142,7 +165,7 @@ public class PantallaSeleccionPersonaje extends PantallaBase {
         tabla.add(seguirBoton).colspan(3).padTop(40).width(250).height(80);
 
 
-        if (juegoApp.getGameClient() != null)  {
+        if (juegoApp.getGameClient() != null) {
             sonicButton.setDisabled(true);
             tailsButton.setDisabled(true);
             knucklesButton.setDisabled(true);
@@ -152,34 +175,14 @@ public class PantallaSeleccionPersonaje extends PantallaBase {
         }
 
         if (juegoApp.getGameClient() == null) {
-        actualizarEstadoBotones();
+            actualizarEstadoBotones();
         }
     }
 
-    private void actualizarEstadoBotones() {
-        System.out.println("Actualizando estado de botones. Personajes ocupados: " + JSonicJuego.personajesYaSeleccionados);
-
-        sonicButton.setDisabled(JSonicJuego.personajesYaSeleccionados.contains(PlayerState.CharacterType.SONIC));
-        tailsButton.setDisabled(JSonicJuego.personajesYaSeleccionados.contains(PlayerState.CharacterType.TAILS));
-        knucklesButton.setDisabled(JSonicJuego.personajesYaSeleccionados.contains(PlayerState.CharacterType.KNUCKLES));
-
-        characterGroup.uncheckAll();
-        personajeSeleccionado = null;
-
-        if (!sonicButton.isDisabled()) {
-            sonicButton.setChecked(true);
-            personajeSeleccionado = PlayerState.CharacterType.SONIC;
-        } else if (!tailsButton.isDisabled()) {
-            tailsButton.setChecked(true);
-            personajeSeleccionado = PlayerState.CharacterType.TAILS;
-        } else if (!knucklesButton.isDisabled()) {
-            knucklesButton.setChecked(true);
-            personajeSeleccionado = PlayerState.CharacterType.KNUCKLES;
-        }
-
-        seguirBoton.setDisabled(personajeSeleccionado == null);
-    }
-
+    /**
+     * Actualiza la lógica de la pantalla y procesa paquetes de red si aplica.
+     * @param delta tiempo transcurrido desde el último frame en segundos.
+     */
     @Override
     public void actualizar(float delta) {
         if (Gdx.input.isKeyJustPressed(Input.Keys.ESCAPE)) {
@@ -210,12 +213,42 @@ public class PantallaSeleccionPersonaje extends PantallaBase {
                 Network.PaqueteTuID p = (Network.PaqueteTuID) paquete;
                 System.out.println("DEBUG: Recibido mi ID del servidor: " + p.id);
                 this.miID = p.id;
-                // Llamamos al método que configura la UI según nuestro ID.
+                // Llamamos al método que configura la UI según nuestro ID
                 configurarBotonesPorID();
             }
         }
     }
 
+    /**
+     * Actualiza los botones según los personajes ya seleccionados (modo un jugador).
+     */
+    private void actualizarEstadoBotones() {
+        System.out.println("Actualizando estado de botones. Personajes ocupados: " + JSonicJuego.personajesYaSeleccionados);
+
+        sonicButton.setDisabled(JSonicJuego.personajesYaSeleccionados.contains(PlayerState.CharacterType.SONIC));
+        tailsButton.setDisabled(JSonicJuego.personajesYaSeleccionados.contains(PlayerState.CharacterType.TAILS));
+        knucklesButton.setDisabled(JSonicJuego.personajesYaSeleccionados.contains(PlayerState.CharacterType.KNUCKLES));
+
+        characterGroup.uncheckAll();
+        personajeSeleccionado = null;
+
+        if (!sonicButton.isDisabled()) {
+            sonicButton.setChecked(true);
+            personajeSeleccionado = PlayerState.CharacterType.SONIC;
+        } else if (!tailsButton.isDisabled()) {
+            tailsButton.setChecked(true);
+            personajeSeleccionado = PlayerState.CharacterType.TAILS;
+        } else if (!knucklesButton.isDisabled()) {
+            knucklesButton.setChecked(true);
+            personajeSeleccionado = PlayerState.CharacterType.KNUCKLES;
+        }
+
+        seguirBoton.setDisabled(personajeSeleccionado == null);
+    }
+
+    /**
+     * Configura los botones de personaje de acuerdo al ID asignado por el servidor.
+     */
     private void configurarBotonesPorID() {
         // Si todavía no sabemos nuestro ID, no hacemos nada.
         if (miID == -1) return;
@@ -251,6 +284,15 @@ public class PantallaSeleccionPersonaje extends PantallaBase {
         // El botón "Seguir" solo se activa si se nos ha asignado un personaje válido.
         seguirBoton.setDisabled(personajeSeleccionado == null);
     }
+
+    /**
+     * Crea un botón de personaje con estados visuales up, down, checked y disabled.
+     * @param up región para estado normal.
+     * @param down región para estado presionado.
+     * @param checked región para estado seleccionado.
+     * @param disabled región para estado deshabilitado.
+     * @return botón configurado.
+     */
     private Button crearBotonPersonaje(String up, String down, String checked, String disabled) {
         Button.ButtonStyle estilo = new Button.ButtonStyle();
         estilo.up = new TextureRegionDrawable(characterAtlas.findRegion(up));
@@ -260,6 +302,10 @@ public class PantallaSeleccionPersonaje extends PantallaBase {
         return new Button(estilo);
     }
 
+    /**
+     * Renderiza el stage de selección de personaje.
+     * @param delta tiempo transcurrido desde el último frame en segundos.
+     */
     @Override
     public void render(float delta) {
         Gdx.gl.glClearColor(0, 0, 0, 1);
@@ -270,30 +316,30 @@ public class PantallaSeleccionPersonaje extends PantallaBase {
         mainStage.draw();
     }
 
+    /**
+     * Establece el input processor al mostrar la pantalla.
+     */
     @Override
     public void show() {
         Gdx.input.setInputProcessor(mainStage);
 
-        // --- INICIO DE LA CORRECCIÓN ---
-
-        // Verificamos si estamos en modo "Un Jugador". La variable esAnfitrion es null en este caso.
         if (esAnfitrion == null) {
-            // 1. Limpiamos la lista estática. Este es el paso CRUCIAL para olvidar el estado de la partida multijugador anterior.
             JSonicJuego.personajesYaSeleccionados.clear();
-
-            // 2. Volvemos a llamar a la función que habilita y pre-selecciona los botones para el modo de un jugador.
             actualizarEstadoBotones();
         }
-        // Para el modo multijugador no es necesario hacer nada aquí, ya que su lógica
-        // se gestiona al recibir los paquetes del servidor en el método 'actualizar(delta)'.
-
-        // --- FIN DE LA CORRECCIÓN ---
     }
+
+    /**
+     * Desactiva el input processor al ocultar la pantalla.
+     */
     @Override
     public void hide() {
         Gdx.input.setInputProcessor(null);
     }
 
+    /**
+     * Libera los recursos de texturas y sonidos utilizados en esta pantalla.
+     */
     @Override
     public void dispose() {
         mainStage.dispose();

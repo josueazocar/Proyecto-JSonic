@@ -16,6 +16,9 @@ import network.Network;
 
 import static com.JSonic.uneg.Pantallas.PantallaCrearPartida.getTuNombre;
 
+/**
+ * Pantalla de espera (lobby) que gestiona la lista de jugadores antes de iniciar la partida online.
+ */
 public class PantallaLobby extends PantallaBase {
     private static final int MAX_PLAYERS = 3;
     private final JSonicJuego juegoApp;
@@ -26,6 +29,11 @@ public class PantallaLobby extends PantallaBase {
     private Table listaContainer;
     private final boolean esAnfitrion;
 
+    /**
+     * Constructor de PantallaLobby.
+     * @param juegoApp instancia del juego JSonic.
+     * @param esAnfitrion indica si el jugador actual es el anfitrión de la partida.
+     */
     public PantallaLobby(JSonicJuego juegoApp, boolean esAnfitrion) {
         super();
         this.juegoApp = juegoApp;
@@ -33,6 +41,9 @@ public class PantallaLobby extends PantallaBase {
         inicializar();
     }
 
+    /**
+     * Inicializa recursos gráficos como el fondo y el atlas de texturas.
+     */
     @Override
     public void inicializar() {
         texturaFondo = new Texture(Gdx.files.internal("Fondos/Portada_desenfoque.png"));
@@ -42,11 +53,14 @@ public class PantallaLobby extends PantallaBase {
         texturesAtlas = new TextureAtlas(Gdx.files.internal("Atlas/textures.atlas"));
     }
 
+    /**
+     * Configura y muestra los elementos de la interfaz del lobby y envía el nombre del jugador al servidor.
+     */
     @Override
     public void show() {
         super.show();
         if (uiStage.getActors().size > 1) {
-            return; // Ya inicializado
+            return;
         }
 
         Table root = new Table();
@@ -74,8 +88,8 @@ public class PantallaLobby extends PantallaBase {
             iniciarPartida.getLabel().setWrap(true);
             iniciarPartida.getLabel().setAlignment(Align.center);
             iniciarPartida.addListener(new ClickListener() {
-                @Override public void clicked(InputEvent e, float x, float y) {
-                    // TODO: La lógica de red debería iniciar la partida para todos.
+                @Override
+                public void clicked(InputEvent e, float x, float y) {
                     juegoApp.iniciarJuegoOnline();
                 }
             });
@@ -102,8 +116,7 @@ public class PantallaLobby extends PantallaBase {
         actualizarListaJugadoresUI();
         if (juegoApp.getGameClient() != null) {
             Network.PaqueteEnviarNombre paqueteNombre = new Network.PaqueteEnviarNombre();
-            // Reemplaza "NombreDeUsuario" con la variable real que contiene el nombre.
-            paqueteNombre.nombre = getTuNombre(); // <-- USA TU VARIABLE DE NOMBRE AQUÍ
+            paqueteNombre.nombre = getTuNombre();
             juegoApp.getGameClient().send(paqueteNombre);
         }
     }
@@ -111,6 +124,7 @@ public class PantallaLobby extends PantallaBase {
     /**
      * Añade un jugador a la sala y actualiza la UI.
      * Este método debería ser llamado por la lógica de red.
+     *
      * @param nombre El nombre del jugador que se une.
      */
     public void agregarJugador(String nombre) {
@@ -123,6 +137,7 @@ public class PantallaLobby extends PantallaBase {
     /**
      * Elimina un jugador de la sala y actualiza la UI.
      * Este método debería ser llamado por la lógica de red.
+     *
      * @param nombre El nombre del jugador que se va.
      */
     public void eliminarJugador(String nombre) {
@@ -144,8 +159,12 @@ public class PantallaLobby extends PantallaBase {
         }
     }
 
+    /**
+     * Procesa paquetes recibidos del servidor y actualiza la lógica del lobby cada frame.
+     * @param delta tiempo transcurrido desde el último frame en segundos.
+     */
     @Override
-    public void actualizar(float delta){
+    public void actualizar(float delta) {
         if (juegoApp.getGameClient() == null) {
             return;
         }
@@ -157,16 +176,16 @@ public class PantallaLobby extends PantallaBase {
             Object paquete = paquetesRecibidos.poll();
 
             if (paquete instanceof Network.PaqueteActualizarLobby paqueteLobby) {
-                // CASO 1: Es para actualizar la lista de nombres. Lo procesamos.
+                // Es para actualizar la lista de nombres. Lo procesamos.
                 System.out.println("[LOBBY] Procesando actualización de nombres.");
                 this.nombresJugadores.clear();
-                for(String nombre : paqueteLobby.nombres) {
+                for (String nombre : paqueteLobby.nombres) {
                     this.nombresJugadores.add(nombre);
                 }
                 actualizarListaJugadoresUI();
 
             } else if (paquete instanceof Network.PaqueteIniciarPartida) {
-                // CASO 2: ¡Es la orden para iniciar el juego! La procesamos.
+                // Orden para iniciar el juego, La procesamos.
                 System.out.println("[LOBBY] Recibida orden del servidor para iniciar la partida.");
                 // Condición de seguridad para no iniciar dos veces.
                 if (!(juegoApp.getScreen() instanceof PantallaDeJuego)) {
@@ -175,7 +194,7 @@ public class PantallaLobby extends PantallaBase {
                 // No necesitamos devolver este paquete a la cola.
 
             } else {
-                // CASO 3: No es para el lobby. Lo guardamos para la siguiente pantalla.
+                // No es para el lobby. Lo guardamos para la siguiente pantalla.
                 paquetesParaDespues.add(paquete);
             }
         }
@@ -185,11 +204,19 @@ public class PantallaLobby extends PantallaBase {
             paquetesRecibidos.addAll(paquetesParaDespues);
         }
     }
+
+    /**
+     * Renderiza la pantalla del lobby.
+     * @param delta tiempo transcurrido desde el último frame en segundos.
+     */
     @Override
     public void render(float delta) {
         super.render(delta);
     }
 
+    /**
+     * Libera los recursos gráficos del lobby, como texturas y atlas.
+     */
     @Override
     public void dispose() {
         super.dispose();

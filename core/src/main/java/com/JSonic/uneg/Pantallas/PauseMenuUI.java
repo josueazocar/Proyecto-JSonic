@@ -15,19 +15,24 @@ import network.Network;
 import java.util.HashMap;
 import java.util.List;
 
-// Es un Table, diseñado para superponerse en la pantalla de juego.
+/**
+ * Menú de pausa que permite reanudar, ver cómo jugar, reglas, estadísticas y salir al menú principal.
+ * Se extiende de Table para organizar los componentes en dos paneles.
+ */
 public class PauseMenuUI extends Table {
 
     private final JSonicJuego juegoApp;
     private final PantallaDeJuego pantallaJuego; // Referencia para llamar a los métodos de pausa
     private final TextureAtlas textoComoJugarAtlas;
     private Label.LabelStyle estiloReglasPersonalizado;
-
-    // ¡IMPORTANTE! Esta es la clave para corregir el tamaño de la fuente.
-    // Es una escala más pequeña para compensar el Viewport del juego.
-    // Puede que necesites ajustar este valor (entre 0.3f y 0.5f) hasta que se vea perfecto.
     private static final float PAUSE_FONT_SCALE = 0.5f;
 
+    /**
+     * Constructor del menú de pausa.
+     * @param juego instancia de JSonicJuego para controlar sonidos y navegación.
+     * @param pantalla instancia de PantallaDeJuego para controlar la pausa.
+     * @param skin skin para estilos de UI.
+     */
     public PauseMenuUI(JSonicJuego juego, PantallaDeJuego pantalla, Skin skin) {
         super(skin);
         this.juegoApp = juego;
@@ -41,6 +46,10 @@ public class PauseMenuUI extends Table {
         inicializarUI(skin);
     }
 
+    /**
+     * Inicializa la interfaz de usuario del menú de pausa, creando paneles y estableciendo estilos.
+     * @param skin skin para estilos de UI.
+     */
     private void inicializarUI(Skin skin) {
         final Table panelDerecho = new Table();
         Label.LabelStyle estiloInicial = new Label.LabelStyle(skin.getFont("body-font"), null);
@@ -54,12 +63,17 @@ public class PauseMenuUI extends Table {
         this.add(panelDerecho).expand().fill();
     }
 
+    /**
+     * Crea el panel izquierdo con los botones de opciones, asignando listeners para cada acción.
+     * @param skin skin para estilos de botones.
+     * @param panelDerecho panel derecho donde se mostrarán contenidos dinámicos.
+     * @return tabla con los botones de opciones.
+     */
     private Table crearPanelIzquierdo(Skin skin, final Table panelDerecho) {
         Table tablaOpciones = new Table();
 
         TextButton.TextButtonStyle estiloBoton = new TextButton.TextButtonStyle(skin.get(TextButton.TextButtonStyle.class));
         estiloBoton.font = new BitmapFont(Gdx.files.internal("Fuentes/juego_fuente2.fnt"));
-        // Aplicamos la escala corregida
         estiloBoton.font.getData().setScale(PAUSE_FONT_SCALE);
 
         // Creación de botones
@@ -97,7 +111,6 @@ public class PauseMenuUI extends Table {
             }
         });
 
-        // El resto de listeners son idénticos a los de AyudaUI, pero usan la escala de fuente corregida
         btnComoJugar.addListener(createComoJugarListener(panelDerecho));
         btnReglas.addListener(createReglasListener(panelDerecho));
         btnEstadisticas.addListener(createEstadisticasListener(panelDerecho, skin));
@@ -112,7 +125,12 @@ public class PauseMenuUI extends Table {
         return tablaOpciones;
     }
 
-    // Los métodos para crear listeners y contenido son iguales, pero asegurándose de usar la escala correcta
+    /**
+     * Crea un listener para mostrar estadísticas de la última partida en el panel derecho.
+     * @param panelDerecho panel donde se mostrará el contenido.
+     * @param skin skin para estilos de UI.
+     * @return listener que maneja el clic en el botón de estadísticas.
+     */
     private ClickListener createEstadisticasListener(final Table panelDerecho, final Skin skin) {
         return new ClickListener() {
             @Override
@@ -140,8 +158,14 @@ public class PauseMenuUI extends Table {
             }
         };
     }
+
     // --- Métodos Creadores de Listeners para PauseMenuUI ---
 
+    /**
+     * Crea un listener para mostrar el contenido de 'Cómo jugar' en el panel derecho.
+     * @param panelDerecho panel donde se mostrará el contenido.
+     * @return listener que maneja el clic en el botón de 'Cómo jugar'.
+     */
     private ClickListener createComoJugarListener(final Table panelDerecho) {
         return new ClickListener() {
             @Override
@@ -154,6 +178,11 @@ public class PauseMenuUI extends Table {
         };
     }
 
+    /**
+     * Crea un listener para mostrar el contenido de reglas en el panel derecho.
+     * @param panelDerecho panel donde se mostrará el contenido.
+     * @return listener que maneja el clic en el botón de reglas.
+     */
     private ClickListener createReglasListener(final Table panelDerecho) {
         return new ClickListener() {
             @Override
@@ -168,14 +197,17 @@ public class PauseMenuUI extends Table {
 
 // --- Métodos Constructores de Contenido para PauseMenuUI ---
 
+    /**
+     * Construye el contenido de 'Cómo jugar' con imágenes y tooltips, envuelto en un ScrollPane.
+     * @return ScrollPane con el contenido de ayuda.
+     */
     private ScrollPane construirContenidoComoJugar() {
         Table contenidoComoJugar = new Table();
 
-        // Estilo y creación del label de instrucciones CON LA ESCALA CORREGIDA
         Label.LabelStyle estiloPersonalizado = new Label.LabelStyle(getSkin().get("default", Label.LabelStyle.class));
-        // ¡IMPORTANTE! Se crea una nueva instancia de la fuente para no afectar a otros labels
+
         estiloPersonalizado.font = new BitmapFont(Gdx.files.internal("Fuentes/juego_fuente2.fnt"));
-        estiloPersonalizado.font.getData().setScale(PAUSE_FONT_SCALE * 1.1f); // Un poco más grande que los botones
+        estiloPersonalizado.font.getData().setScale(PAUSE_FONT_SCALE * 1.1f);
 
         Label misionLabel = new Label("Pasa el raton sobre cada imagen para ver la accion correspondiente.", estiloPersonalizado);
         misionLabel.setWrap(true);
@@ -230,12 +262,14 @@ public class PauseMenuUI extends Table {
         return scrollPane;
     }
 
+    /**
+     * Construye el contenido de reglas con texto explicativo, envuelto en un ScrollPane.
+     * @return ScrollPane con las reglas del juego.
+     */
     private ScrollPane construirContenidoReglas() {
-        // Si el estilo no ha sido creado, lo creamos con la escala corregida
         if (estiloReglasPersonalizado == null) {
             estiloReglasPersonalizado = new Label.LabelStyle(getSkin().get("default", Label.LabelStyle.class));
             estiloReglasPersonalizado.font = new BitmapFont(Gdx.files.internal("Fuentes/juego_fuente2.fnt"));
-            // Aplicamos la escala corregida
             estiloReglasPersonalizado.font.getData().setScale(PAUSE_FONT_SCALE);
             estiloReglasPersonalizado.font.getData().setLineHeight(estiloReglasPersonalizado.font.getLineHeight() * 2.5f);
         }
@@ -291,17 +325,22 @@ public class PauseMenuUI extends Table {
         return scrollPane;
     }
 
+    /**
+     * Construye el panel de estadísticas de la última partida, ordenado por puntuación, envuelto en un ScrollPane.
+     * @param stats lista de estadísticas de jugadores.
+     * @return ScrollPane con la tabla de estadísticas.
+     */
     private ScrollPane construirPanelEstadisticas(List<EstadisticasJugador> stats) {
 
-        // 1. Ordenamos las estadísticas de mayor a menor puntuación
+        //Ordenamos las estadísticas de mayor a menor puntuación
         stats.sort(java.util.Comparator.comparingInt(EstadisticasJugador::getPuntuacionTotal).reversed());
 
         Table tablaStats = new Table();
 
-        // 2. Creamos los estilos para las fuentes, similar a PantallaEstadisticas
-        //    Es importante crear nuevas instancias para no afectar otros estilos del skin.
+        // Creamos los estilos para las fuentes, similar a PantallaEstadisticas
+        //  Es importante crear nuevas instancias para no afectar otros estilos del skin.
         BitmapFont fuenteTitulo = new BitmapFont(Gdx.files.internal("Fuentes/juego_fuente2.fnt"));
-        fuenteTitulo.getData().setScale(0.8f); // Un poco más pequeño para que quepa bien
+        fuenteTitulo.getData().setScale(0.8f);
         Label.LabelStyle estiloTitulo = new Label.LabelStyle(fuenteTitulo, com.badlogic.gdx.graphics.Color.WHITE);
 
         BitmapFont fuenteCuerpo = new BitmapFont(Gdx.files.internal("Fuentes/juego_fuente2.fnt"));
@@ -309,28 +348,28 @@ public class PauseMenuUI extends Table {
         Label.LabelStyle estiloEncabezado = new Label.LabelStyle(fuenteCuerpo, com.badlogic.gdx.graphics.Color.WHITE);
         Label.LabelStyle estiloDatos = new Label.LabelStyle(fuenteCuerpo, com.badlogic.gdx.graphics.Color.LIGHT_GRAY);
 
-        // 3. Añadimos el Título
+        // Añadimos el Título
         tablaStats.add(new Label("Resultados Ultima Partida", estiloTitulo)).colspan(2).center().padBottom(30);
         tablaStats.row();
 
-        // 4. Añadimos los Encabezados
+        // Añadimos los Encabezados
         tablaStats.add(new Label("Jugador", estiloEncabezado)).padBottom(10).left();
         tablaStats.add(new Label("Puntuacion", estiloEncabezado)).padBottom(10).right();
         tablaStats.row();
 
-        // 5. Añadimos una línea separadora (opcional pero estético)
+        // Añadimos una línea separadora
         Image separador = new Image(getSkin().getDrawable("default-round-down")); // Usamos un drawable del skin
         tablaStats.add(separador).colspan(2).height(2).fillX().padBottom(10);
         tablaStats.row();
 
-        // 6. Recorremos las estadísticas y añadimos una fila por cada jugador
+        // Recorremos las estadísticas y añadimos una fila por cada jugador
         for (EstadisticasJugador stat : stats) {
             tablaStats.add(new Label(stat.getNombreJugador(), estiloDatos)).pad(5).left();
             tablaStats.add(new Label(String.valueOf(stat.getPuntuacionTotal()), estiloDatos)).pad(5).right();
             tablaStats.row();
         }
 
-        // 7. Envolvemos la tabla en un ScrollPane por si la lista es muy larga
+        // Envolvemos la tabla en un ScrollPane por si la lista es muy larga
         ScrollPane scrollPane = new ScrollPane(tablaStats, getSkin());
         scrollPane.setFadeScrollBars(false);
         scrollPane.setScrollingDisabled(true, false);
@@ -338,7 +377,9 @@ public class PauseMenuUI extends Table {
         return scrollPane;
     }
 
-
+    /**
+     * Libera los recursos utilizados por el menú de pausa, como atlas de texto de ayuda.
+     */
     public void dispose() {
         textoComoJugarAtlas.dispose();
     }

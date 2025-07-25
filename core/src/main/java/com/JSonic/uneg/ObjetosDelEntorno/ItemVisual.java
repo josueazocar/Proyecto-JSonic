@@ -9,31 +9,42 @@ import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.graphics.g2d.TextureRegion;
 import com.badlogic.gdx.math.Rectangle;
 
+/**
+ * Representa un elemento visual en el juego con animación y colisiones.
+ */
 public abstract class ItemVisual {
 
     public ItemState estado;
-    protected Texture spriteSheet; // La hoja de sprites completa
+    protected Texture spriteSheet;
     protected Animation<TextureRegion> animacion;
     protected float tiempoAnimacion;
     protected Rectangle bounds; // Hitbox para colisiones
 
+    /**
+     * Crea un ItemVisual con un estado inicial y carga su animación.
+     * @param estadoInicial Estado inicial del ítem.
+     */
     public ItemVisual(ItemState estadoInicial) {
         this.estado = estadoInicial;
         this.tiempoAnimacion = 0f;
-        cargarAnimacion(); // Ahora cargamos una animación
+        cargarAnimacion();
 
-        // Inicializamos el hitbox. Asumimos un tamaño, puedes ajustarlo.
-        // Usaremos el tamaño del primer frame de la animación.
+
         if (animacion != null) {
             TextureRegion frameInicial = animacion.getKeyFrame(0);
             this.bounds = new Rectangle(estado.x, estado.y, frameInicial.getRegionWidth(), frameInicial.getRegionHeight());
         }
     }
 
-    // Método abstracto para que cada clase hija cree su animación.
+    /**
+     * Método abstracto que debe implementar cada ítem para cargar su animación.
+     */
     public abstract void cargarAnimacion();
 
-    // Actualiza la lógica del ítem (animación y posición del hitbox)
+    /**
+     * Actualiza la lógica del ítem, animación y posición del hitbox.
+     * @param deltaTime Tiempo transcurrido desde la última actualización.
+     */
     public void update(float deltaTime) {
         tiempoAnimacion += deltaTime;
         // Mantenemos el hitbox sincronizado con la posición del estado
@@ -42,7 +53,10 @@ public abstract class ItemVisual {
         }
     }
 
-    // Dibuja el frame actual de la animación.
+    /**
+     * Dibuja el frame actual de la animación.
+     * @param batch Lote de sprites usado para dibujar el ítem.
+     */
     public void draw(SpriteBatch batch) {
         if (animacion != null) {
             TextureRegion frameActual = animacion.getKeyFrame(tiempoAnimacion, true); // true para loop
@@ -50,20 +64,33 @@ public abstract class ItemVisual {
         }
     }
 
-    // Getter para el hitbox
+    /**
+     * Obtiene el rectángulo de colisiones (hitbox) del ítem.
+     * @return Rectángulo de colisiones.
+     */
     public Rectangle getBounds() {
         return bounds;
     }
 
+    /**
+     * Obtiene la animación del ítem.
+     * @return Animación de TextureRegion.
+     */
     public Animation<TextureRegion> getAnimacion() {
         return animacion;
     }
 
+    /**
+     * Define la acción al recolectar el ítem por parte del jugador.
+     * @param player Jugador que colecta el ítem.
+     */
     public void onCollect(Player player){
-        //se puede dejar vacio o hacer una logica diferente para cada items
+
     }
 
-    // Libera la memoria de la hoja de sprites.
+    /**
+     * Libera los recursos de la hoja de sprites.
+     */
     public void dispose() {
         if (spriteSheet != null) {
             spriteSheet.dispose();

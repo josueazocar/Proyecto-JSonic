@@ -13,17 +13,27 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-// Esta clase centraliza el registro de todos los paquetes de red.
+/**
+ * Clase central responsable de registrar todas las clases de paquetes
+ * para ser serializadas y enviadas por la red con KryoNet.
+ * Debe invocarse tanto en el cliente como en el servidor.
+ */
 public class Network {
 
-    // Puerto en el que el servidor escuchará
+    /**
+     * Puerto en el que el servidor escuchará y al que se conectará el cliente.
+     */
     static public final int PORT = 54555;
 
-    // Esta función registrará todas las clases que se enviarán por la red.
-    // DEBE ser llamada tanto en el servidor como en el cliente.
+    /**
+     * Registra en el EndPoint todas las clases de paquetes y estados
+     * que se enviarán por la red.
+     *
+     * @param endPoint instancia de Client o Server de KryoNet.
+     */
     static public void registrar(EndPoint endPoint) {
         Kryo kryo = endPoint.getKryo();
-        // Aquí iremos añadiendo las clases de nuestros paquetes
+
         kryo.register(SolicitudAccesoPaquete.class);
         kryo.register(RespuestaAccesoPaquete.class);
         kryo.register(PaquetePosicionJugador.class);
@@ -56,11 +66,9 @@ public class Network {
         kryo.register(PlayerState.CharacterType.class);
         kryo.register(PaqueteActualizacionContaminacion.class);
 
-        //animales
-        // --- Nuevas adiciones para los animales ---
-        kryo.register(AnimalState.class); // Clase del estado del animal
-        kryo.register(PaqueteEstadoAnimalActualizado.class); // Paquete para un solo animal actualizado
-        kryo.register(PaqueteAnimalNuevo.class); // Paquete para un animal nuevo
+        kryo.register(AnimalState.class);
+        kryo.register(PaqueteEstadoAnimalActualizado.class);
+        kryo.register(PaqueteAnimalNuevo.class);
         kryo.register(PaqueteActualizacionAnimales.class);
         kryo.register(PaqueteSolicitudLiberarAnimal.class);
         kryo.register(PaqueteSolicitudMatarAnimal.class);
@@ -98,24 +106,24 @@ public class Network {
         kryo.register(PaqueteIniciarPartida.class);
     }
 
-    // --- Definición de los Paquetes ---
-    // Son clases simples que solo contienen los datos que queremos enviar.
+    /** Paquete enviado por el servidor al cliente con su ID asignado. */
     public static class PaqueteTuID {
         public int id;
     }
 
-    // Paquete enviado por el cliente al servidor para solicitar unirse
+    /** Paquete enviado por el cliente al servidor para solicitar unirse a la partida. */
     public static class SolicitudAccesoPaquete {
         public String nombreJugador;
         public PlayerState.CharacterType characterType;
     }
 
-    // Paquete enviado por el servidor al cliente como respuesta
+    /** Paquete enviado por el servidor al cliente como respuesta a la solicitud de acceso. */
     public static class RespuestaAccesoPaquete {
         public String mensajeRespuesta;
         public PlayerState tuEstado;
     }
 
+    /** Paquete que transmite la posición y estado de animación de un jugador. */
     public static class PaquetePosicionJugador {
         public int id;
         public float x;
@@ -123,34 +131,42 @@ public class Network {
         public Player.EstadoPlayer estadoAnimacion;
     }
 
+    /** Paquete enviado a clientes cuando un nuevo jugador se conecta. */
     public static class PaqueteJugadorConectado {
         public PlayerState nuevoJugador;
     }
 
+    /** Paquete enviado para informar de la creación de un nuevo enemigo. */
     public static class PaqueteEnemigoNuevo {
-        public EnemigoState estadoEnemigo; // Enviamos el estado completo del nuevo enemigo
+        public EnemigoState estadoEnemigo;
     }
 
+    /** Paquete enviado para informar de la aparición de un nuevo ítem. */
     public static class PaqueteItemNuevo {
-        public ItemState estadoItem; // Enviamos el estado completo del nuevo ítem
+        public ItemState estadoItem;
     }
-    // El cliente envía este paquete al servidor cuando intenta recoger un ítem.
+
+    /** Paquete enviado por el cliente al servidor para recoger un ítem. */
     public static class PaqueteSolicitudRecogerItem {
         public int idItem;
     }
 
-    // El servidor envía este paquete a todos cuando un ítem es recogido y debe ser eliminado.
+    /** Paquete enviado cuando un ítem debe eliminarse de la escena. */
     public static class PaqueteItemEliminado {
         public int idItem;
     }
-    // Este paquete contendrá el estado actualizado de TODOS los enemigos activos.
+
+    /** Paquete con el estado actualizado de todos los enemigos activos. */
     public static class PaqueteActualizacionEnemigos {
         public Map<Integer, EnemigoState> estadosEnemigos;
     }
-    // Paquete enviado por el cliente al servidor cuando un enemigo termina una animación clave.
+
+    /** Paquete enviado por el cliente indicando que la animación de un enemigo ha terminado. */
     public static class PaqueteAnimacionEnemigoTerminada {
         public int idEnemigo;
     }
+
+    /** Paquete que contiene la información del mapa: paredes, portales y esmeralda. */
     public static class PaqueteInformacionMapa {
         public java.util.ArrayList<com.badlogic.gdx.math.Rectangle> paredes;
         public ArrayList<PortalInfo> portales;
@@ -158,115 +174,128 @@ public class Network {
         public Vector2 posEsmeralda;
     }
 
+    /** Paquete para solicitar o informar el cambio de mapa actual. */
     public static class PaqueteOrdenCambiarMapa {
         public String nuevoMapa;
     }
 
+    /** Paquete con la actualización de la puntuación del jugador (anillos y basura). */
     public static class PaqueteActualizacionPuntuacion {
-        // No necesitamos el ID del jugador, porque el servidor
-        // se lo enviará solo al cliente que corresponda.
         public int nuevosAnillos;
         public int nuevaBasura;
         public int totalBasuraReciclada;
     }
 
+    /** Paquete con el porcentaje de contaminación actual de un jugador. */
     public static class PaqueteActualizacionContaminacion {
         public float contaminationPercentage;
     }
 
-
-    // ANIMALES --Para actualizar el estado de un animal en el juego.--- ANIMALES
+    /** Paquete con el estado actualizado de un animal en la escena. */
     public static class PaqueteEstadoAnimalActualizado {
         public int idAnimal;
         public boolean estaVivo;
     }
 
+    /** Paquete indicando la aparición de un nuevo animal. */
     public static class PaqueteAnimalNuevo {
         public AnimalState estadoAnimal;
     }
 
-    // Este paquete es para sincronizar periódicamente todos los animales
+    /** Paquete con la colección de estados de todos los animales. */
     public static class PaqueteActualizacionAnimales {
-        // Usamos HashMap<Integer, AnimalState> para enviar el estado de todos los animales
         public HashMap<Integer, AnimalState> estadosAnimales;
     }
 
+    /** Paquete enviado por el cliente al servidor para liberar un animal. */
     public static class PaqueteSolicitudLiberarAnimal {
         public int idAnimal;
     }
 
+    /** Paquete enviado por el cliente al servidor para matar un animal. */
     public static class PaqueteSolicitudMatarAnimal {
         public int idAnimal;
     }
 
+    /** Paquete indicando que un bloque ha sido destruido por un jugador. */
     public static class PaqueteBloqueDestruido {
         public int idBloque;
         public int idJugador;
     }
 
+    /** Paquete confirmando la destrucción de un bloque. */
     public static class PaqueteBloqueConfirmadoDestruido {
-        public int idBloque; // La ID del bloque a destruir.
+        public int idBloque;
     }
 
+    /** Paquete enviado para solicitar la invocación de un dron. */
     public static class PaqueteInvocarDron {
         // El cliente envía este paquete vacío para pedir que se active el dron.
         // El servidor sabrá quién lo envió por el ID de la conexión.
     }
+
+    /** Paquete que notifica el estado de un dron (posición y acción). */
     public static class PaqueteDronEstado {
         public int ownerId; // ID del jugador dueño
         public DronState.EstadoDron nuevoEstado; // APARECIENDO, DESAPARECIENDO, etc.
         public float x, y; // Posición inicial (solo para APARECIENDO)
     }
+
+    /** Paquete para informar de un nuevo árbol generado. */
     public static class PaqueteArbolNuevo {
-        // El servidor envía esto a TODOS los clientes para decirles que dibujen un árbol.
         public float x;
         public float y;
     }
 
+    /** Paquete con un mensaje para la interfaz de usuario. */
     public static class PaqueteMensajeUI {
-        // El servidor envía esto a UN cliente para mostrar un mensaje.
         public String mensaje;
     }
+
+    /** Paquete con la cantidad de basura depositada. */
     public static class PaqueteBasuraDepositada {
         public int cantidad;
     }
 
-    // En tu archivo Network.java, junto a los otros paquetes
-
+    /** Paquete enviado para activar la habilidad de limpieza Sonic. */
     public static class PaqueteHabilidadLimpiezaSonic {
-        // No necesita contenido, su sola existencia es el mensaje.
+
     }
 
+    /** Paquete enviado para solicitar la habilidad de limpieza. */
     public static class PaqueteSolicitudHabilidadLimpieza {
     }
 
+    /** Paquete con la sincronización de todos los bloques rompibles. */
     public static class PaqueteSincronizarBloques {
         // Enviamos el mismo tipo de mapa que usa el servidor para que sea fácil.
         public HashMap<Integer, Rectangle> todosLosBloques;
     }
-    // El cliente envía esto cuando su ataque colisiona con un enemigo.
+    /** Paquete enviando un ataque de jugador a un enemigo. */
     public static class PaqueteAtaqueJugadorAEnemigo {
         public int idEnemigo;
         public int danio = 1; // Puedes variar el daño por ataque
         public int idJugador;
     }
 
-    // El servidor envía esto cuando una entidad (jugador o enemigo) muere.
+    /** Paquete notificando la eliminación de una entidad (jugador/enemigo). */
     public static class PaqueteEntidadEliminada {
         public int idEntidad;
         public boolean esJugador; // Para distinguir si el ID es de un jugador o un enemigo
     }
 
-    // El servidor envía esto para actualizar la vida de los jugadores en la UI.
+    /** Paquete con la actualización de vida de un jugador. */
     public static class PaqueteActualizacionVida {
         public int idJugador;
         public int nuevaVida;
     }
 
+    /** Paquete con el total de esmeraldas recolectadas. */
     public static class PaqueteActualizacionEsmeraldas {
         public int totalEsmeraldas;
     }
 
+    /** Clase auxiliar que define la información de un portal (posición y destino). */
     public static class PortalInfo {
         public float x, y;
         public float destinoX, destinoY;
@@ -275,48 +304,58 @@ public class Network {
         public PortalInfo() {} // Constructor vacío para KryoNet
     }
 
+    /** Paquete notificando la desconexión de un jugador. */
     public static class PaqueteJugadorDesconectado {
         public int idJugador; // El ID del jugador que se ha ido.
     }
 
+    /** Paquete indicando que un jugador sale de la partida. */
     public static class PaqueteSalidaDePartida {
-        // No necesita campos. Su simple llegada es la notificación.
+
     }
 
+    /** Paquete con las estadísticas finales de la partida. */
     public static class PaqueteResultadosFinales {
         public List<EstadisticasJugador> estadisticasFinales;
     }
 
+    /** Paquete utilizado para forzar el fin de juego en modo depuración. */
     public static class ForzarFinDeJuegoDebug {
     }
 
+    /** Paquete para activar o desactivar la transformación Super de un jugador. */
     public static class PaqueteTransformacionSuper {
         public int idJugador; // Para saber quién se transforma
         public boolean esSuper; // Para saber si se activa o desactiva
     }
 
+    /** Paquete indicando el fin de la partida (Game Over). */
     public static class PaqueteGameOver {
-        // No necesita campos. Su llegada es el mensaje.
+
     }
 
+    /** Paquete con la actualización de vida de un enemigo. */
     public static class PaqueteActualizacionVidaEnemigo {
         public int idEnemigo;
         public int nuevaVida;
     }
 
+    /** Paquete notificando el uso de la habilidad del dron. */
     public static class PaqueteHabilidadDronUsada {
-        // No necesita contenido. Su existencia es el mensaje.
+
     }
-    // ... dentro de la clase Network
+
+    /** Paquete con el nombre de un jugador. */
     public static class PaqueteEnviarNombre {
         public String nombre;
     }
 
+    /** Paquete con la lista de nombres de jugadores en el lobby. */
     public static class PaqueteActualizarLobby {
         public java.util.ArrayList<String> nombres;
     }
+    /** Paquete indicando el inicio de la partida. */
     public static class PaqueteIniciarPartida {
 
     }
 }
-

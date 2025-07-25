@@ -4,20 +4,27 @@ import com.badlogic.gdx.Game;
 import com.badlogic.gdx.assets.AssetManager;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 
+/**
+ * Clase principal del juego que extiende Game de libGDX.
+ * Se encarga de inicializar y delegar el ciclo de vida al juego JSonicJuego,
+ * así como de gestionar recursos compartidos entre pantallas.
+ */
 public class Main extends Game {
 
-    // Main solo gestiona los recursos que podrían compartirse entre pantallas.
+    JSonicJuego sonicJuego; // Instancia del juego JSonicJuego que maneja la lógica del juego.
 
-    JSonicJuego sonicJuego;
-
+    /**
+     * Crea la instancia de JSonicJuego y llama a su método create().
+     */
     @Override
     public void create() {
-
         sonicJuego = new JSonicJuego();
         sonicJuego.create();
     }
 
-    // render() simplemente delega a la pantalla activa. Perfecto.
+    /**
+     * Renderiza la pantalla activa y actualiza el juego.
+     */
     @Override
     public void render() {
         super.render();
@@ -26,6 +33,9 @@ public class Main extends Game {
         }
     }
 
+    /**
+     * Pausa el juego delegando al método pause de JSonicJuego.
+     */
     @Override
     public void pause() {
         if(sonicJuego != null) {
@@ -33,6 +43,9 @@ public class Main extends Game {
         }
     }
 
+    /**
+     * Reanuda el juego delegando al método resume de JSonicJuego.
+     */
     @Override
     public void resume() {
         if(sonicJuego != null) {
@@ -40,6 +53,12 @@ public class Main extends Game {
         }
     }
 
+    /**
+     * Ajusta el tamaño de la ventana y notifica a JSonicJuego.
+     *
+     * @param width  nuevo ancho de la ventana.
+     * @param height nuevo alto de la ventana.
+     */
     @Override
     public void resize(int width, int height) {
         if(sonicJuego != null) {
@@ -47,7 +66,9 @@ public class Main extends Game {
         }
     }
 
-    // dispose() libera los recursos compartidos cuando el juego se cierra.
+    /**
+     * Libera los recursos compartidos y finaliza JSonicJuego.
+     */
     @Override
     public void dispose() {
         super.dispose();

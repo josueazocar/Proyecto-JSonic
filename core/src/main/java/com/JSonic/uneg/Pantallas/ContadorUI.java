@@ -1,4 +1,3 @@
-// Archivo: core/src/main/java/com/JSonic/uneg/ContadorUI.java
 package com.JSonic.uneg.Pantallas;
 
 import com.badlogic.gdx.graphics.Texture;
@@ -8,6 +7,11 @@ import com.badlogic.gdx.scenes.scene2d.ui.Table;
 import com.badlogic.gdx.scenes.scene2d.utils.TextureRegionDrawable;
 import com.badlogic.gdx.utils.Disposable;
 
+/**
+ * Clase que representa un contador visual que muestra números en la interfaz de usuario.
+ * Permite mostrar un número dinámico con dígitos representados por imágenes.
+ * Los dígitos se cargan desde una textura que contiene los números del 0 al 9.
+ */
 public class ContadorUI implements Disposable {
 
     private Texture digitosTextura;
@@ -16,6 +20,7 @@ public class ContadorUI implements Disposable {
 
     /**
      * Crea un contador visual con un número de dígitos dinámico.
+     *
      * @param rutaTextura Ruta al archivo de imagen con los dígitos (0-9).
      */
     public ContadorUI(String rutaTextura) {
@@ -40,6 +45,7 @@ public class ContadorUI implements Disposable {
     /**
      * Actualiza el valor mostrado en el contador. El número de dígitos se ajusta
      * dinámicamente.
+     *
      * @param valor El nuevo número a mostrar.
      */
     public void setValor(int valor) {
@@ -64,10 +70,19 @@ public class ContadorUI implements Disposable {
         }
     }
 
+    /**
+     * Obtiene la tabla que contiene los dígitos del contador.
+     *
+     * @return La tabla con los dígitos.
+     */
     public Table getTabla() {
         return tabla;
     }
 
+    /**
+     * Limpia la tabla y libera los recursos utilizados por la textura de los dígitos.
+     * Este método debe ser llamado cuando el contador ya no sea necesario.
+     */
     @Override
     public void dispose() {
         if (digitosTextura != null) {

@@ -12,6 +12,7 @@ import com.badlogic.gdx.math.Rectangle;
 import network.interfaces.IGameClient;
 import network.interfaces.IGameServer;
 import com.badlogic.gdx.math.Vector2;
+
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Queue;
@@ -21,10 +22,11 @@ import java.util.concurrent.ConcurrentLinkedQueue;
 /**
  * Una implementación de IGameServer que se ejecuta localmente en la memoria.
  * No utiliza la red real y actúa como el motor para el modo de un solo jugador.
+ * Se encarga de toda la lógica del juego: IA de enemigos, generación de ítems,
+ * reglas del juego y estado de los jugadores.
  */
 public class LocalServer implements IGameServer {
 
-    // Almacenes para los estados de todas las entidades del juego
     private final HashMap<Integer, PlayerState> jugadores = new HashMap<>();
     private final HashMap<Integer, EnemigoState> enemigosActivos = new HashMap<>();
     private final HashMap<Integer, ItemState> itemsActivos = new HashMap<>();
@@ -32,7 +34,6 @@ public class LocalServer implements IGameServer {
     private final HashMap<Integer, Integer> puntajesBasura = new HashMap<>();
     private final HashMap<Integer, EstadisticasJugador> estadisticasJugadores = new HashMap<>();
     private static final ContaminationState contaminationState = new ContaminationState();
-    //Declara un HashMap para asociar el ID del portal con su destino (para los portales
     private final HashMap<Integer, String> destinosPortales = new HashMap<>();
 
     private static final float VELOCIDAD_ROBOTNIK = 60f;
@@ -59,22 +60,18 @@ public class LocalServer implements IGameServer {
     private float tiempoDesdeUltimaContaminacion = 0f;
     private static final float INTERVALO_ACTUALIZACION_CONTAMINACION = 1.0f; // 1 segundo
     private int esmeraldasRecogidasGlobal = 0;
-    //para colocarle limite a los enemigos por mapa
     private final HashMap<String, Integer> enemigosPorMapa = new HashMap<>();
 
-    //declaraciones de HashMap
     private final HashMap<Integer, AnimalState> animalesActivos = new HashMap<>();
     private final HashMap<Integer, Rectangle> bloquesRompibles = new HashMap<>();
     private int proximoIdBloque = 30000; // Un rango de IDs para bloques
     private int proximoIdAnimal = 20000; // Usamos un ID base alto para evitar conflictos con otros IDs
-    // Variables para la lógica de muerte por contaminación
     private float tiempoParaProximaMuerteAnimal = 20f; // Temporizador para la muerte secuencial (20 segundos)
     private boolean muertesAnimalesActivas = false;
 
     // Cola para paquetes que vienen "desde el cliente" hacia el servidor
     private final Queue<Object> paquetesEntrantes = new ConcurrentLinkedQueue<>();
     private boolean alMenosUnJugadorHaEnviadoPosicion = false;
-    // Referencia directa al único cliente que existirá en este modo
     private float cooldownHabilidadLimpieza = 0f;
     private static final float COOLDOWN_HABILIDAD_SONIC = 40.0f;
     private LocalClient clienteLocal;
@@ -84,6 +81,11 @@ public class LocalServer implements IGameServer {
     private static final float ROBOT_ATTACK_RANGE = 10f; // Usando el valor del código original
     private int basuraReciclada = 0;
 
+
+    /**
+     * Constructor del servidor local.
+     * Aquí inicializamos los mapas de enemigos y otros estados necesarios.
+     */
     public LocalServer() {
         // Poblamos el mapa con la cantidad de enemigos por nivel.
         enemigosPorMapa.put("maps/Zona1N1.tmx", 8);
@@ -95,27 +97,39 @@ public class LocalServer implements IGameServer {
         enemigosPorMapa.put("maps/ZonaJefeN3.tmx", 10);
     }
 
+
+    /**
+     * Permite a la clase que nos crea (JSonicJuego) obtener la instancia del cliente.
+     *
+     * @return El cliente local asociado a este servidor.
+     */
+    public IGameClient getClient() {
+        return this.clienteLocal;
+    }
+
+    /**
+     * Reduce el porcentaje de contaminación global.
+     *
+     * @param porcentaje El valor porcentual a reducir.
+     */
     public static void decreaseContamination(float porcentaje) {
         contaminationState.decrease(porcentaje);
     }
 
+    /**
+     * Inicia el servidor local. Este proceso incluye:
+     * 1. Crear la instancia del cliente local.
+     * 2. Crear el estado inicial del jugador (posición, ID, etc.).
+     * 3. Inicializar las estadísticas del jugador.
+     * 4. Enviar un paquete de bienvenida al cliente para confirmar la conexión.
+     */
     @Override
     public void start() {
         System.out.println("[LOCAL SERVER] Servidor local iniciado.");
 
-        // 1. Creamos la única instancia del cliente local y la guardamos.
+        // Crea la única instancia del cliente local y la guarda
         this.clienteLocal = new LocalClient(this);
 
-        /*EnemigoState estadoRobotnik = new EnemigoState(999, 300, 100, 100, EnemigoState.EnemigoType.ROBOTNIK);
-        this.enemigosActivos.put(estadoRobotnik.id, estadoRobotnik);
-        System.out.println("[LOCAL SERVER] Robotnik ha sido creado en el servidor local.");
-
-        Network.PaqueteEnemigoNuevo paqueteRobotnik = new Network.PaqueteEnemigoNuevo();
-        paqueteRobotnik.estadoEnemigo = estadoRobotnik;
-        this.clienteLocal.recibirPaqueteDelServidor(paqueteRobotnik);*/ // "Enviamos" el paquete
-
-        // 2. Simulamos la conexión del jugador inmediatamente.
-        // Esto replica la lógica del listener "connected" de tu GameServer.
         PlayerState nuevoEstado = new PlayerState();
         nuevoEstado.id = proximoIdJugador++; // Será el jugador 1
         nuevoEstado.x = 100; // Posición inicial X
@@ -133,22 +147,27 @@ public class LocalServer implements IGameServer {
             // Convierte "sonic" a "Sonic"
             nombreDelPersonaje = nombreEnMinusculas.substring(0, 1).toUpperCase() + nombreEnMinusculas.substring(1);
         } else {
-            nombreDelPersonaje = "Jugador"; // Un nombre por defecto si algo saliera mal.
+            nombreDelPersonaje = "Jugador";
         }
 
-        // 3. Creamos las estadísticas usando el nombre correcto.
+        // Creamos las estadísticas usando el nombre correcto
         EstadisticasJugador stats = new EstadisticasJugador(nombreDelPersonaje);
         estadisticasJugadores.put(nuevoEstado.id, stats);
         System.out.println("[STATS] Objeto de estadísticas creado para el jugador " + nuevoEstado.id);
 
-        // 3. "Enviamos" el paquete de bienvenida al cliente local.
+        // Envia el paquete de bienvenida al cliente local
         Network.RespuestaAccesoPaquete respuesta = new Network.RespuestaAccesoPaquete();
         respuesta.mensajeRespuesta = "Bienvenido al modo local!";
         respuesta.tuEstado = nuevoEstado;
         this.clienteLocal.recibirPaqueteDelServidor(respuesta);
     }
 
-    //funcion para portales generar portales
+    /**
+     * Genera los portales de teletransporte para el nivel actual basándose en la información
+     * del LevelManager y notifica al cliente.
+     *
+     * @param manejadorNivel El gestor del nivel actual.
+     */
     private void generarPortales(LevelManager manejadorNivel) {
         int idBase = 10000;
         for (LevelManager.PortalInfo portal : manejadorNivel.obtenerPortales()) {
@@ -162,6 +181,12 @@ public class LocalServer implements IGameServer {
         }
     }
 
+    /**
+     * Genera una cantidad fija de bloques rompibles en posiciones aleatorias
+     * no colisionables del mapa actual.
+     *
+     * @param manejadorNivel El gestor del nivel actual.
+     */
     private void generarBloquesParaElNivel(LevelManager manejadorNivel) {
         bloquesRompibles.clear();
         int cantidad = 5;
@@ -185,27 +210,31 @@ public class LocalServer implements IGameServer {
             }
         }
     }
-    //esta funcion es para los animales
-    // Nuevo método para generar animales en el mapa actual
+
+
+    /**
+     * Genera una cantidad fija de animales en posiciones aleatorias no colisionables
+     * del mapa actual y notifica al cliente.
+     *
+     * @param manejadorNivel El gestor del nivel actual.
+     */
     private void generarAnimales(LevelManager manejadorNivel) {
         // Limpiamos la lista para que no se acumulen animales entre mapas
-       // animalesActivos.clear();
+        // animalesActivos.clear();
         proximoIdAnimal = 20000; // Reiniciamos el contador de ID
         muertesAnimalesActivas = false; // Reseteamos la bandera al cambiar de mapa
         tiempoParaProximaMuerteAnimal = 20f; // Reiniciamos el temporizador
 
-        // Queremos 5 animales por mapa, como solicitaste
         int cantidadAnimales = 10;
         for (int i = 0; i < cantidadAnimales; i++) {
             int intentos = 0;
             boolean colocado = false;
-            while (!colocado && intentos < 50) { // Aumentamos los intentos para encontrar un lugar
+            while (!colocado && intentos < 50) {
                 // Genera una posición aleatoria dentro de los límites del mapa
                 float x = MathUtils.random(0, manejadorNivel.getAnchoMapaPixels() - 32); // Restamos el tamaño del animal para que no se salga
                 float y = MathUtils.random(0, manejadorNivel.getAltoMapaPixels() - 32);
 
                 // Crea un rectángulo temporal para verificar colisiones.
-                // Asumimos un tamaño de 32x32 para el animal (ajusta si es diferente).
                 Rectangle animalBounds = new Rectangle(x, y, 32, 32);
 
                 // Verifica colisión con objetos del mapa (capa "Colisiones")
@@ -213,14 +242,9 @@ public class LocalServer implements IGameServer {
                     String texturaPath = "Items/Conejo1.png"; // Asegúrate de que esta ruta sea correcta
                     AnimalState nuevoAnimal = new AnimalState(proximoIdAnimal++, x, y, texturaPath);
 
-                    // 1. Lo guardamos en la lista del servidor
+                    //  Lo guardamos en la lista del servidor
                     animalesActivos.put(nuevoAnimal.id, nuevoAnimal);
 
-                    // 2. Enviamos la notificación de creación al cliente
-                    // Para que el cliente pueda crear el AnimalVisual correspondiente
-                    /*Network.PaqueteAnimalNuevo paquete = new Network.PaqueteAnimalNuevo();
-                    paquete.estadoAnimal = nuevoAnimal;
-                    clienteLocal.recibirPaqueteDelServidor(paquete);*/
                     System.out.println("[LOCAL SERVER] Generando animal en X: " + x + ", Y: " + y);
                     colocado = true;
                 }
@@ -232,7 +256,6 @@ public class LocalServer implements IGameServer {
         }
         System.out.println("[LOCAL SERVER] Generados y guardados " + animalesActivos.size() + " animales.");
 
-        // Después de generar todos los animales, enviamos la lista completa al cliente UNA SOLA VEZ.
         if (!animalesActivos.isEmpty()) {
             Network.PaqueteActualizacionAnimales paqueteInicial = new Network.PaqueteActualizacionAnimales();
             // Se crea una copia para evitar problemas de concurrencia.
@@ -243,13 +266,11 @@ public class LocalServer implements IGameServer {
 
     }
 
-    //-------------------------------------------------------------------------------
-
-    //Para matar al siguiente animal
 
     /**
-     * [NUEVO MÉTODO AUXILIAR]
-     * Busca el primer animal vivo en la lista, lo marca como muerto y notifica al cliente.
+     * Busca el primer animal que sigue vivo en la lista de animales activos,
+     * cambia su estado a "muerto" y notifica al cliente sobre este cambio.
+     * Se utiliza cuando el nivel de contaminación es alto.
      */
     private void matarSiguienteAnimalVivo() {
         // Buscamos el primer animal que todavía esté vivo
@@ -259,29 +280,29 @@ public class LocalServer implements IGameServer {
                 System.out.println("[LOCAL SERVER] Contaminación alta. Matando animal ID: " + animal.id);
 
                 // Notificamos al cliente del cambio de estado.
-                // Usaremos PaqueteActualizacionAnimales para mantener la consistencia.
-                // Esto asegura que el cliente recibe el estado completo y actualizado.
                 Network.PaqueteActualizacionAnimales paquete = new Network.PaqueteActualizacionAnimales();
                 paquete.estadosAnimales = new HashMap<>();
                 paquete.estadosAnimales.put(animal.id, animal); // Enviamos solo el estado del animal que cambió
                 clienteLocal.recibirPaqueteDelServidor(paquete);
 
-                return; // Salimos del método una vez que hemos matado a un animal.
+                return; // Salimos del metodo una vez que hemos matado a un animal.
             }
         }
         System.out.println("[LOCAL SERVER] No se encontraron más animales vivos para matar.");
     }
-    //-------------------------------------
 
-    //Logica para la muerte de los aniamales
-
+    /**
+     * Actualiza el estado de los animales basado en el nivel de contaminación.
+     * Si la contaminación es alta, inicia un proceso de muerte secuencial de animales.
+     *
+     * @param deltaTime El tiempo transcurrido desde el último fotograma.
+     */
     private void actualizarEstadoAnimalesPorContaminacion(float deltaTime) {
         if (contaminationState.getPercentage() >= 50) {
-            // Si la contaminación es alta pero la bandera de muertes aún no está activa...
             if (!muertesAnimalesActivas) {
-                muertesAnimalesActivas = true; // 1. Activamos la bandera.
-                matarSiguienteAnimalVivo();    // 2. Matamos un animal INMEDIATAMENTE.
-                tiempoParaProximaMuerteAnimal = 20f; // 3. Reiniciamos el temporizador para la SIGUIENTE muerte.
+                muertesAnimalesActivas = true; // Activamos la bandera.
+                matarSiguienteAnimalVivo();    // Matamos un animal INMEDIATAMENTE.
+                tiempoParaProximaMuerteAnimal = 20f; // Reiniciamos el temporizador para la SIGUIENTE muerte.
             } else {
                 // Si la bandera ya está activa, continuamos con el temporizador normal.
                 tiempoParaProximaMuerteAnimal -= deltaTime;
@@ -298,9 +319,12 @@ public class LocalServer implements IGameServer {
             }
         }
     }
-    //-----------------------------------------------------------------------------------------------
 
-    //Generar esmeraldas(inicio)
+    /**
+     * Genera una Esmeralda del Caos en la posición definida en el mapa, si existe.
+     *
+     * @param manejadorNivel El gestor del nivel actual.
+     */
     private void generarEsmeralda(LevelManager manejadorNivel) {
         Vector2 posEsmeralda = manejadorNivel.obtenerPosicionEsmeralda();
 
@@ -318,14 +342,15 @@ public class LocalServer implements IGameServer {
             System.out.println("[LOCAL SERVER] No hay esmeralda definida para este mapa.");
         }
     }
-    //-----------------------------------------------------------------------------------------
 
     /**
      * Este es el "game loop" del servidor. Se llamará desde PantallaDeJuego.
-     *
+     * Procesa paquetes entrantes, actualiza la lógica del juego (IA, generación de ítems, etc.)
+     * y envía actualizaciones de estado al cliente.
      *
      * @param deltaTime        El tiempo transcurrido desde el último fotograma.
-     * @param personajeJugable
+     * @param manejadorNivel   El gestor del nivel actual, para colisiones y datos del mapa.
+     * @param personajeJugable La instancia del jugador principal para interacción directa.
      */
     @Override
     public void update(float deltaTime, LevelManager manejadorNivel, Player personajeJugable) {
@@ -336,7 +361,6 @@ public class LocalServer implements IGameServer {
             if (objeto instanceof Network.PaquetePosicionJugador paquete) {
                 PlayerState estadoJugador = jugadores.get(paquete.id);
                 if (estadoJugador != null) {
-                    // Asumimos un tamaño para el jugador, por ejemplo 32x48. Ajusta estos valores.
                     Rectangle nuevosLimites = new Rectangle(paquete.x, paquete.y, 32, 48);
 
                     // Verificamos que la nueva posición no colisione ni con el mapa ni con un animal.
@@ -352,17 +376,10 @@ public class LocalServer implements IGameServer {
                         alMenosUnJugadorHaEnviadoPosicion = true;
                     }
                 }
-            }
-
-            else if (objeto instanceof Network.PaqueteHabilidadLimpiezaSonic) {
+            } else if (objeto instanceof Network.PaqueteHabilidadLimpiezaSonic) {
                 System.out.println("[SERVER] ¡Recibida notificación de habilidad de limpieza de Sonic!");
                 decreaseContamination(100.0f);
-                // El servidor ahora enviará automáticamente la actualización a todos los clientes
-                // con el nuevo valor 0, porque la variable de contaminación ha cambiado.
-            }
-
-            else if (objeto instanceof Network.PaqueteSolicitudRecogerItem paquete) {
-                // Primero, verificamos si el ítem existe con .get()
+            } else if (objeto instanceof Network.PaqueteSolicitudRecogerItem paquete) {
                 ItemState itemRecogido = itemsActivos.get(paquete.idItem);
 
                 if (itemRecogido != null) {
@@ -377,10 +394,10 @@ public class LocalServer implements IGameServer {
                             PlayerState estadoJugador = jugadores.get(1);
 
                             // Comprobamos si el personaje es Sonic y si no está ya transformado.
-                            if (estadoJugador != null  && !estadoJugador.isSuper) {
+                            if (estadoJugador != null && !estadoJugador.isSuper) {
                                 System.out.println("[LOCAL SERVER] ¡7 Esmeraldas! Activando Super Sonic en modo local.");
 
-                                // 1. Actualizamos el estado del jugador en el servidor.
+                                // Actualizamos el estado del jugador en el servidor.
                                 estadoJugador.isSuper = true;
                                 estadoJugador.vida = Player.MAX_VIDA;
                                 System.out.println("[LOCAL SERVER] Vida del jugador restaurada al máximo: " + estadoJugador.vida);
@@ -388,28 +405,23 @@ public class LocalServer implements IGameServer {
                                 paqueteVida.idJugador = estadoJugador.id;
                                 paqueteVida.nuevaVida = estadoJugador.vida;
                                 clienteLocal.recibirPaqueteDelServidor(paqueteVida);
-                                // 2. Como tenemos una referencia directa al objeto del jugador,
-                                //    le ordenamos que se transforme llamando a su método.
-                                //    `personajeJugable` viene como parámetro del método update().
                                 if (personajeJugable instanceof Sonic) {
                                     personajeJugable.setSuper(true);
                                 }
                             }
                         }
 
-                        // 1. Notificar a TODOS los clientes del nuevo total de esmeraldas
+                        // Notifica a TODOS los clientes del nuevo total de esmeraldas
                         Network.PaqueteActualizacionEsmeraldas paqueteEsmeraldas = new Network.PaqueteActualizacionEsmeraldas();
                         paqueteEsmeraldas.totalEsmeraldas = esmeraldasRecogidasGlobal;
                         clienteLocal.recibirPaqueteDelServidor(paqueteEsmeraldas);
 
-                        // 2. Notificar que el ítem específico fue eliminado
+                        // Notifica que el ítem específico fue eliminado
                         Network.PaqueteItemEliminado paqueteEliminado = new Network.PaqueteItemEliminado();
                         paqueteEliminado.idItem = paquete.idItem;
                         clienteLocal.recibirPaqueteDelServidor(paqueteEliminado);
 
-                    }
-
-                    else if (itemRecogido.tipo == ItemState.ItemType.TELETRANSPORTE) {
+                    } else if (itemRecogido.tipo == ItemState.ItemType.TELETRANSPORTE) {
                         System.out.println("[LOCAL SERVER] Jugador ha activado el teletransportador.");
                         String destinoMapa = destinosPortales.get(paquete.idItem);
 
@@ -421,23 +433,22 @@ public class LocalServer implements IGameServer {
                         }
                         if (destinoMapa == null) {
                             System.err.println("[LOCAL SERVER] Error: El portal con ID " + paquete.idItem + " no tiene un mapa de destino definido.");
-                            return; // Salimos para evitar el error.
+                            return;
                         }
-                        // 3. AHORA sí, eliminamos el portal de las listas activas.
                         itemsActivos.remove(paquete.idItem);
                         destinosPortales.remove(paquete.idItem); // Limpieza del mapa de destinos.
 
                         manejadorNivel.cargarNivel(destinoMapa);
                         com.badlogic.gdx.math.Vector2 llegada = manejadorNivel.obtenerPosicionLlegada();
 
-                        // Creamos la ORDEN de cambio de mapa
+                        // Crea la ORDEN de cambio de mapa
                         Network.PaqueteOrdenCambiarMapa orden = new Network.PaqueteOrdenCambiarMapa();
                         orden.nuevoMapa = destinoMapa;
 
-                        // "Enviamos" la orden al cliente local
+                        // Envia la orden al cliente local
                         clienteLocal.recibirPaqueteDelServidor(orden);
 
-                        // También "enviamos" la notificación de que el portal fue eliminado
+                        // notificación de que el portal fue eliminado
                         Network.PaqueteItemEliminado paqueteEliminado = new Network.PaqueteItemEliminado();
                         paqueteEliminado.idItem = paquete.idItem;
                         clienteLocal.recibirPaqueteDelServidor(paqueteEliminado);
@@ -456,16 +467,15 @@ public class LocalServer implements IGameServer {
                             if (anillosAhora >= 100) {
                                 System.out.println("[LOCAL SERVER] ¡100 anillos! Canjeando por vida.");
 
-                                // 1. Restamos los anillos EN EL SERVIDOR.
+                                // Restamos los anillos EN EL SERVIDOR.
                                 puntajesAnillos.put(idJugador, anillosAhora - 100);
 
-                                // 2. Aumentamos la vida del jugador EN EL SERVIDOR.
+                                // Aumentamos la vida del jugador EN EL SERVIDOR.
                                 PlayerState estadoJugador = jugadores.get(idJugador);
                                 if (estadoJugador != null) {
-                                    // Usamos Math.min para no superar la vida máxima. ¡Buena práctica!
                                     estadoJugador.vida = Math.min(estadoJugador.vida + 100, Player.MAX_VIDA);
 
-                                    // 3. ENVIAMOS un paquete para notificar al cliente de su nueva vida.
+                                    // ENVIAMOS un paquete para notificar al cliente de su nueva vida.
                                     Network.PaqueteActualizacionVida paqueteVida = new Network.PaqueteActualizacionVida();
                                     paqueteVida.idJugador = idJugador;
                                     paqueteVida.nuevaVida = estadoJugador.vida;
@@ -484,15 +494,15 @@ public class LocalServer implements IGameServer {
                             System.out.println("[LOCAL SERVER] Basura recogida. Contaminación reducida a: " + contaminationState.getPercentage() + "%");
                         }
 
-                        // Creamos el paquete de actualización de puntuación
+                        // Crea el paquete de actualización de puntuación
                         Network.PaqueteActualizacionPuntuacion paquetePuntaje = new Network.PaqueteActualizacionPuntuacion();
                         paquetePuntaje.nuevosAnillos = puntajesAnillos.get(idJugador);
                         paquetePuntaje.nuevaBasura = puntajesBasura.get(idJugador);
 
-                        // "Enviamos" el paquete de puntuación al cliente local
+                        // Envia el paquete de puntuación al cliente local
                         clienteLocal.recibirPaqueteDelServidor(paquetePuntaje);
 
-                        // "Enviamos" la notificación de eliminación
+                        // Envia la notificación de eliminación
                         Network.PaqueteItemEliminado paqueteEliminado = new Network.PaqueteItemEliminado();
                         paqueteEliminado.idItem = paquete.idItem;
                         clienteLocal.recibirPaqueteDelServidor(paqueteEliminado);
@@ -520,8 +530,6 @@ public class LocalServer implements IGameServer {
                 }
             }
 
-            // --- FIN: CÓDIGO A AÑADIR ---
-
             //Para que los bloques de basura sean contados como basura
             else if (objeto instanceof Network.PaqueteBloqueDestruido paquete) {
                 System.out.println("[LOCAL SERVER] Bloque destruido por jugador ID: " + paquete.idJugador);
@@ -546,17 +554,14 @@ public class LocalServer implements IGameServer {
                 Network.PaqueteBloqueConfirmadoDestruido confirmacion = new Network.PaqueteBloqueConfirmadoDestruido();
                 confirmacion.idBloque = paquete.idBloque;
                 clienteLocal.recibirPaqueteDelServidor(confirmacion); // "Enviamos" la confirmación.
-            }
-            //--------------------------------------------------------------------------
-
-            else if (objeto instanceof Network.PaqueteBasuraDepositada paquete) {
+            } else if (objeto instanceof Network.PaqueteBasuraDepositada paquete) {
                 System.out.println("[LOCAL SERVER] Solicitud para depositar " + paquete.cantidad + " de basura recibida.");
                 int idJugador = 1;
 
-                // 1. Añadimos la cantidad depositada al total reciclado.
+                // Añadimos la cantidad depositada al total reciclado.
                 this.basuraReciclada += paquete.cantidad;
 
-                // 2. Reiniciamos el contador de basura del jugador a 0.
+                // Reiniciamos el contador de basura del jugador a 0.
                 puntajesBasura.put(idJugador, 0);
 
                 EstadisticasJugador stats = estadisticasJugadores.get(idJugador);
@@ -566,24 +571,23 @@ public class LocalServer implements IGameServer {
                 }
 
                 if (paquete.cantidad >= 5 && personajeJugable instanceof Tails) {
-                    // 2. Lógica de Curación: Si se cumplió la condición, curamos al jugador.
+                    // Lógica de Curación: Si se cumplió la condición, curamos al jugador.
                     PlayerState estadoJugador = jugadores.get(idJugador);
                     if (estadoJugador != null) {
                         // Sumamos 10 a la vida actual.
                         int vidaNueva = estadoJugador.vida + 10;
                         personajeJugable.mostrarMensaje("Basura reciclada +10 SALUD!");
-                        // Usamos Math.min para asegurarnos de que la vida no supere el máximo (¡muy importante!).
                         estadoJugador.vida = Math.min(vidaNueva, Player.MAX_VIDA);
 
                         System.out.println("[LOCAL SERVER] Jugador curado. Vida nueva: " + estadoJugador.vida);
 
-                        // 3. Notificación de Vida: Enviamos un paquete para que la UI de la barra de vida se actualice.
+                        // Notificación de Vida: Enviamos un paquete para que la UI de la barra de vida se actualice.
                         Network.PaqueteActualizacionVida paqueteVida = new Network.PaqueteActualizacionVida();
                         paqueteVida.idJugador = idJugador;
                         paqueteVida.nuevaVida = estadoJugador.vida;
                         clienteLocal.recibirPaqueteDelServidor(paqueteVida);
                     }
-                    // 3. Enviamos la actualización completa al cliente.
+                    // Enviamos la actualización completa al cliente.
                     Network.PaqueteActualizacionPuntuacion paquetePuntaje = new Network.PaqueteActualizacionPuntuacion();
                     paquetePuntaje.nuevosAnillos = puntajesAnillos.getOrDefault(idJugador, 0);
                     paquetePuntaje.nuevaBasura = puntajesBasura.get(idJugador); // Será 0
@@ -591,17 +595,14 @@ public class LocalServer implements IGameServer {
                     clienteLocal.recibirPaqueteDelServidor(paquetePuntaje);
                 } else personajeJugable.mostrarMensaje("Recoge por lo menos 5 basuras");
 
-            }
-           else if (objeto instanceof Network.PaqueteSolicitudHabilidadLimpieza) {
-                // --- INICIO DE LA MODIFICACIÓN ---
-                // ¡El servidor ahora comprueba su propio temporizador!
+            } else if (objeto instanceof Network.PaqueteSolicitudHabilidadLimpieza) {
                 if (cooldownHabilidadLimpieza <= 0) {
                     System.out.println("[LOCAL SERVER] Habilidad de limpieza de Sonic activada.");
 
-                    // 1. Reiniciamos el cooldown del servidor.
+                    // Reiniciamos el cooldown del servidor.
                     cooldownHabilidadLimpieza = COOLDOWN_HABILIDAD_SONIC;
 
-                    // 2. Aplicamos el efecto al estado del juego.
+                    // Aplicamos el efecto al estado del juego.
                     decreaseContamination(100.0f);
                     EstadisticasJugador stats = estadisticasJugadores.get(1);
                     if (stats != null) {
@@ -610,14 +611,14 @@ public class LocalServer implements IGameServer {
                     }
 
 
-                    // 3. Recogemos la basura (lógica que ya tenías).
+                    // Recogemos la basura (lógica que ya tenías).
                     for (ItemState item : new ArrayList<>(itemsActivos.values())) {
                         if (item.tipo == ItemState.ItemType.BASURA || item.tipo == ItemState.ItemType.PIEZA_PLASTICO) {
                             procesarRecogidaItem(1, item.id);
                         }
                     }
 
-                    // 4. Enviamos la notificación de éxito al cliente.
+                    // Enviamos la notificación de éxito al cliente.
                     Network.PaqueteHabilidadLimpiezaSonic notificacion = new Network.PaqueteHabilidadLimpiezaSonic();
                     clienteLocal.recibirPaqueteDelServidor(notificacion);
                 } else {
@@ -628,11 +629,7 @@ public class LocalServer implements IGameServer {
                 EnemigoState enemigo = enemigosActivos.get(paquete.idEnemigo);
 
                 if (enemigo != null && enemigo.vida > 0) {
-                    // --- INICIO: CÓDIGO DE DEPURACIÓN ---
-                    System.out.println("[DEBUG] Vida del enemigo " + enemigo.id + " ANTES del golpe: " + enemigo.vida);
-                    // --- FIN: CÓDIGO DE DEPURACIÓN ---
                     enemigo.vida -= paquete.danio;
-                    System.out.println("[LOCAL SERVER] Enemigo ID " + enemigo.id + " recibió daño. Vida: " + enemigo.vida);
 
                     if (enemigo.vida <= 0) {
                         System.out.println("[LOCAL SERVER] ¡Enemigo ID " + enemigo.id + " derrotado!");
@@ -645,11 +642,10 @@ public class LocalServer implements IGameServer {
                         }
 
                         if (enemigo.tipo == EnemigoState.EnemigoType.ROBOTNIK) {
-                            // Comprobamos el nombre del mapa actual. AJUSTA EL NOMBRE SI ES DIFERENTE.
                             if (manejadorNivel.getNombreMapaActual().equals("maps/ZonaJefeN3.tmx")) {
                                 System.out.println("[VICTORIA FINAL] ¡Jefe final derrotado en la última zona!");
                                 finalizarPartidaYEnviarResultados(); // Se muestran las estadísticas.
-                                return; // Detenemos todo, la partida terminó.
+                                return;
                             } else {
                                 // Si no es el jefe final, solo generamos el portal.
                                 System.out.println("[VICTORIA PARCIAL] Jefe de zona derrotado. Abriendo portal...");
@@ -669,15 +665,13 @@ public class LocalServer implements IGameServer {
                         clienteLocal.recibirPaqueteDelServidor(notificacionMuerte);
                     }
                 }
-            }else if (objeto instanceof Network.ForzarFinDeJuegoDebug) {
+            } else if (objeto instanceof Network.ForzarFinDeJuegoDebug) {
                 System.out.println("[LOCAL SERVER] ¡Recibida orden de forzar fin de juego!");
 
-                // Simplemente llamamos a la función que ya hace todo el trabajo.
                 finalizarPartidaYEnviarResultados();
 
-                // Detenemos el bucle para no procesar más paquetes en este frame.
                 break;
-            }else if (objeto instanceof Network.PaqueteHabilidadDronUsada) {
+            } else if (objeto instanceof Network.PaqueteHabilidadDronUsada) {
                 System.out.println("[LOCAL SERVER] Recibida notificación de uso de habilidad de dron.");
                 int idJugador = 1; // En modo local, el jugador siempre es el ID 1
 
@@ -700,14 +694,13 @@ public class LocalServer implements IGameServer {
             }
 
         }
-        // --- LÓGICA DE AUMENTO DE CONTAMINACIÓN ---
         contaminationState.increase(CONTAMINATION_RATE_PER_SECOND * deltaTime);
 
         tiempoDesdeUltimaContaminacion += deltaTime;
         if (tiempoDesdeUltimaContaminacion >= INTERVALO_ACTUALIZACION_CONTAMINACION) {
             Network.PaqueteActualizacionContaminacion paquete = new Network.PaqueteActualizacionContaminacion();
             paquete.contaminationPercentage = contaminationState.getPercentage();
-            clienteLocal.recibirPaqueteDelServidor(paquete); // "Enviamos" el paquete
+            clienteLocal.recibirPaqueteDelServidor(paquete);
 
             tiempoDesdeUltimaContaminacion = 0f; // Reseteamos el temporizador
         }
@@ -715,14 +708,14 @@ public class LocalServer implements IGameServer {
         if (cooldownHabilidadLimpieza > 0) {
             cooldownHabilidadLimpieza -= deltaTime;
         }
-        //para que se genere mas de un portal y en diferentes mapas
-        // --- LÓGICA DE CAMBIO DE MAPA ---
+
+        // LÓGICA DE CAMBIO DE MAPA
         String mapaActual = manejadorNivel.getNombreMapaActual();
         if (!mapaActual.equals(ultimoMapaProcesado)) {
             System.out.println("[LOCAL SERVER] Detectado cambio de mapa a: " + mapaActual);
             ultimoMapaProcesado = mapaActual;
 
-            // 1. Limpiar entidades del mapa anterior
+            // Limpiar entidades del mapa anterior
             enemigosActivos.clear();
             itemsActivos.clear();
             destinosPortales.clear(); // Importante para los portales
@@ -730,7 +723,7 @@ public class LocalServer implements IGameServer {
             bloquesRompibles.clear();
 
 
-            // 2. Reiniciar temporizadores de generación
+            // Reiniciar temporizadores de generación
             teleportGenerado = false;
             tiempoGeneracionTeleport = 0f;
             tiempoGeneracionEnemigo = 0f;
@@ -739,8 +732,8 @@ public class LocalServer implements IGameServer {
             tiempoSpawnBasura = 0f;
             tiempoSpawnPlastico = 0f;
 
-            // 3. Regenerar entidades para el nuevo mapa
-            generarAnimales(manejadorNivel); // Esto ya lo tenías, y está bien
+            // Regenerar entidades para el nuevo mapa
+            generarAnimales(manejadorNivel);
             generarBloquesParaElNivel(manejadorNivel);
             generarNuevosItems(0f, manejadorNivel);
             generarEsmeralda(manejadorNivel);
@@ -750,9 +743,7 @@ public class LocalServer implements IGameServer {
             clienteLocal.recibirPaqueteDelServidor(paqueteSync);
             System.out.println("[LOCAL SERVER] Enviando estado de bloques al cliente local.");
 
-            // 4. Volver a crear a Robotnik en el nuevo mapa (si es necesario)
-            // Nota: Esto es opcional si quieres que Robotnik aparezca en todos los mapas.
-            // Si no, puedes eliminar estas líneas.
+            //  Volver a crear a Robotnik en el nuevo mapa (si es necesario)
             if (mapaActual.contains("ZonaJefe")) {
                 EnemigoState estadoRobotnik = new EnemigoState(999, 300, 100, 100, EnemigoState.EnemigoType.ROBOTNIK);
                 this.enemigosActivos.put(estadoRobotnik.id, estadoRobotnik);
@@ -764,19 +755,6 @@ public class LocalServer implements IGameServer {
 
         }
 
-        // --- FIN DE LÓGICA DE CAMBIO DE MAPA ---
-        //----------------------------------------------------
-        //aqui se cambio para que la logica donde se llamaba al servidor, fuera una funcion
-
-        /*this.tiempoGeneracionTeleport += deltaTime;
-        if (!this.teleportGenerado && this.tiempoGeneracionTeleport >= 20f) {
-
-            System.out.println("[LOCAL SERVER] Generando teletransportador...");
-            System.out.println("[DEBUG] Intentando generar portales...");
-            //llamamos a la funcion generar portales
-            generarPortales(manejadorNivel);
-            this.teleportGenerado = true;
-        }*/
 
         if (alMenosUnJugadorHaEnviadoPosicion) {
             actualizarEstadoAnimalesPorContaminacion(deltaTime);
@@ -784,11 +762,9 @@ public class LocalServer implements IGameServer {
         }
         generarNuevosItems(deltaTime, manejadorNivel);
         generarEnemigosControlados(deltaTime, manejadorNivel);
-        //generarNuevosEnemigos(deltaTime, manejadorNivel);
-//para que los animales se puedan generar varias veces en el mapa
         if (!animalesActivos.isEmpty()) {
             Network.PaqueteActualizacionAnimales paqueteUpdateAnimales = new Network.PaqueteActualizacionAnimales();
-            paqueteUpdateAnimales.estadosAnimales = this.animalesActivos; // Envía todo el HashMap
+            paqueteUpdateAnimales.estadosAnimales = this.animalesActivos;
             clienteLocal.recibirPaqueteDelServidor(paqueteUpdateAnimales);
         }
 
@@ -799,6 +775,14 @@ public class LocalServer implements IGameServer {
         }
     }
 
+    /**
+     * Procesa la acción de un jugador al recoger un ítem.
+     * Elimina el ítem del mundo del juego y aplica su efecto (puntos, reducción de contaminación, etc.).
+     * Notifica al cliente para que actualice la interfaz y elimine el ítem visualmente.
+     *
+     * @param idJugador El ID del jugador que recoge el ítem.
+     * @param idItem    El ID del ítem recogido.
+     */
     private void procesarRecogidaItem(int idJugador, int idItem) {
         ItemState itemRecogido = itemsActivos.remove(idItem);
         if (itemRecogido == null) return;
@@ -823,19 +807,28 @@ public class LocalServer implements IGameServer {
         clienteLocal.recibirPaqueteDelServidor(paqueteEliminado);
     }
 
+    /**
+     * Actualiza la inteligencia artificial (IA) de todos los enemigos activos.
+     * Determina el comportamiento del enemigo (perseguir, atacar, estar inactivo)
+     * basándose en la posición del jugador y las reglas del juego.
+     *
+     * @param deltaTime        El tiempo desde el último fotograma.
+     * @param manejadorNivel   El gestor del nivel para comprobaciones de colisión.
+     * @param personajeJugable El objeto del jugador principal para obtener su estado.
+     */
     private void actualizarEnemigosAI(float deltaTime, LevelManager manejadorNivel, Player personajeJugable) {
         PlayerState jugador = jugadores.get(1);
         if (jugador == null)
             return;
 
         for (EnemigoState enemigo : enemigosActivos.values()) {
-            // --- AÑADIDO: Actualización del Cooldown ---
             // Actualiza el temporizador de ataque de cada enemigo.
             enemigo.actualizar(deltaTime);
             if (jugador == null) {
                 enemigo.estadoAnimacion = enemigo.mirandoDerecha ? EnemigoState.EstadoEnemigo.IDLE_RIGHT : EnemigoState.EstadoEnemigo.IDLE_LEFT;
                 continue; // Pasa al siguiente enemigo.
             }
+
             // --- Lógica para Robotnik (Jefe) ---
             if (enemigo.tipo == EnemigoState.EnemigoType.ROBOTNIK) {
                 float distanciaX = jugador.x - enemigo.x;
@@ -851,11 +844,12 @@ public class LocalServer implements IGameServer {
                     enemigo.mirandoDerecha = (direccionDeseada.x > 0);
                     enemigo.estadoAnimacion = enemigo.mirandoDerecha ? EnemigoState.EstadoEnemigo.RUN_RIGHT : EnemigoState.EstadoEnemigo.RUN_LEFT;
                 } else {
+
                     // El jefe está en rango de ataque.
                     enemigo.estadoAnimacion = enemigo.mirandoDerecha ? EnemigoState.EstadoEnemigo.IDLE_RIGHT : EnemigoState.EstadoEnemigo.IDLE_LEFT;
 
 
-                    // --- AÑADIDO: Lógica de Ataque y Daño para Robotnik ---
+                    // Lógica de Ataque y Daño para Robotnik
                     if (enemigo.puedeAtacar()) {
                         enemigo.reiniciarCooldownAtaque();
 
@@ -892,7 +886,7 @@ public class LocalServer implements IGameServer {
                 continue; // Finaliza la lógica para Robotnik.
             }
 
-            // --- Lógica para Robots Normales ---
+            //  Lógica para Robots Normales
             int dx = (int) (jugador.x - enemigo.x);
             int dy = (int) (jugador.y - enemigo.y);
             int distance = (int) Math.sqrt(dx * dx + dy * dy);
@@ -906,7 +900,7 @@ public class LocalServer implements IGameServer {
             if (distance <= ROBOT_ATTACK_RANGE) {
                 enemigo.estadoAnimacion = dx > 0 ? EnemigoState.EstadoEnemigo.HIT_RIGHT : EnemigoState.EstadoEnemigo.HIT_LEFT;
 
-                // --- AÑADIDO: Lógica de Ataque y Daño para Robots ---
+                // Lógica de Ataque y Daño para Robots ---
                 if (enemigo.puedeAtacar()) {
                     enemigo.reiniciarCooldownAtaque();
                     int idJugador = jugador.id;
@@ -950,7 +944,6 @@ public class LocalServer implements IGameServer {
                 enemigo.tiempoEnEstado = 0;
             }
 
-            // Tu lógica de movimiento original se mantiene sin cambios.
             if (enemigo.estadoAnimacion == EnemigoState.EstadoEnemigo.RUN_RIGHT || enemigo.estadoAnimacion == EnemigoState.EstadoEnemigo.RUN_LEFT) {
                 float targetX = enemigo.x;
                 float targetY = enemigo.y;
@@ -978,7 +971,14 @@ public class LocalServer implements IGameServer {
         }
     }
 
-
+    /**
+     * Gestiona la generación continua de ítems (anillos, basura) en el mapa.
+     * Utiliza temporizadores para generar nuevos ítems a intervalos regulares,
+     * respetando un límite máximo de ítems por tipo en el mapa.
+     *
+     * @param deltaTime      El tiempo desde el último fotograma.
+     * @param manejadorNivel El gestor del nivel para colocar los ítems.
+     */
     private void generarNuevosItems(float deltaTime, LevelManager manejadorNivel) {
         int anillos = 0, basura = 0, plastico = 0;
         for (ItemState item : itemsActivos.values()) {
@@ -1004,37 +1004,42 @@ public class LocalServer implements IGameServer {
         }
     }
 
-    //para enemigospor mapa
+    /**
+     * Controla la generación de nuevos enemigos en el nivel.
+     * Genera enemigos a intervalos de tiempo definidos hasta alcanzar
+     * el límite de enemigos especificado para el mapa actual.
+     *
+     * @param deltaTime      El tiempo desde el último fotograma.
+     * @param manejadorNivel El gestor de nivel para colocar los enemigos.
+     */
     private void generarEnemigosControlados(float deltaTime, LevelManager manejadorNivel) {
         String mapaActual = manejadorNivel.getNombreMapaActual();
         int limiteEnemigos = enemigosPorMapa.getOrDefault(mapaActual, 0);
 
-        // Si ya hemos generado todos los enemigos para este nivel, no hacemos nada más.
         if (enemigosGeneradosEnNivelActual >= limiteEnemigos) {
             return;
         }
 
-        // Si todavía no hemos alcanzado el límite, aplicamos el temporizador.
         tiempoGeneracionEnemigo += deltaTime;
         if (tiempoGeneracionEnemigo >= INTERVALO_GENERACION_ENEMIGO) {
 
-            // Intentamos generar un nuevo enemigo.
             boolean enemigoGenerado = spawnNuevoEnemigo(manejadorNivel);
 
-            // Si se pudo generar con éxito...
             if (enemigoGenerado) {
                 enemigosGeneradosEnNivelActual++; // Incrementamos el contador de este nivel.
                 System.out.println("[LOCAL SERVER] Enemigo generado (" + enemigosGeneradosEnNivelActual + "/" + limiteEnemigos + ")");
             }
 
-            // Reiniciamos el temporizador en cualquier caso, para no intentarlo en cada frame.
             tiempoGeneracionEnemigo = 0f;
         }
     }
 
     /**
-     * Comprueba si todos los enemigos del nivel han sido derrotados.
-     * Si es así, genera el portal de salida.
+     * Comprueba si se cumplen las condiciones para generar el portal de fin de nivel.
+     * La condición principal es que todos los enemigos del mapa hayan sido derrotados.
+     * Si es así, invoca la generación del portal.
+     *
+     * @param manejadorNivel El gestor de nivel, necesario para crear el portal.
      */
     private void comprobarYGenerarPortalSiCorresponde(LevelManager manejadorNivel) {
         if (teleportGenerado) {
@@ -1048,9 +1053,15 @@ public class LocalServer implements IGameServer {
             teleportGenerado = true;
         }
     }
-    //-------------------------------------------------------------------
 
-
+    /**
+     * Intenta generar un nuevo enemigo en una posición aleatoria y válida del mapa.
+     * Realiza varios intentos para encontrar una ubicación que no colisione con
+     * la geometría del nivel.
+     *
+     * @param manejadorNivel El gestor de nivel para verificar colisiones.
+     * @return {@code true} si el enemigo fue generado con éxito, {@code false} en caso contrario.
+     */
     private boolean spawnNuevoEnemigo(LevelManager manejadorNivel) {
         int intentos = 0;
         boolean colocado = false;
@@ -1072,6 +1083,14 @@ public class LocalServer implements IGameServer {
         return colocado;
     }
 
+    /**
+     * Genera un nuevo ítem de un tipo específico en una posición aleatoria y válida.
+     * Se asegura de que el nuevo ítem no se superponga con ítems existentes ni
+     * con la geometría del mapa.
+     *
+     * @param tipo           El tipo de ítem a generar (ANILLO, BASURA, etc.).
+     * @param manejadorNivel El gestor de nivel para verificar colisiones.
+     */
     private void spawnNuevoItem(ItemState.ItemType tipo, LevelManager manejadorNivel) {
         int intentos = 0;
         boolean colocado = false;
@@ -1100,17 +1119,27 @@ public class LocalServer implements IGameServer {
         }
     }
 
+    /**
+     * Finaliza la partida actual y envía los resultados finales al cliente.
+     * Empaqueta las estadísticas acumuladas de los jugadores y las envía
+     * para que se muestren en la pantalla de fin de juego.
+     */
     private void finalizarPartidaYEnviarResultados() {
         System.out.println("[LOCAL SERVER] Finalizando partida y enviando resultados...");
 
         Network.PaqueteResultadosFinales paqueteResultados = new Network.PaqueteResultadosFinales();
-        // Creamos una nueva lista a partir de los valores del HashMap
+        // Crea una nueva lista a partir de los valores del HashMap
         paqueteResultados.estadisticasFinales = new ArrayList<>(estadisticasJugadores.values());
 
-        // "Enviamos" el paquete final al cliente local.
+        // Envia el paquete final al cliente local.
         clienteLocal.recibirPaqueteDelServidor(paqueteResultados);
     }
 
+    /**
+     * Libera los recursos utilizados por el servidor al cerrar el juego.
+     * Limpia las listas de jugadores y otros estados para asegurar una
+     * terminación limpia.
+     */
     @Override
     public void dispose() {
         jugadores.clear();
@@ -1118,21 +1147,13 @@ public class LocalServer implements IGameServer {
     }
 
     /**
-     * Método para que el LocalClient nos "envíe" paquetes.
+     * Recibe un paquete de datos desde el cliente local y lo añade a la cola
+     * de procesamiento. Este método es el punto de entrada para toda la comunicación
+     * del cliente hacia el servidor en el modo local.
      *
-     * @param paquete El paquete enviado por el cliente.
+     * @param paquete El objeto de paquete enviado por el cliente.
      */
     public void recibirPaqueteDelCliente(Object paquete) {
         this.paquetesEntrantes.add(paquete);
     }
-
-    /**
-     * Permite a la clase que nos crea (JSonicJuego) obtener la instancia del cliente.
-     *
-     * @return El cliente local asociado a este servidor.
-     */
-    public IGameClient getClient() {
-        return this.clienteLocal;
-    }
-
 }

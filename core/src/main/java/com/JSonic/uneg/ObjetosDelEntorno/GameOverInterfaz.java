@@ -16,6 +16,10 @@ import com.badlogic.gdx.scenes.scene2d.utils.ClickListener;
 import network.LocalServer;
 import network.Network;
 
+/**
+ * Clase que representa la interfaz de "Game Over" del juego.
+ * Muestra un mensaje de fin de juego y botones para reiniciar o volver al menú principal.
+ */
 public class GameOverInterfaz extends Table {
 
     private final JSonicJuego juegoApp;
@@ -23,7 +27,7 @@ public class GameOverInterfaz extends Table {
     private TextButton botonReiniciar;
     private TextButton botonMenu;
 
-    // Se declara la fuente aquí para poder liberarla en el método dispose().
+    // Se declara la fuente aquí para poder liberarla en el metodo dispose().
     private BitmapFont fuenteBoton;
 
     public GameOverInterfaz(JSonicJuego juegoApp, Skin skin) {
@@ -32,6 +36,11 @@ public class GameOverInterfaz extends Table {
         setupUI(skin);
     }
 
+    /**
+     * Configura la interfaz de usuario con los elementos necesarios.
+     *
+     * @param skin Skin utilizado para el estilo de los componentes.
+     */
     private void setupUI(Skin skin) {
         this.setVisible(false);
         this.setFillParent(true);
@@ -41,7 +50,7 @@ public class GameOverInterfaz extends Table {
         estiloTitulo.font.getData().setScale(1.6f);
         tituloLabel = new Label("FIN DEL JUEGO", estiloTitulo);
 
-        // Se crea la fuente para los botones. Guardarla es crucial para evitar fugas de memoria.
+        // Se crea la fuente para los botones
         fuenteBoton = new BitmapFont(Gdx.files.internal("Fuentes/juego_fuente2.fnt"));
         TextButton.TextButtonStyle estiloBotonPequeno = new TextButton.TextButtonStyle(skin.get("default", TextButton.TextButtonStyle.class));
         estiloBotonPequeno.font = fuenteBoton;
@@ -83,6 +92,10 @@ public class GameOverInterfaz extends Table {
         this.add(botonMenu).size(300, 80).pad(10);
     }
 
+    /**
+     * Metodo que se llama cuando la pantalla se muestra.
+     * Aquí se puede inicializar la interfaz o realizar acciones necesarias.
+     */
     @Override
     public void setVisible(boolean visible) {
         super.setVisible(visible);
@@ -102,7 +115,7 @@ public class GameOverInterfaz extends Table {
      * Inicia una animación de entrada secuencial para el título y los botones.
      */
     public void iniciarAnimacionDeEntrada() {
-        // 1. Se resetea el estado de los actores a animar.
+        // Se resetea el estado de los actores a animar.
         tituloLabel.clearActions();
         botonReiniciar.clearActions();
         botonMenu.clearActions();
@@ -112,8 +125,9 @@ public class GameOverInterfaz extends Table {
         botonReiniciar.getColor().a = 0;
         botonMenu.getColor().a = 0;
 
-        // 2. Se añade una secuencia de acciones a la tabla misma.
+        // Se añade una secuencia de acciones a la tabla misma.
         this.addAction(Actions.sequence(
+
             // Acción 1: El título aparece con un fundido lento y dramático.
             Actions.run(new Runnable() {
                 @Override
@@ -136,8 +150,8 @@ public class GameOverInterfaz extends Table {
     }
 
     /**
-     * Este método es ESENCIAL para evitar fugas de memoria.
-     * Debe ser llamado desde el método dispose() de la pantalla que contiene esta interfaz.
+     * Este metodo es ESENCIAL para evitar fugas de memoria.
+     * Debe ser llamado desde el metodo dispose() de la pantalla que contiene esta interfaz.
      */
     public void dispose() {
         if (fuenteBoton != null) {

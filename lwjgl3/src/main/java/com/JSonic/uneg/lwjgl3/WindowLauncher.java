@@ -12,6 +12,11 @@ public class WindowLauncher {
     private static final int screenWidth = tile * maxScreenCol;//768 pixels
     private static final int screenHeight = tile * maxScreenRow;//576 pixels
 
+    /**
+     * Main method to launch the application.
+     * This method checks if a new JVM is required to run the application,
+     * @param args
+     */
     public static void main(String[] args) {
         if (StartupHelper.startNewJvmIfRequired()) return; // This handles macOS support and helps on Windows.
         createApplication(screenWidth, screenHeight);

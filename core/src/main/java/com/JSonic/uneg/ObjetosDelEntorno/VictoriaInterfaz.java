@@ -9,6 +9,10 @@ import com.badlogic.gdx.scenes.scene2d.ui.Label;
 import com.badlogic.gdx.scenes.scene2d.ui.Skin;
 import com.badlogic.gdx.scenes.scene2d.ui.Table;
 
+/**
+ * Clase que representa la interfaz de victoria del juego.
+ * Muestra un mensaje de victoria y un subtítulo con instrucciones.
+ */
 public class VictoriaInterfaz extends Table {
 
     private final JSonicJuego juegoApp;
@@ -17,19 +21,28 @@ public class VictoriaInterfaz extends Table {
 
     private BitmapFont fuenteSubtitulo;
 
+    /**
+     * Construye la interfaz de victoria e inicializa los componentes.
+     * @param juegoApp Instancia principal del juego.
+     * @param skin Skin de UI para estilos.
+     */
     public VictoriaInterfaz(JSonicJuego juegoApp, Skin skin) {
         super(skin);
         this.juegoApp = juegoApp;
         setupUI(skin);
     }
 
+    /**
+     * Configura los elementos de la UI: visibilidad, layout y estilos de labels.
+     * @param skin Skin de UI para estilos.
+     */
     private void setupUI(Skin skin) {
         this.setVisible(false);
         this.setFillParent(true);
         this.center();
 
         Label.LabelStyle estiloTitulo = new Label.LabelStyle(skin.getFont("body-font"), Color.GREEN); // Color cambiado a Amarillo para más impacto
-        estiloTitulo.font.getData().setScale(2.5f); // Un poco más grande
+        estiloTitulo.font.getData().setScale(2.5f);
         tituloLabel = new Label("VICTORIA", estiloTitulo);
 
 
@@ -43,6 +56,10 @@ public class VictoriaInterfaz extends Table {
     }
 
 
+    /**
+     * Muestra u oculta la interfaz y lanza la animación de entrada si se hace visible.
+     * @param visible true para mostrar, false para ocultar.
+     */
     @Override
     public void setVisible(boolean visible) {
         super.setVisible(visible);
@@ -52,6 +69,9 @@ public class VictoriaInterfaz extends Table {
     }
 
 
+    /**
+     * Inicia la animación de aparición para los labels de título y subtítulo.
+     */
     public void iniciarAnimacionDeEntrada() {
         tituloLabel.clearActions();
         tituloLabel.getColor().a = 0;
@@ -76,6 +96,9 @@ public class VictoriaInterfaz extends Table {
     }
 
 
+    /**
+     * Libera los recursos asociados a la fuente de subtítulo.
+     */
     public void dispose() {
         if (fuenteSubtitulo != null) {
             fuenteSubtitulo.dispose();

@@ -1,10 +1,8 @@
-// Archivo: src/com/JSonic/uneg/PantallaSeleccionNivel.java
 package com.JSonic.uneg.Pantallas;
 
 import com.JSonic.uneg.JSonicJuego;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Input;
-import com.badlogic.gdx.Preferences;
 import com.badlogic.gdx.graphics.GL20;
 import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.TextureAtlas;
@@ -14,6 +12,9 @@ import com.badlogic.gdx.scenes.scene2d.utils.ClickListener;
 import com.badlogic.gdx.scenes.scene2d.utils.TextureRegionDrawable;
 import com.JSonic.uneg.GestorDeProgreso;
 
+/**
+ * Pantalla para seleccionar el nivel de juego, mostrando opciones según progreso o modo multijugador.
+ */
 public class PantallaSeleccionNivel extends PantallaBase {
 
     private final JSonicJuego juegoApp;
@@ -24,6 +25,10 @@ public class PantallaSeleccionNivel extends PantallaBase {
     private final boolean esMultijugador;
     private boolean logicaInicializada = false;
 
+    /**
+     * Constructor para modo un jugador.
+     * @param juegoApp instancia del juego.
+     */
     public PantallaSeleccionNivel(JSonicJuego juegoApp) {
         super();
         this.juegoApp = juegoApp;
@@ -31,6 +36,11 @@ public class PantallaSeleccionNivel extends PantallaBase {
         inicializar();
     }
 
+    /**
+     * Constructor para modo multijugador.
+     * @param juegoApp instancia del juego.
+     * @param esMultijugador indica si es modo multijugador.
+     */
     public PantallaSeleccionNivel(JSonicJuego juegoApp, boolean esMultijugador) {
         super();
         this.juegoApp = juegoApp;
@@ -38,6 +48,9 @@ public class PantallaSeleccionNivel extends PantallaBase {
         inicializar();
     }
 
+    /**
+     * Carga atlas de texturas y crea los botones de nivel y el botón de jugar.
+     */
     @Override
     public void inicializar() {
         atlasNiveles = new TextureAtlas(Gdx.files.internal("Atlas/seleccionNiveles.atlas"));
@@ -60,7 +73,6 @@ public class PantallaSeleccionNivel extends PantallaBase {
         playStyle.over = new TextureRegionDrawable(atlasNiveles.findRegion("boton_jugar_hover"));
         playButton = new Button(playStyle);
 
-        //botonNivel1.setChecked(true);
         botonNivel1.addListener(new ClickListener() {
             @Override
             public void clicked(InputEvent event, float x, float y) {
@@ -93,7 +105,6 @@ public class PantallaSeleccionNivel extends PantallaBase {
         });
 
 
-
         playButton.addListener(new ClickListener() {
             @Override
             public void clicked(InputEvent event, float x, float y) {
@@ -119,12 +130,14 @@ public class PantallaSeleccionNivel extends PantallaBase {
 
     }
 
-    private void configurarInterfazCompleta(){
+    /**
+     * Configura la interfaz completa con fondo, títulos, tooltips y botones.
+     */
+    private void configurarInterfazCompleta() {
         mainStage.addActor(new Image(new Texture("Fondos/Portada_desenfoque.png")));
 
         TextureRegionDrawable fondoDrawable = new TextureRegionDrawable(atlasTextures.findRegion("shade"));
 
-        // Usaremos una única tabla para todo el layout, como en la pantalla de personajes.
         uiTable.setFillParent(true);
         mainStage.addActor(uiTable);
 
@@ -133,15 +146,14 @@ public class PantallaSeleccionNivel extends PantallaBase {
         tituloDrawable = new TextureRegionDrawable(atlasNiveles.findRegion("seleccionatunivel"));
         uiTable.add(new Image(tituloDrawable)).colspan(3).padBottom(20).row();
 
-
-        // Agregar textos descriptivos ARRIBA de cada botón
+        // Agrega textos descriptivos ARRIBA de cada botón
         Label.LabelStyle smallLabelStyle = new Label.LabelStyle(getSkin().get(Label.LabelStyle.class));
         smallLabelStyle.font.getData().setScale(0.8f);
         Label labelNivel1 = new Label("Green Hill", smallLabelStyle);
         Label labelNivel2 = new Label("Chemical Plant", smallLabelStyle);
         Label labelNivel3 = new Label("Ice Cap", smallLabelStyle);
 
-        //1
+
         Label tooltipLabel1 = new Label("Zona clasica de pasto y colinas.", getSkin(), "default");
         tooltipLabel1.setWrap(true);
         Table tooltipTable1 = new Table(getSkin());
@@ -185,6 +197,13 @@ public class PantallaSeleccionNivel extends PantallaBase {
         actualizarEstadoNiveles();
     }
 
+    /**
+     * Crea un botón de selección de nivel with diferentes estados gráficos y sonido.
+     * @param up nombre de la región para estado normal.
+     * @param checked nombre de la región para estado seleccionado.
+     * @param disabled nombre de la región para estado deshabilitado.
+     * @return botón configurado.
+     */
     private Button crearBotonNivel(String up, String checked, String disabled) {
         Button.ButtonStyle estilo = new Button.ButtonStyle();
         estilo.up = new TextureRegionDrawable(atlasNiveles.findRegion(up));
@@ -200,6 +219,9 @@ public class PantallaSeleccionNivel extends PantallaBase {
         return boton;
     }
 
+    /**
+     * Actualiza la disponibilidad y selección inicial de los botones de nivel.
+     */
     private void actualizarEstadoNiveles() {
         // Lógica para habilitar/deshabilitar según el modo de juego
         if (esMultijugador) {
@@ -208,7 +230,7 @@ public class PantallaSeleccionNivel extends PantallaBase {
             botonNivel3.setDisabled(false);
         } else {
             // --- LÓGICA DE UN JUGADOR CON PROGRESO ---
-            // 1. Cargamos el nivel más alto desbloqueado
+            // Cargamos el nivel más alto desbloqueado
             int nivelMasAlto = GestorDeProgreso.cargarNivelMasAltoDesbloqueado();
             System.out.println("[SeleccionNivel] Nivel más alto desbloqueado: " + nivelMasAlto);
 
@@ -235,7 +257,10 @@ public class PantallaSeleccionNivel extends PantallaBase {
     }
 
 
-
+    /**
+     * Actualiza la lógica de entrada y el stage de esta pantalla.
+     * @param delta tiempo transcurrido desde el último frame en segundos.
+     */
     @Override
     public void actualizar(float delta) {
         if (Gdx.input.isKeyJustPressed(Input.Keys.ESCAPE)) {
@@ -251,6 +276,10 @@ public class PantallaSeleccionNivel extends PantallaBase {
         mainStage.act(delta);
     }
 
+    /**
+     * Renderiza la pantalla de selección de nivel: limpia pantalla y dibuja el stage.
+     * @param delta tiempo transcurrido desde el último frame en segundos.
+     */
     @Override
     public void render(float delta) {
         Gdx.gl.glClearColor(0, 0, 0, 1);
@@ -259,6 +288,9 @@ public class PantallaSeleccionNivel extends PantallaBase {
         mainStage.draw();
     }
 
+    /**
+     * Muestra la pantalla y asigna el procesador de entrada.
+     */
     @Override
     public void show() {
         if (!logicaInicializada) {
@@ -268,11 +300,17 @@ public class PantallaSeleccionNivel extends PantallaBase {
         Gdx.input.setInputProcessor(mainStage);
     }
 
+    /**
+     * Oculta la pantalla y desactiva el procesador de entrada.
+     */
     @Override
     public void hide() {
         Gdx.input.setInputProcessor(null);
     }
 
+    /**
+     * Libera los recursos de atlas utilizados en la pantalla.
+     */
     @Override
     public void dispose() {
         super.dispose();

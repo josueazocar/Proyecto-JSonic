@@ -12,13 +12,16 @@ import com.badlogic.gdx.scenes.scene2d.ui.Table;
 import com.badlogic.gdx.scenes.scene2d.utils.ClickListener;
 import com.badlogic.gdx.scenes.scene2d.utils.TextureRegionDrawable;
 
+/**
+ * Pantalla principal del menú que proporciona navegación entre opciones como jugar, opciones y multijugador.
+ */
 public class PantallaMenu extends PantallaBase {
 
     private final JSonicJuego juegoApp;
     private Texture texturaFondo, textureTextoInicio, texturaFondoInicio;
     private TextureAtlas atlasBotones;
     private Image imagenFondo, imagenTextoInicio, imagenFondoDesenfoque;
-    private Button botonJugar, botonAcercaDe, botonUnJugador, botonOnline , botonLocal,botonMultijugador, botonAtras, botonSalir, botonOpciones, botonAyuda, botonCrear, botonUnirse;
+    private Button botonJugar, botonAcercaDe, botonUnJugador, botonOnline, botonLocal, botonMultijugador, botonAtras, botonSalir, botonOpciones, botonAyuda, botonCrear, botonUnirse;
     private final boolean mostrarMenuDirecto;
     private boolean logicaInicializada = false; // Bandera para controlar la inicialización
     private EstadoMenu estadoInicial = EstadoMenu.PRINCIPAL;
@@ -28,14 +31,23 @@ public class PantallaMenu extends PantallaBase {
         PRINCIPAL, JUGAR, OPCIONES, MULTIJUGADOR, CREAR_UNIRSE
     }
 
+    /**
+     * Constructor del menú principal.
+     * @param juegoApp instancia de JSonicJuego.
+     * @param mostrarMenuDirecto si omite la pantalla de inicio y muestra directamente el submenú.
+     */
     public PantallaMenu(JSonicJuego juegoApp, boolean mostrarMenuDirecto) {
-        super(); // Llama a inicializar() internamente
+        super();
         this.juegoApp = juegoApp;
         this.mostrarMenuDirecto = mostrarMenuDirecto;
         this.estadoActual = EstadoMenu.PRINCIPAL;
         inicializar();
     }
 
+    /**
+     * Establece el submenú inicial a mostrar al abrir el menú.
+     * @param estado el estado de menú a mostrar.
+     */
     public void setEstadoMenu(EstadoMenu estado) {
         this.estadoInicial = estado;
     }
@@ -44,9 +56,12 @@ public class PantallaMenu extends PantallaBase {
         this(juegoApp, false);
     }
 
+    /**
+     * Inicializa recursos gráficos y crea los actores del menú.
+     */
     @Override
     public void inicializar() {
-        // 1. Cargar todos los assets y crear los actores.
+        // Carga todos los assets y crea los actores.
         texturaFondo = new Texture(Gdx.files.internal("Fondos/Portada.png"));
         texturaFondoInicio = new Texture(Gdx.files.internal("Fondos/Portada_desenfoque.png"));
         textureTextoInicio = new Texture(Gdx.files.internal("Fondos/Texto_inicial.png"));
@@ -70,9 +85,13 @@ public class PantallaMenu extends PantallaBase {
         botonAyuda = crearBotonConEstados("boton_ayuda", "boton_ayuda_down", "boton_ayuda_hover");
     }
 
+    /**
+     * Actualiza la lógica de animación y navegación del menú.
+     * @param delta tiempo transcurrido desde el último frame en segundos.
+     */
     @Override
     public void actualizar(float delta) {
-        // 2. La lógica de configuración se ejecuta solo una vez en el primer fotograma.
+        // La lógica de configuración se ejecuta solo una vez en el primer fotograma.
         if (!logicaInicializada) {
             configurarEscena();
             logicaInicializada = true;
@@ -80,20 +99,18 @@ public class PantallaMenu extends PantallaBase {
 
         // Lógica de actualización continua
         if (imagenTextoInicio.isVisible() && Gdx.input.isKeyJustPressed(Input.Keys.ANY_KEY)) {
-            //imagenTextoInicio.setVisible(false);
-            // Primero detenemos cualquier música que pudiera estar sonando
+
             juegoApp.getSoundManager().stopBackgroundMusic();
 
-
-            // Ahora sí, esta llamada funcionará porque el método ya existe en JSonicJuego
             juegoApp.setPantallaActiva(new PantallaHistoria(juegoApp, juegoApp.getSoundManager()));
 
-            //mostrarMenuPrincipal();
         }
     }
 
+    /**
+     * Configura la escena inicial del menú, colocando el fondo y los botones según el estado.
+     */
     private void configurarEscena() {
-        // En este punto, 'mostrarMenuDirecto' ya tiene el valor correcto.
         imagenFondo.setSize(mainStage.getWidth(), mainStage.getHeight());
         mainStage.addActor(imagenFondo);
 
@@ -115,8 +132,7 @@ public class PantallaMenu extends PantallaBase {
                 mostrarMenuMultijugador();
             } else if (estadoInicial == EstadoMenu.CREAR_UNIRSE) {
                 mostrarMenuCrearUnirse();
-            }
-            else {
+            } else {
                 mostrarMenuPrincipal();
             }
         } else {
@@ -148,6 +164,9 @@ public class PantallaMenu extends PantallaBase {
         tablaAtras.add(botonAtras).size(105, 105).pad(20);
     }
 
+    /**
+     * Configura los listeners de eventos para los botones del menú.
+     */
     private void configurarListeners() {
         botonJugar.addListener(new ClickListener() {
             @Override
@@ -189,7 +208,7 @@ public class PantallaMenu extends PantallaBase {
             }
         });
 
-        botonAyuda.addListener(new ClickListener(){
+        botonAyuda.addListener(new ClickListener() {
             @Override
             public void clicked(InputEvent event, float x, float y) {
 
@@ -245,6 +264,9 @@ public class PantallaMenu extends PantallaBase {
         });
     }
 
+    /**
+     * Muestra el menú principal con los botones de Jugar, Opciones y Salir.
+     */
     private void mostrarMenuPrincipal() {
         estadoActual = EstadoMenu.PRINCIPAL;
         uiTable.clear();
@@ -269,6 +291,9 @@ public class PantallaMenu extends PantallaBase {
         botonAyuda.setVisible(false);
     }
 
+    /**
+     * Muestra el submenú Jugar con opciones de un jugador o multijugador.
+     */
     private void mostrarMenuJugar() {
         estadoActual = EstadoMenu.JUGAR;
         uiTable.clear();
@@ -291,6 +316,9 @@ public class PantallaMenu extends PantallaBase {
         botonAyuda.setVisible(false);
     }
 
+    /**
+     * Muestra el submenú Multijugador con opciones local u online.
+     */
     private void mostrarMenuMultijugador() {
         estadoActual = EstadoMenu.MULTIJUGADOR;
         uiTable.clear();
@@ -313,6 +341,9 @@ public class PantallaMenu extends PantallaBase {
         botonAyuda.setVisible(false);
     }
 
+    /**
+     * Muestra el submenú para crear o unirse a una partida online.
+     */
     private void mostrarMenuCrearUnirse() {
         estadoActual = EstadoMenu.CREAR_UNIRSE;
         uiTable.clear();
@@ -336,6 +367,9 @@ public class PantallaMenu extends PantallaBase {
     }
 
 
+    /**
+     * Muestra el submenú Opciones con las opciones Acerca De y Ayuda.
+     */
     private void mostrarMenuOpciones() {
         uiTable.clear();
         uiTable.bottom().padBottom(40);
@@ -356,7 +390,13 @@ public class PantallaMenu extends PantallaBase {
     }
 
 
-
+    /**
+     * Crea un botón con diferentes estados gráficos y reproduce un sonido al hacer click.
+     * @param up región para estado normal.
+     * @param down región para estado presionado.
+     * @param over región para estado hover.
+     * @return el botón configurado.
+     */
     private Button crearBotonConEstados(String up, String down, String over) {
         Button.ButtonStyle estilo = new Button.ButtonStyle();
         estilo.up = new TextureRegionDrawable(atlasBotones.findRegion(up));
@@ -374,12 +414,15 @@ public class PantallaMenu extends PantallaBase {
         return boton;
     }
 
+    /**
+     * Libera los recursos gráficos del menú, como texturas y atlas.
+     */
     @Override
     public void dispose() {
         super.dispose();
         if (texturaFondo != null) texturaFondo.dispose();
         if (textureTextoInicio != null) textureTextoInicio.dispose();
-        if(texturaFondoInicio != null) texturaFondoInicio.dispose();
+        if (texturaFondoInicio != null) texturaFondoInicio.dispose();
         if (atlasBotones != null) atlasBotones.dispose();
     }
 }

@@ -10,7 +10,7 @@ import com.badlogic.gdx.Input.Keys;
 import com.badlogic.gdx.graphics.g2d.Animation;
 import com.badlogic.gdx.graphics.g2d.TextureRegion;
 import com.badlogic.gdx.utils.Disposable;
-import com.badlogic.gdx.math.MathUtils; // Importar para MathUtils.clamp
+import com.badlogic.gdx.math.MathUtils;
 import com.badlogic.gdx.math.Rectangle;
 import com.badlogic.gdx.math.Polygon;
 import com.badlogic.gdx.math.Intersector;
@@ -19,35 +19,32 @@ import network.interfaces.IGameClient;
 
 import java.util.EnumMap;
 
+/**
+ * Clase base abstracta para jugadores. Gestiona movimiento, estado, colisiones, animaciones y eventos de jugador.
+ */
 public abstract class Player extends Entity implements Disposable {
     public static final int MAX_VIDA = 100;
     protected EstadoPlayer lastDirection = EstadoPlayer.IDLE_RIGHT;
-    protected float lastPosX, lastPosY;
     protected LevelManager levelManager;
-    //Nuevas varialbles para las colisiones
     protected Rectangle bounds; // Rectángulo de colisión del jugador
     protected float collisionWidth;
     protected float collisionHeight;
     protected float collisionOffsetX;
     protected float collisionOffsetY;
-    // Flag to track if any WASD movement was detected.
     protected boolean isMoving = false;
-    // Stores the proposed movement state (UP, DOWN, LEFT, RIGHT) before applying actions.
     protected EstadoPlayer proposedMovementState = null;
-    protected boolean actionStateSet = false; // Flag to know if an action state has been set.
-    //para identificar quien esta tocando el bloque
+    protected boolean actionStateSet = false;
     protected String characterName;
     public PlayerState estado;
     protected String mensajeUI;
     protected float tiempoMensajeVisible;
     protected static final float DURACION_MENSAJE = 3.0f; // Mensaje visible por 3 segundos
     protected transient IGameClient gameClient;
-    protected  boolean clean = false;
     protected int gemas;
     protected transient SoundManager soundManager;
 
     // Mapa para almacenar diferentes animaciones por estado
-protected EnumMap<EstadoPlayer, Animation<TextureRegion>> animations;
+    protected EnumMap<EstadoPlayer, Animation<TextureRegion>> animations;
 
     public enum EstadoPlayer {
         IDLE_RIGHT,
@@ -69,10 +66,18 @@ protected EnumMap<EstadoPlayer, Animation<TextureRegion>> animations;
         PUNCH_RIGHT
     }
 
-    public Player(){
+    /**
+     * Constructor por defecto de Player.
+     */
+    public Player() {
         super();
     }
 
+    /**
+     * Constructor de Player con estado inicial.
+     *
+     * @param estadoInicial Estado inicial del jugador.
+     */
     public Player(PlayerState estadoInicial) {
         super(estadoInicial);
         setDefaultValues();
@@ -82,6 +87,12 @@ protected EnumMap<EstadoPlayer, Animation<TextureRegion>> animations;
         animations = new EnumMap<>(EstadoPlayer.class);
     }
 
+    /**
+     * Constructor de Player con estado inicial y gestor de nivel.
+     *
+     * @param estadoInicial Estado inicial del jugador.
+     * @param levelManager  Gestor de nivel para interacciones con el entorno.
+     */
     public Player(PlayerState estadoInicial, LevelManager levelManager) {
         this(estadoInicial);
         this.levelManager = levelManager;
@@ -92,40 +103,79 @@ protected EnumMap<EstadoPlayer, Animation<TextureRegion>> animations;
     }
 
     /**
-     * Se llama cuando Sonic recoge una gema. Incrementa el contador.
-     * La lógica de transformación se maneja en el método update().
+     * Añade una gema al jugador e incrementa su contador.
      */
     public void anadirGema() {
         this.gemas++;
         Gdx.app.log("Sonic", "Gema recogida. Total: " + this.gemas);
     }
 
-
+    /**
+     * Asigna el gestor de nivel al jugador.
+     *
+     * @param levelManager gestor de nivel.
+     */
     public void setLevelManager(LevelManager levelManager) {
         this.levelManager = levelManager;
     }
 
+    /**
+     * Obtiene el estado de animación actual del jugador.
+     *
+     * @return estado de animación.
+     */
     public EstadoPlayer getEstadoActual() {
         return this.estado.estadoAnimacion;
     }
 
+    /**
+     * Cambia el estado de animación actual del jugador.
+     *
+     * @param estadoActual nuevo estado de animación.
+     */
     public void setEstadoActual(EstadoPlayer estadoActual) {
         this.estado.estadoAnimacion = estadoActual;
     }
+
+    /**
+     * Obtiene el estado lógico del jugador.
+     *
+     * @return objeto PlayerState con la información del jugador.
+     */
     public PlayerState getEstado() {
         return estado;
     }
 
+    /**
+     * Configura si el jugador está en modo Super (para personajes específicos).
+     *
+     * @param esSuper true para modo Super, false en caso contrario.
+     */
     public void setSuper(boolean esSuper) {
         // Por defecto, no hace nada. Las subclases como Sonic lo sobreescribirán.
     }
+
+    /**
+     * Asigna el administrador de sonido al jugador.
+     *
+     * @param soundManager instancia de SoundManager.
+     */
     public void setSoundManager(SoundManager soundManager) {
         this.soundManager = soundManager;
     }
 
+    /**
+     * Asigna un nuevo estado lógico al jugador.
+     *
+     * @param estado nuevo estado PlayerState.
+     */
     public void setEstado(PlayerState estado) {
         this.estado = estado;
     }
+
+    /**
+     * Inicializa valores por defecto de la entidad jugador.
+     */
     @Override
     protected void setDefaultValues() {
         if (this.estado == null) {
@@ -133,14 +183,19 @@ protected EnumMap<EstadoPlayer, Animation<TextureRegion>> animations;
             this.estado.x = 100;
             this.estado.y = 100;
         }
-        speed = 2.8F; // Asegúrate de que 'speed' esté declarado en Entity o aquí
+        speed = 2.8F;
         setEstadoActual(EstadoPlayer.IDLE_RIGHT);
     }
+
+    /**
+     * Obtiene los límites de colisión del jugador.
+     *
+     * @return Rectángulo de colisión actualizado.
+     */
     //Para las colisiones
     public Rectangle getBounds() {
         if (bounds == null) {
             Gdx.app.log("Player", "ERROR CRÍTICO: bounds es nulo. ¡La inicialización del hitbox debe ocurrir en la subclase Sonic!");
-            // Fallback: Usar el tileSize de la entidad (48) para el hitbox si no se inicializó.
             this.collisionWidth = getTileSize(); // Se mantiene usando getTileSize() (48)
             this.collisionHeight = getTileSize(); // Se mantiene usando getTileSize() (48)
             this.collisionOffsetX = 0;
@@ -151,6 +206,11 @@ protected EnumMap<EstadoPlayer, Animation<TextureRegion>> animations;
         return bounds;
     }
 
+    /**
+     * Indica si el jugador está ejecutando una acción de ataque.
+     *
+     * @return true si ataca, false de lo contrario.
+     */
     public boolean estaAtacando() {
         if (this.estado == null || this.estado.estadoAnimacion == null) {
             return false;
@@ -170,6 +230,14 @@ protected EnumMap<EstadoPlayer, Animation<TextureRegion>> animations;
                 return false;
         }
     }
+
+    /**
+     * Comprueba si habría colisión en una posición futura.
+     *
+     * @param newX coordenada X futura.
+     * @param newY coordenada Y futura.
+     * @return true si colisiona, false en caso contrario.
+     */
     protected boolean checkCollision(float newX, float newY) {
         if (levelManager == null) {
             return false;
@@ -181,12 +249,12 @@ protected EnumMap<EstadoPlayer, Animation<TextureRegion>> animations;
         // Crea el hitbox en la posición futura.
         Rectangle futureBounds = new Rectangle(newX + collisionOffsetX, newY + collisionOffsetY, collisionWidth, collisionHeight);
 
-        // 1. Comprobar colisión con el mapa (bloques, árboles, etc.)
+        // Comprobar colisión con el mapa (bloques, árboles, etc.)
         if (levelManager.colisionaConMapa(futureBounds)) {
             return true; // Hay colisión con el mapa
         }
 
-        // 2. NUEVA COMPROBACIÓN: Colisión con bloques rompibles
+        // Colisión con bloques rompibles
         if (levelManager.getBloquesRompibles() != null) {
             Polygon futurePlayerPolygon = new Polygon(new float[]{
                 futureBounds.x, futureBounds.y,
@@ -202,43 +270,33 @@ protected EnumMap<EstadoPlayer, Animation<TextureRegion>> animations;
             }
         }
 
-        // Si no hubo colisión con NADA de lo anterior, permite el movimiento.
         return false;
     }
-//colisiones fin
 
-    // NUEVO MÉTODO para verificar si una acción bloqueante está en curso
     /**
-     * Verifica si el jugador está actualmente en una animación de acción
-     * (como HIT o KICK) que debería impedir el movimiento.
-     * Las animaciones de SPIN (si son LOOP) no se consideran bloqueantes aquí.
-     * @return true si una acción bloqueante está en curso, false de lo contrario.
+     * Verifica si una acción bloqueante está en curso impidiendo el movimiento.
+     *
+     * @return true si bloquea movimiento, false en caso contrario.
      */
     public boolean isActionBlockingMovement() {
         if (animacion == null) return false;
-        // Considera acciones bloqueantes aquellas que son PlayMode.NORMAL y no han terminado.
-        // SPIN, si es LOOP, no entra aquí. Si SPIN fuera NORMAL y quieres que bloquee,
-        // no necesitarías una condición especial para ello aquí.
         boolean isNormalAction = animacion.getPlayMode() == Animation.PlayMode.NORMAL;
         boolean isSpinning = getEstadoActual() == EstadoPlayer.SPECIAL_LEFT || getEstadoActual() == EstadoPlayer.SPECIAL_RIGHT;
 
         if (isSpinning && animacion.getPlayMode() == Animation.PlayMode.LOOP) {
-            return false; // El Spin en modo LOOP no bloquea el *procesamiento* de teclas de movimiento,
-            // aunque la lógica de estado en Sonic.update() podría anular el movimiento.
-            // Lo importante es que KeyHandler SÍ registre el intento de moverse.
+            return false;
         }
 
         return isNormalAction && !animacion.isAnimationFinished(tiempoXFrame);
     }
 
-
+    /**
+     * Maneja la entrada de teclas para el movimiento del jugador.
+     */
     @Override
     public void KeyHandler() {
 
         //Para las colisiones
-        // CAMBIO: Declarar e inicializar oldX, oldY, targetX, targetY al inicio
-        float oldX = estado.x;
-        float oldY = estado.y;
         float targetX = estado.x;
         float targetY = estado.y;
 
@@ -250,7 +308,7 @@ protected EnumMap<EstadoPlayer, Animation<TextureRegion>> animations;
             targetY += speed;
             isMoving = true;
             // El estado de movimiento propuesto para el movimiento vertical depende de la última dirección horizontal
-            if(lastDirection == EstadoPlayer.RIGHT || lastDirection == EstadoPlayer.IDLE_RIGHT) {
+            if (lastDirection == EstadoPlayer.RIGHT || lastDirection == EstadoPlayer.IDLE_RIGHT) {
                 proposedMovementState = EstadoPlayer.UP_RIGHT;
             } else {
                 proposedMovementState = EstadoPlayer.UP_LEFT;
@@ -260,7 +318,7 @@ protected EnumMap<EstadoPlayer, Animation<TextureRegion>> animations;
         if (Gdx.input.isKeyPressed(Keys.S)) {
             targetY -= speed;
             isMoving = true;
-            if(lastDirection == EstadoPlayer.RIGHT || lastDirection == EstadoPlayer.IDLE_RIGHT) {
+            if (lastDirection == EstadoPlayer.RIGHT || lastDirection == EstadoPlayer.IDLE_RIGHT) {
                 proposedMovementState = EstadoPlayer.DOWN_RIGHT;
             } else {
                 proposedMovementState = EstadoPlayer.DOWN_LEFT;
@@ -280,7 +338,7 @@ protected EnumMap<EstadoPlayer, Animation<TextureRegion>> animations;
             proposedMovementState = EstadoPlayer.RIGHT;
         }
 
-        if(!isMoving) {
+        if (!isMoving) {
             //En caso de que no se este presionando ninguna tecla
             // Solo establece IDLE si no se están presionando teclas de movimiento
             if (lastDirection == EstadoPlayer.LEFT) {
@@ -290,7 +348,6 @@ protected EnumMap<EstadoPlayer, Animation<TextureRegion>> animations;
             }
         }
 
-// Aplica el movimiento solo si no hay colisión
         if (!checkCollision(targetX, estado.y)) {
             estado.x = targetX;
         }
@@ -298,7 +355,7 @@ protected EnumMap<EstadoPlayer, Animation<TextureRegion>> animations;
             estado.y = targetY;
         }
 
-        // CAMBIO: Limitar al personaje a los bordes del mapa usando getTileSize() (que es 48).
+        // Limitar al personaje a los bordes del mapa usando getTileSize()
         if (levelManager != null) {
             float mapWidth = levelManager.getAnchoMapaPixels();
             float mapHeight = levelManager.getAltoMapaPixels();
@@ -309,8 +366,12 @@ protected EnumMap<EstadoPlayer, Animation<TextureRegion>> animations;
 
     }
 
-    //Para que todos los personajes puedan recolectar anillos, basura..
 
+    /**
+     * Recolecta objetos del entorno que colisionan con el jugador.
+     *
+     * @param items lista de objetos ItemVisual.
+     */
     public void recolectarItems(Array<ItemVisual> items) {
         Rectangle playerBounds = getBounds();
         for (int i = items.size - 1; i >= 0; i--) {
@@ -321,7 +382,10 @@ protected EnumMap<EstadoPlayer, Animation<TextureRegion>> animations;
             }
         }
     }
-        //esto es para romper bloques
+
+    /**
+     * Intenta romper un bloque si el personaje es Knuckles y colisiona.
+     */
     public void intentarRomperBloque() {
         // Solo Knuckles puede romper bloques
         if (!"Knuckles".equals(this.characterName)) {
@@ -333,7 +397,7 @@ protected EnumMap<EstadoPlayer, Animation<TextureRegion>> animations;
         }
 
         // Usamos los bounds del jugador para ver si se superpone con un bloque
-        Rectangle playerBounds = getBounds(); // Asumiendo que Player tiene un getBounds()
+        Rectangle playerBounds = getBounds();
 
         Polygon playerPolygon = new Polygon(new float[]{
             playerBounds.x, playerBounds.y,
@@ -356,9 +420,17 @@ protected EnumMap<EstadoPlayer, Animation<TextureRegion>> animations;
         }
     }
 
+    /**
+     * Muestra un mensaje UI por pantalla.
+     *
+     * @param texto texto a mostrar.
+     */
     public void mostrarMensaje(String texto) {
     }
 
+    /**
+     * Libera los recursos del jugador (por ejemplo, texturas).
+     */
     @Override
     public void dispose() {
         if (spriteSheet != null) {
@@ -366,8 +438,12 @@ protected EnumMap<EstadoPlayer, Animation<TextureRegion>> animations;
         }
     }
 
+    /**
+     * Asigna el cliente de red al jugador.
+     *
+     * @param client instancia IGameClient.
+     */
     public void setGameClient(IGameClient client) {
         this.gameClient = client;
-        //System.out.println("[PLAYER] setGameClient fue llamado. El cliente es: " + (this.gameClient != null ? "VÁLIDO" : "NULO"));
     }
 }

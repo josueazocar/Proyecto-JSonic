@@ -2,7 +2,10 @@ package network.interfaces;
 
 import java.util.Queue;
 
-
+/**
+ * Interfaz que define las operaciones básicas de un cliente de juego.
+ * Permite conectar, desconectar, enviar paquetes y recibir datos del servidor.
+ */
 public interface IGameClient {
 
     /**

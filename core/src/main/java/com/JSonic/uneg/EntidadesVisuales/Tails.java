@@ -13,19 +13,23 @@ import network.Network;
 import network.interfaces.IGameClient;
 
 
+/**
+ * Clase para el personaje Tails, extiende Player y gestiona su dron y animaciones.
+ */
 public class Tails extends Player {
 
     protected TextureRegion[] frameSpinRight;
     protected TextureRegion[] frameSpinLeft;
     private Dron_Tails miDron;
     public boolean isOnlineMode = false;
+    private transient BitmapFont font;
+    private transient GlyphLayout glyphLayout;
 
-
-    private transient BitmapFont font; // Se usa 'transient' para que no se intente serializar en red
-    private transient GlyphLayout glyphLayout; // Ayuda a medir el texto para centrarlo
-
-
-
+    /**
+     * Constructor de Tails con estado inicial.
+     *
+     * @param estadoInicial Estado inicial del jugador.
+     */
     public Tails(PlayerState estadoInicial) {
         super(estadoInicial);
         CargarSprites();
@@ -43,6 +47,13 @@ public class Tails extends Player {
         this.mensajeUI = "";
     }
 
+    /**
+     * Constructor de Tails con estado inicial, gestor de nivel y cliente de red.
+     *
+     * @param estadoInicial Estado inicial del jugador.
+     * @param levelManager  gestor de nivel para colisiones y entorno.
+     * @param gameClient    cliente de red para sincronización.
+     */
     public Tails(PlayerState estadoInicial, LevelManager levelManager, IGameClient gameClient) {
         super(estadoInicial, levelManager);
         this.gameClient = gameClient;
@@ -61,6 +72,12 @@ public class Tails extends Player {
         this.mensajeUI = "";
     }
 
+    /**
+     * Constructor de Tails con estado inicial y gestor de nivel.
+     *
+     * @param estadoInicial Estado inicial del jugador.
+     * @param levelManager  gestor de nivel para colisiones y entorno.
+     */
     public Tails(PlayerState estadoInicial, LevelManager levelManager) {
         super(estadoInicial, levelManager);
         this.gameClient = gameClient;
@@ -79,35 +96,48 @@ public class Tails extends Player {
         this.mensajeUI = "";
     }
 
+    /**
+     * Obtiene el dron asociado a Tails.
+     *
+     * @return instancia de Dron_Tails.
+     */
     public Dron_Tails getDron() {
         return miDron;
     }
+
+    /**
+     * Define el modo online para Tails y su dron.
+     *
+     * @param online true para modo online, false para local.
+     */
     public void setOnlineMode(boolean online) {
         this.isOnlineMode = online;
         if (this.miDron != null) {
             this.miDron.isOnlineMode = online;
         }
     }
+
+    /**
+     * Gestiona el dron en base a un estado recibido desde red.
+     *
+     * @param nuevoEstado estado del dron.
+     * @param startX      coordenada X donde aparece el dron.
+     * @param startY      coordenada Y donde aparece el dron.
+     */
     public void gestionarDronDesdeRed(DronState.EstadoDron nuevoEstado, float startX, float startY) {
         if (miDron == null) return; // Seguridad por si el dron no existe
 
         switch (nuevoEstado) {
             case APARECIENDO:
-                // El servidor nos ordena que el dron aparezca.
-                // Usamos una lógica similar al método 'invocar', pero sin seguir a un objetivo,
-                // ya que este dron podría pertenecer a OTRO jugador.
-                miDron.estado.estadoActual = DronState.EstadoDron.APARECIENDO;
-                miDron.tiempoDeEstado = 0f; // Reiniciamos la animación
 
-                // Colocamos el dron en la posición que nos dijo el servidor.
+                miDron.estado.estadoActual = DronState.EstadoDron.APARECIENDO;
+                miDron.tiempoDeEstado = 0f;
+
                 miDron.posicion.set(startX, startY);
                 miDron.estado.x = startX;
                 miDron.estado.y = startY;
 
-                // Si este Tails es el nuestro, le asignamos el objetivo para el seguimiento suave.
-                // Si es de otro jugador, 'objetivo' será null y el dron solo hará la animación
-                // de aparecer y desaparecer en el sitio, lo cual es aceptable y eficiente.
-                if (this.gameClient != null) { // Una forma de saber si somos el jugador local
+                if (this.gameClient != null) {
                     miDron.setObjetivo(this);
                 }
                 break;
@@ -121,6 +151,9 @@ public class Tails extends Player {
         }
     }
 
+    /**
+     * Maneja la entrada de teclas, incluyendo invocación del dron y acciones de jugador.
+     */
     @Override
     public void KeyHandler() {
         // Guarda la posición actual antes de que el KeyHandler del padre la modifique
@@ -146,13 +179,10 @@ public class Tails extends Player {
                 } else {
                     System.err.println("[CLIENTE ERROR] Se esperaba un gameClient en modo online, pero es nulo.");
                 }
-            }
-            // Si la bandera es falsa, estamos en una partida LOCAL (un jugador).
-            else {
+            } else {
                 // Verificamos que el dron exista para evitar errores.
                 if (miDron != null && PantallaDeJuego.getBasuraTotal() >= 20) {
                     System.out.println("[CLIENTE] MODO LOCAL: Invocando el dron localmente.");
-                    // Esta es la llamada a tu lógica original de un jugador, que ya funcionaba.
                     gameClient.send(new Network.PaqueteHabilidadDronUsada());
                     miDron.invocar(this);
                 } else {
@@ -162,7 +192,7 @@ public class Tails extends Player {
             }
         }
 
-        // --- Lógica para MANEJAR TECLAS DE ACCIÓN (Sin cambios) ---
+        // --- Lógica para MANEJAR TECLAS DE ACCIÓN ---
         if (isActionBlockingMovement()) {
             estado.x = currentX;
             estado.y = currentY;
@@ -180,8 +210,7 @@ public class Tails extends Player {
             actionStateSet = true;
             estado.x = currentX;
             estado.y = currentY;
-        }
-        else if (Gdx.input.isKeyPressed(Input.Keys.L)) {
+        } else if (Gdx.input.isKeyPressed(Input.Keys.L)) {
 
             if (Gdx.input.isKeyPressed(Input.Keys.A)) {
                 setEstadoActual(EstadoPlayer.SPECIAL_LEFT);
@@ -215,9 +244,22 @@ public class Tails extends Player {
     }
 
 
+    /**
+     * Proporciona la ruta al sprite sheet de Tails.
+     *
+     * @return ruta del recurso de textura.
+     */
     protected String getSpriteSheetPath() {
         return "Entidades/Player/Tails/tails.png";
     }
+
+    /**
+     * Comprueba colisión futura, ignorándola en modo vuelo de Tails.
+     *
+     * @param newX posición X futura del jugador.
+     * @param newY posición Y futura del jugador.
+     * @return true si colisiona con mapa u objetos, false si no o en vuelo.
+     */
     @Override
     protected boolean checkCollision(float newX, float newY) {
         EstadoPlayer estadoActual = getEstadoActual();
@@ -231,6 +273,10 @@ public class Tails extends Player {
         // Para cualquier otro estado, usamos la lógica de colisión normal de la clase Player.
         return super.checkCollision(newX, newY);
     }
+
+    /**
+     * Carga los sprites y genera los frames para las animaciones de Tails.
+     */
     @Override
     protected void CargarSprites() {
         Texture coleccionDeSprites = new Texture(Gdx.files.internal(getSpriteSheetPath()));
@@ -290,7 +336,8 @@ public class Tails extends Player {
 
         for (int i = 0; i < 6; i++) {
             frameHitLeft[i] = matrizDeSprites[8][i];
-        }for (int i = 0; i < 6; i++) {
+        }
+        for (int i = 0; i < 6; i++) {
             frameHitLeft[i + 6] = matrizDeSprites[8][5 - i];
         }
 
@@ -299,8 +346,6 @@ public class Tails extends Player {
             frameHitRight[i].flip(true, false);
         }
 
-
-
         frameSpinLeft[0] = matrizDeSprites[2][5];
         frameSpinLeft[1] = matrizDeSprites[2][6];
         frameSpinLeft[2] = matrizDeSprites[2][6];
@@ -308,7 +353,6 @@ public class Tails extends Player {
         frameSpinLeft[4] = matrizDeSprites[2][7];
         frameSpinLeft[5] = matrizDeSprites[2][7];
 
-        // Tercer bucle: Crear frameSpinRight invirtiendo los frames de frameSpinLeft
         for (int i = 0; i < 6; i++) { // Cambiado de 24 a 8
             frameSpinRight[i] = new TextureRegion(frameSpinLeft[i]);
             frameSpinRight[i].flip(true, false); // Voltear horizontalmente
@@ -345,6 +389,10 @@ public class Tails extends Player {
         }
     }
 
+    /**
+     * Inicializa la hitbox de Tails basada en el tamaño del tile.
+     * Ajusta los offsets y dimensiones para una colisión precisa.
+     */
     private void inicializarHitbox() {
         float baseTileSize = getTileSize();
 
@@ -387,8 +435,6 @@ public class Tails extends Player {
 
         tiempoXFrame += deltaTime;
 
-        // Lógica de transición de estado después de que una animación de acción termina
-        // Solo para animaciones de PlayMode.NORMAL como HIT o KICK.
         if ((estado.estadoAnimacion == EstadoPlayer.HIT_RIGHT || estado.estadoAnimacion == EstadoPlayer.HIT_LEFT ||
             estado.estadoAnimacion == EstadoPlayer.KICK_RIGHT || estado.estadoAnimacion == EstadoPlayer.KICK_LEFT) && animacion != null) {
 
@@ -430,15 +476,10 @@ public class Tails extends Player {
         if (tiempoMensajeVisible > 0 && !mensajeUI.isEmpty()) {
             glyphLayout.setText(font, mensajeUI);
 
-            // 1. Calculamos la posición X para centrar el texto sobre Tails
-            //    (posición de Tails + centro del sprite) - (mitad del ancho del texto)
             float textX = estado.x + (getTileSize() / 2) - (glyphLayout.width / 2);
 
-            // 2. Calculamos la posición Y para que flote justo encima de Tails
-            //    (posición de Tails + altura del sprite) + (un pequeño espacio)
-            float textY = estado.y + getTileSize() + 20; // 20px de espacio por encima
+            float textY = estado.y + getTileSize() + 20;
 
-            // 3. Dibujamos el texto en las coordenadas del mundo del juego
             font.draw(batch, glyphLayout, textX, textY);
         }
     }
@@ -456,6 +497,12 @@ public class Tails extends Player {
         }
     }
 
+    /**
+     * Muestra un mensaje en la UI de Tails.
+     * Este mensaje se mostrará durante un tiempo determinado.
+     *
+     * @param texto El texto del mensaje a mostrar.
+     */
     @Override
     public void mostrarMensaje(String texto) {
         this.mensajeUI = texto;

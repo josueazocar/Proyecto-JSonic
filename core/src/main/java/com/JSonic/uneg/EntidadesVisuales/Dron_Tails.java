@@ -1,4 +1,3 @@
-// Archivo: com/JSonic/uneg/Dron_Tails.java
 package com.JSonic.uneg.EntidadesVisuales;
 
 import com.JSonic.uneg.State.DronState;
@@ -9,30 +8,31 @@ import com.badlogic.gdx.graphics.g2d.Animation;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.graphics.g2d.TextureRegion;
 import com.badlogic.gdx.math.Rectangle;
-import com.badlogic.gdx.math.Vector2; // ¡Importante! Usaremos vectores para el movimiento
+import com.badlogic.gdx.math.Vector2;
 import network.LocalServer;
 
 import java.util.EnumMap;
 
+/**
+ * Clase que representa un dron que sigue a un objetivo (Tails) y planta árboles.
+ */
 public class Dron_Tails {
 
     // --- Constantes y Configuración ---
     private static final float DURACION_SEGUIMIENTO = 15.0f;
     private static final float OFFSET_X = -60;
     private static final float OFFSET_Y = 50;
-    // NUEVO: Factor de suavizado para el movimiento. ¡Puedes experimentar con este valor!
-    // Un valor más bajo = más lento y suave. Un valor más alto = más rápido y brusco.
     private static final float LERP_FACTOR = 5.0f;
     public boolean isOnlineMode = false;
     // --- Estado y Referencias ---
     public DronState estado;
     private Tails objetivo;
-    float tiempoDeEstado;
+    public float tiempoDeEstado;
     private float temporizadorSeguimiento;
     private LevelManager levelManager;
 
-    // NUEVO: Vectores para manejar la posición actual y el objetivo del movimiento
-    Vector2 posicion;
+    // Vectores para manejar la posición actual y el objetivo del movimiento
+    public Vector2 posicion;
     private Vector2 posicionObjetivo;
 
     // --- Gráficos ---
@@ -42,27 +42,33 @@ public class Dron_Tails {
     protected Texture spriteSheetSeguir;
     protected Texture spriteSheetDesaparecer;
 
+    /**
+     * Constructor del Dron_Tails.
+     * Inicializa el estado, las animaciones y la posición del dron.
+     *
+     * @param id           El identificador del dron.
+     * @param levelManager El gestor de niveles para manejar colisiones y generación de árboles.
+     */
     public Dron_Tails(int id, LevelManager levelManager) {
         this.estado = new DronState(id);
         this.animations = new EnumMap<>(DronState.EstadoDron.class);
         this.levelManager = levelManager;
 
-        // Inicializamos los nuevos vectores
         this.posicion = new Vector2();
         this.posicionObjetivo = new Vector2();
 
         CargarSprites();
     }
 
-    public Tails getObjetivo() {
-        return objetivo;
-    }
-
     public void setObjetivo(Tails objetivo) {
         this.objetivo = objetivo;
     }
 
-    // ... CargarSprites() se mantiene igual ...
+
+    /**
+     * Carga los sprites y las animaciones del dron.
+     * Utiliza TextureRegion para dividir las texturas en frames individuales.
+     */
     private void CargarSprites() {
         spriteSheetAparecer = new Texture(Gdx.files.internal("Entidades/Dron/Landing.png"));
         TextureRegion[][] matrizAparecer = TextureRegion.split(spriteSheetAparecer, 72, 72);
@@ -85,6 +91,9 @@ public class Dron_Tails {
         animations.put(DronState.EstadoDron.DESAPARECIENDO, animDesaparecer);
     }
 
+    /**
+     * Actualiza el estado del dron
+     */
     public void update(float delta) {
         if (estado.estadoActual == DronState.EstadoDron.INACTIVO) {
             return;
@@ -92,7 +101,6 @@ public class Dron_Tails {
 
         tiempoDeEstado += delta;
 
-        // CAMBIO PRINCIPAL: La lógica de movimiento ahora usa interpolación
         switch (estado.estadoActual) {
             case APARECIENDO:
                 if (animations.get(DronState.EstadoDron.APARECIENDO).isAnimationFinished(tiempoDeEstado)) {
@@ -103,13 +111,13 @@ public class Dron_Tails {
             case SIGUIENDO:
                 temporizadorSeguimiento += delta;
                 if (objetivo != null) {
-                    // 1. Calculamos la posición donde el dron QUIERE estar
+                    //Se Calcula la posición donde el dron QUIERE estar
                     posicionObjetivo.set(objetivo.estado.x + OFFSET_X, objetivo.estado.y + OFFSET_Y);
 
-                    // 2. Usamos lerp para mover la posición ACTUAL hacia la del OBJETIVO suavemente
+                    //Se Usamos lerp para mover la posición ACTUAL hacia la del OBJETIVO suavemente
                     posicion.lerp(posicionObjetivo, LERP_FACTOR * delta);
 
-                    // 3. Sincronizamos la posición del vector con el estado (para la red, si es necesario)
+                    //Sincronizamos la posición del vector con el estado (para la red, si es necesario)
                     estado.x = posicion.x;
                     estado.y = posicion.y;
                 }
@@ -123,7 +131,7 @@ public class Dron_Tails {
                     if (!isOnlineMode) {
                         Rectangle hitboxPruebaArbol = new Rectangle(this.posicion.x, this.posicion.y, 64, 64); // Ajusta el tamaño si es necesario
 
-                        // 2. Le preguntamos al LevelManager si ese lugar ya está ocupado.
+                        // Le preguntamos al LevelManager si ese lugar ya está ocupado.
                         if (levelManager != null && !levelManager.colisionaConMapa(hitboxPruebaArbol)) {
 
 
@@ -137,13 +145,13 @@ public class Dron_Tails {
                             }
 
                         } else {
-                            // 4. SI ESTÁ OCUPADO: No generamos nada y mostramos el mensaje de error.
+                            // SI ESTÁ OCUPADO: No generamos nada y mostramos el mensaje de error.
                             if (objetivo != null) {
                                 objetivo.mostrarMensaje("Lugar no apto para sembrar");
                             }
                         }
                     }
-                    // 5. Finalmente, el dron se desactiva como siempre.
+                    // Finalmente, el dron se desactiva como siempre.
                     cambiarEstado(DronState.EstadoDron.INACTIVO);
                 }
                 break;
@@ -155,6 +163,12 @@ public class Dron_Tails {
         }
     }
 
+    /**
+     * Dibuja el dron en la pantalla.
+     * Solo dibuja si el dron no está inactivo y tiene un frame actual.
+     *
+     * @param batch El SpriteBatch utilizado para dibujar el dron.
+     */
     public void draw(SpriteBatch batch) {
         if (estado.estadoActual != DronState.EstadoDron.INACTIVO && frameActual != null) {
             // Usamos la posición del vector, que es la que se actualiza suavemente
@@ -162,13 +176,19 @@ public class Dron_Tails {
         }
     }
 
+    /**
+     * Invoca al dron para que comience a sembrar un árbol.
+     * Cambia su estado a APARECIENDO y establece la posición inicial.
+     *
+     * @param tails El objetivo Tails que invoca al dron.
+     */
     public void invocar(Tails tails) {
         if (estado.estadoActual == DronState.EstadoDron.INACTIVO) {
             this.objetivo = tails;
             cambiarEstado(DronState.EstadoDron.APARECIENDO);
             this.objetivo.mostrarMensaje("Sembrando árbol...");
 
-            // CAMBIO: Establecemos la posición inicial del dron y del estado.
+            // Establecemos la posición inicial del dron y del estado.
             float startX = objetivo.estado.x + OFFSET_X;
             float startY = objetivo.estado.y + OFFSET_Y;
             this.posicion.set(startX, startY);
@@ -177,7 +197,12 @@ public class Dron_Tails {
         }
     }
 
-    // ... cambiarEstado y dispose se mantienen igual ...
+    /**
+     * Cambia el estado del dron a uno nuevo.
+     * Reinicia el temporizador de estado y, si es necesario, el temporizador de seguimiento.
+     *
+     * @param nuevoEstado El nuevo estado al que se cambiará el dron.
+     */
     void cambiarEstado(DronState.EstadoDron nuevoEstado) {
         estado.estadoActual = nuevoEstado;
         tiempoDeEstado = 0f;
@@ -186,6 +211,10 @@ public class Dron_Tails {
         }
     }
 
+    /**
+     * Libera los recursos utilizados por el dron.
+     * Destruye las texturas de los sprites.
+     */
     public void dispose() {
         if (spriteSheetAparecer != null) {
             spriteSheetAparecer.dispose();

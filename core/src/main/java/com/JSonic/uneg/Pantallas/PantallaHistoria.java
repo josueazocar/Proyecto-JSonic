@@ -1,4 +1,3 @@
-// Archivo: src/com/JSonic/uneg/Pantallas/PantallaHistoria.java
 package com.JSonic.uneg.Pantallas;
 
 import com.JSonic.uneg.JSonicJuego;
@@ -10,6 +9,9 @@ import com.badlogic.gdx.scenes.scene2d.utils.TextureRegionDrawable;
 import com.badlogic.gdx.utils.Array;
 import com.JSonic.uneg.SoundManager;
 
+/**
+ * Pantalla que muestra la secuencia de imágenes de la historia con transiciones de fade in/out.
+ */
 public class PantallaHistoria extends PantallaBase {
 
     private final JSonicJuego juegoApp;
@@ -23,12 +25,15 @@ public class PantallaHistoria extends PantallaBase {
     private EstadoTransicion estadoActual = EstadoTransicion.FADE_IN;
     private float temporizadorEstado = 0f;
 
-    // --- AJUSTA ESTOS VALORES A TU GUSTO ---
     private static final float TIEMPO_POR_IMAGEN = 3.0f; // 3 segundos visible
     private static final float TIEMPO_FADE = 1.0f;       // 1 segundo para la transición
-    private static final int CANTIDAD_IMAGENES = 6;      // El número total de imágenes en tu carpeta /Historia
-    // ------------------------------------
+    private static final int CANTIDAD_IMAGENES = 6;
 
+    /**
+     * Constructor de PantallaHistoria.
+     * @param juegoApp instancia del juego JSonic.
+     * @param soundManager gestor de sonido para reproducir música de fondo.
+     */
     public PantallaHistoria(JSonicJuego juegoApp, SoundManager soundManager) {
         super();
         this.juegoApp = juegoApp;
@@ -37,6 +42,9 @@ public class PantallaHistoria extends PantallaBase {
         inicializar();
     }
 
+    /**
+     * Carga las imágenes de la historia y configura el actor de imagen y la música de fondo.
+     */
     @Override
     public void inicializar() {
         imagenes = new Array<>();
@@ -52,10 +60,12 @@ public class PantallaHistoria extends PantallaBase {
         actorImagen.setSize(mainStage.getWidth(), mainStage.getHeight());
         actorImagen.getColor().a = 0f; // Empezar transparente para el primer FADE_IN
         mainStage.addActor(actorImagen);
-
-
     }
 
+    /**
+     * Actualiza la transición de las imágenes según el estado actual y el tiempo transcurrido.
+     * @param delta tiempo desde el último frame en segundos.
+     */
     @Override
     public void actualizar(float delta) {
         if (Gdx.input.isKeyJustPressed(Input.Keys.ANY_KEY) || Gdx.input.justTouched()) {
@@ -92,6 +102,9 @@ public class PantallaHistoria extends PantallaBase {
         }
     }
 
+    /**
+     * Avanza a la siguiente imagen o retorna al menú si se agotaron las diapositivas.
+     */
     private void avanzarDiapositiva() {
         indiceActual++;
         if (indiceActual >= imagenes.size) {
@@ -103,11 +116,17 @@ public class PantallaHistoria extends PantallaBase {
         }
     }
 
+    /**
+     * Detiene la música y cambia a la pantalla de menú principal.
+     */
     private void pasarAlMenu() {
         soundManager.stopBackgroundMusic();
         juegoApp.setPantallaActiva(new PantallaMenu(juegoApp, true));
     }
 
+    /**
+     * Libera los recursos de las texturas utilizadas en la historia.
+     */
     @Override
     public void dispose() {
         super.dispose();

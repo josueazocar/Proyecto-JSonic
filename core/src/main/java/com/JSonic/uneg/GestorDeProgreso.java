@@ -9,10 +9,10 @@ import com.badlogic.gdx.Preferences;
  */
 public class GestorDeProgreso {
 
-    // Nombre único para nuestro archivo de guardado.
+    // Nombre único para el archivo de guardado
     private static final String NOMBRE_PREFERENCIAS = "JSonicProgreso";
 
-    // Clave que usaremos para identificar el dato guardado.
+    // Clave que usaremos para identificar el dato guardado
     private static final String CLAVE_NIVEL_MAS_ALTO = "nivelMasAltoDesbloqueado";
 
     /**
@@ -30,11 +30,11 @@ public class GestorDeProgreso {
      */
     public static void guardarProgresoDeNivel(int numeroDeNivel) {
         Preferences prefs = obtenerPreferencias();
-        int nivelGuardado = prefs.getInteger(CLAVE_NIVEL_MAS_ALTO, 1); // El valor por defecto es 1.
+        int nivelGuardado = prefs.getInteger(CLAVE_NIVEL_MAS_ALTO, 1); // El valor por defecto es 1
 
         if (numeroDeNivel > nivelGuardado) {
             prefs.putInteger(CLAVE_NIVEL_MAS_ALTO, numeroDeNivel);
-            prefs.flush(); // ¡Esencial! Escribe los cambios en el disco duro.
+            prefs.flush(); // Escribe los cambios en el disco duro
             System.out.println("[GestorDeProgreso] Progreso guardado. Nivel más alto ahora es: " + numeroDeNivel);
         }
     }

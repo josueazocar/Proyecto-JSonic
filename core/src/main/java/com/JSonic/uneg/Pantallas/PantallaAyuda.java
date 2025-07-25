@@ -1,4 +1,3 @@
-// Archivo: src/com/JSonic/uneg/Pantallas/PantallaAyuda.java
 package com.JSonic.uneg.Pantallas;
 
 import com.JSonic.uneg.JSonicJuego;
@@ -16,9 +15,16 @@ import com.badlogic.gdx.utils.Align;
 import com.badlogic.gdx.utils.Scaling;
 import com.badlogic.gdx.utils.viewport.FitViewport;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
+
 import java.util.HashMap;
 import java.util.List;
 
+/**
+ * La clase PantallaAyuda representa la pantalla de ayuda del juego.
+ * Proporciona información sobre cómo jugar, las reglas del juego y las estadísticas
+ * de la última partida. La pantalla está diseñada con un panel de navegación a la
+ * izquierda y un área de contenido a la derecha que cambia según la opción seleccionada.
+ */
 public class PantallaAyuda extends PantallaBase {
 
     public static final float VIRTUAL_WIDTH = 1920;
@@ -31,6 +37,12 @@ public class PantallaAyuda extends PantallaBase {
 
     private BitmapFont fuenteBoton, fuenteReglas, fuenteStatsTitulo, fuenteStatsCuerpo, fuenteComoJugar;
 
+    /**
+     * Constructor para la pantalla de ayuda.
+     *
+     * @param juegoApp La instancia principal del juego, utilizada para la gestión de pantallas y sonidos.
+     * @param pantallaAnterior La pantalla desde la que se accedió a la ayuda, para poder regresar a ella.
+     */
     public PantallaAyuda(JSonicJuego juegoApp, Screen pantallaAnterior) {
         super();
         this.juegoApp = juegoApp;
@@ -38,6 +50,10 @@ public class PantallaAyuda extends PantallaBase {
         inicializar();
     }
 
+    /**
+     * Inicializa todos los componentes de la interfaz de usuario de la pantalla de ayuda.
+     * Configura las fuentes, los estilos, los paneles de contenido y los listeners para los botones.
+     */
     @Override
     public void inicializar() {
         mainStage = new Stage(new FitViewport(VIRTUAL_WIDTH, VIRTUAL_HEIGHT));
@@ -184,6 +200,12 @@ public class PantallaAyuda extends PantallaBase {
         });
     }
 
+    /**
+     * Construye y devuelve el panel de "Cómo Jugar".
+     * Este panel contiene imágenes y tooltips que explican los controles básicos del juego.
+     *
+     * @return Un ScrollPane que contiene la sección de "Cómo Jugar".
+     */
     private ScrollPane construirPanelComoJugar() {
         Table contenidoComoJugar = new Table();
         Label.LabelStyle estiloPersonalizado = new Label.LabelStyle(getSkin().get("default", Label.LabelStyle.class));
@@ -241,6 +263,13 @@ public class PantallaAyuda extends PantallaBase {
         return scrollPane;
     }
 
+    /**
+     * Construye y devuelve el panel de estadísticas de la última partida.
+     * Muestra una tabla con los jugadores y sus puntuaciones, ordenados de mayor a menor.
+     *
+     * @param stats Una lista de objetos EstadisticasJugador con los datos de la última partida.
+     * @return Un ScrollPane que contiene la tabla de estadísticas.
+     */
     private ScrollPane construirPanelEstadisticas(List<EstadisticasJugador> stats) {
         stats.sort(java.util.Comparator.comparingInt(EstadisticasJugador::getPuntuacionTotal).reversed());
         Table tablaStats = new Table();
@@ -267,21 +296,44 @@ public class PantallaAyuda extends PantallaBase {
         return new ScrollPane(tablaStats, getSkin());
     }
 
+    /**
+     * Método de actualización llamado en cada fotograma. No se utiliza en esta pantalla.
+     *
+     * @param delta El tiempo transcurrido desde el último fotograma.
+     */
     @Override
     public void actualizar(float delta) {
         // La lógica de actualización del Stage ahora se maneja en el método render.
     }
 
+    /**
+     * Se llama cuando esta pantalla se convierte en la pantalla actual.
+     * Establece el procesador de entrada al stage principal para que reciba los eventos de UI.
+     */
     @Override
     public void show() {
         Gdx.input.setInputProcessor(mainStage);
     }
 
+    /**
+     * Se llama cuando la ventana del juego cambia de tamaño.
+     * Actualiza el viewport del stage para que se ajuste al nuevo tamaño.
+     *
+     * @param width El nuevo ancho de la ventana.
+     * @param height El nuevo alto de la ventana.
+     */
     @Override
     public void resize(int width, int height) {
         mainStage.getViewport().update(width, height, true);
     }
 
+    /**
+     * Dibuja la pantalla en cada fotograma.
+     * Renderiza la pantalla anterior para crear un efecto de superposición, dibuja un fondo
+     * semitransparente y luego dibuja el stage con todos los elementos de la UI.
+     *
+     * @param delta El tiempo transcurrido desde el último fotograma.
+     */
     @Override
     public void render(float delta) {
         pantallaAnterior.render(0);
@@ -300,6 +352,10 @@ public class PantallaAyuda extends PantallaBase {
         mainStage.draw();
     }
 
+    /**
+     * Libera todos los recursos utilizados por esta pantalla para evitar fugas de memoria.
+     * Se encarga de desechar el stage, el shapeRenderer, el atlas de texturas y las fuentes.
+     */
     @Override
     public void dispose() {
         if (mainStage != null) mainStage.dispose();

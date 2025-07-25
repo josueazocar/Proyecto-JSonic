@@ -6,6 +6,11 @@ import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.audio.Sound;
 import java.util.HashMap;
 
+/**
+ * Gestor de sonidos y música de fondo.
+ * Permite registrar, cargar y reproducir efectos de sonido y música
+ * usando un AssetManager de libGDX.
+ */
 public class SoundManager {
 
     private final AssetManager assetManager;
@@ -14,19 +19,20 @@ public class SoundManager {
     private float sfxVolume = 1.0f;
     private final HashMap<String, String> sfxMap = new HashMap<>();
     private String currentMusicPath; // Para recordar qué música está sonando
-    private Sound sonidoClick;
-    private String clickSoundPath;
     private float musicVolume = 1.0f;
 
-    // Constructor que recibe el AssetManager
+    /**
+     * Crea un SoundManager con el AssetManager especificado.
+     * @param assetManager gestor de recursos para cargar sonidos y música.
+     */
     public SoundManager(AssetManager assetManager) {
         this.assetManager = assetManager;
     }
 
     /**
-     * Pone en cola de carga cualquier efecto de sonido.
-     * @param key La clave para llamarlo (ej: "explosion_bomba").
-     * @param path La ruta al archivo.
+     * Registra un efecto de sonido para cargarlo posteriormente.
+     * @param key   clave identificadora del sonido.
+     * @param path  ruta al archivo de sonido.
      */
     public void registerSound(String key, String path) {
         if (!sfxMap.containsKey(key)) {
@@ -36,18 +42,21 @@ public class SoundManager {
         }
     }
     // Método para cargar la música
-    // Se recomienda usar el AssetManager para esto
+    /**
+     * Encola la carga de un archivo de música de fondo.
+     * @param filePath ruta al archivo de música.
+     */
     public void loadMusic(String filePath) {
         if (!assetManager.isLoaded(filePath, Music.class)) {
             assetManager.load(filePath, Music.class);
             Gdx.app.log("SoundManager", "Cargando música: " + filePath);
         }
-        this.currentMusicPath = filePath; // Guarda la ruta para luego obtenerla
+        this.currentMusicPath = filePath;
     }
 
     /**
-     * Reproduce cualquier sonido registrado usando su clave.
-     * @param key La clave del sonido a reproducir.
+     * Reproduce un efecto de sonido registrado.
+     * @param key clave del sonido a reproducir.
      */
     public void play(String key) {
         String path = sfxMap.get(key);
@@ -59,16 +68,13 @@ public class SoundManager {
         }
     }
 
-    public void setSfxVolume(float volume) { this.sfxVolume = volume; }
-
-    public void setMusicVolume(float volume) {
-        this.musicVolume = Math.max(0, Math.min(1, volume));
-        if (backgroundMusic != null) {
-            backgroundMusic.setVolume(this.musicVolume);
-        }
-    }
 
     // Método para obtener la música una vez cargada
+    /**
+     * Obtiene la instancia de Music si ya fue cargada.
+     * @param filePath ruta al archivo de música.
+     * @return la instancia de Music o null si no está cargada.
+     */
     private Music getLoadedMusic(String filePath) {
         if (assetManager.isLoaded(filePath, Music.class)) {
             return assetManager.get(filePath, Music.class);
@@ -77,7 +83,12 @@ public class SoundManager {
         return null;
     }
 
-    // Método para reproducir la música de fondo
+    /**
+     * Reproduce música de fondo, deteniendo la anterior si existe.
+     * @param filePath ruta al archivo de música.
+     * @param volume   nivel de volumen [0.0,1.0].
+     * @param looping  true para reproducción en bucle.
+     */
     public void playBackgroundMusic(String filePath, float volume, boolean looping) {
         // Detener la música actual si está sonando
         if (backgroundMusic != null && backgroundMusic.isPlaying()) {
@@ -105,10 +116,9 @@ public class SoundManager {
 
     }
 
-
-
-
-    // Método para detener la música
+    /**
+     * Detiene la música de fondo en reproducción.
+     */
     public void stopBackgroundMusic() {
         if (backgroundMusic != null && backgroundMusic.isPlaying()) {
             backgroundMusic.stop();
@@ -116,7 +126,9 @@ public class SoundManager {
         }
     }
 
-    // Método para pausar la música
+    /**
+     * Pausa la música de fondo actualmente activa.
+     */
     public void pauseBackgroundMusic() {
         if (backgroundMusic != null && backgroundMusic.isPlaying()) {
             backgroundMusic.pause();
@@ -124,7 +136,9 @@ public class SoundManager {
         }
     }
 
-    // Método para reanudar la música
+    /**
+     * Reanuda la música de fondo pausada.
+     */
     public void resumeBackgroundMusic() {
         if (backgroundMusic != null && !backgroundMusic.isPlaying()) {
             backgroundMusic.play();
@@ -132,28 +146,39 @@ public class SoundManager {
         }
     }
 
-    // Método para ajustar el volumen de la música
+    /**
+     * Ajusta el volumen de la música de fondo.
+     * @param volume nuevo volumen [0.0,1.0].
+     */
     public void setBackgroundMusicVolume(float volume) {
         if (backgroundMusic != null) {
             backgroundMusic.setVolume(volume);
         }
     }
 
-    // Método para liberar los recursos de la música
-    // IMPORTANTE: Esto debe llamarse al final de la aplicación
+    /**
+     * Libera los recursos de música cargados.
+     * Debe llamarse al cerrar la aplicación.
+     */
     public void dispose() {
         if (currentMusicPath != null && assetManager.isLoaded(currentMusicPath, Music.class)) {
             assetManager.unload(currentMusicPath); // Descarga la música del AssetManager
             Gdx.app.log("SoundManager", "Música de fondo liberada del AssetManager.");
         }
-        // No llamamos backgroundMusic.dispose() directamente si está gestionado por AssetManager.
-        // AssetManager.dispose() en Main se encargará de liberar todos los assets.
+
     }
 
+    /**
+     * Registra el efecto de sonido de clic.
+     * @param filePath ruta al archivo de sonido de clic.
+     */
     public void loadClickSound(String filePath) {
         registerSound("click", filePath);
     }
 
+    /**
+     * Reproduce el efecto de sonido de clic.
+     */
     public void playClickSound() {
         play("click");
     }

@@ -1,4 +1,3 @@
-// Archivo: src/com/JSonic/uneg/AnimalVisual.java
 package com.JSonic.uneg.EntidadesVisuales;
 
 import com.JSonic.uneg.State.AnimalState;
@@ -8,12 +7,20 @@ import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.graphics.g2d.TextureRegion;
 import com.badlogic.gdx.math.Rectangle;
 
+/**
+ * Clase que representa la parte visual de un animal en el juego.
+ * Maneja las animaciones y el estado visual del animal.
+ */
 public class AnimalVisual {
 
-    // --- Referencia directa al estado (¡el patrón a seguir!) ---
-    public AnimalState estado; // Puede ser 'public' o 'private' con un getter
+    /** El estado del animal, que contiene su posición y estado de vida.
+     * Este objeto se actualiza constantemente para reflejar los cambios en el juego.
+     */
+    public AnimalState estado;
 
-    // --- Propiedades visuales (solo para el cliente) ---
+    /**
+     * La textura del sprite sheet que contiene las animaciones del animal.
+     */
     private transient Texture spriteSheet;
     private transient Animation<TextureRegion> animacionVivo;
     private transient Animation<TextureRegion> animacionMuerto;
@@ -21,7 +28,12 @@ public class AnimalVisual {
     private float tiempoAnimacion = 0f;
     private transient Rectangle bounds;
 
-    // El constructor ahora recibe el objeto de estado completo.
+    /**
+     * Constructor de la clase AnimalVisual.
+     *
+     * @param estadoInicial El estado inicial del animal, que contiene su posición y estado de vida.
+     * @param spriteSheet   La textura del sprite sheet que contiene las animaciones del animal.
+     */
     public AnimalVisual(AnimalState estadoInicial, Texture spriteSheet) {
         this.estado = estadoInicial;
         this.spriteSheet = spriteSheet;
@@ -29,14 +41,18 @@ public class AnimalVisual {
         cargarAnimacion();
     }
 
+    public boolean estaVivo() {
+        return this.estado.estaVivo;
+    }
+
+    /**
+     * Carga las animaciones del animal desde el sprite sheet.
+     * Divide el sprite sheet en dos partes: una para el estado vivo y otra para el estado muerto.
+     */
     private void cargarAnimacion() {
         TextureRegion[][] tmp = TextureRegion.split(spriteSheet, spriteSheet.getWidth(), spriteSheet.getHeight() / 2);
 
         animacionVivo = new Animation<>(0.25f, tmp[0]);
-        animacionVivo.setPlayMode(Animation.PlayMode.LOOP);
-
-        animacionMuerto = new Animation<>(1f, tmp[1]);
-        animacionMuerto.setPlayMode(Animation.PlayMode.NORMAL);
 
         // Ajustar el tamaño del hitbox basado en el frame
         this.bounds.setSize(tmp[0][0].getRegionWidth(), tmp[0][0].getRegionHeight());
@@ -46,8 +62,7 @@ public class AnimalVisual {
     }
 
     /**
-     * El método update ahora es más simple.
-     * Solo se encarga de la lógica visual, como cambiar de animación.
+     * Actualiza el estado visual del animal.
      */
     public void update() {
         // Sincroniza la posición del hitbox con la del estado
@@ -61,7 +76,12 @@ public class AnimalVisual {
         }
     }
 
-    // El método draw ahora lee directamente del estado.
+    /**
+     * Dibuja la animación actual del animal en la pantalla.
+     *
+     * @param batch El SpriteBatch utilizado para dibujar la animación.
+     * @param delta El tiempo transcurrido desde el último frame, utilizado para actualizar la animación.
+     */
     public void draw(SpriteBatch batch, float delta) {
         if (animacionActual == null) return;
 
@@ -72,21 +92,9 @@ public class AnimalVisual {
         batch.draw(currentFrame, estado.x, estado.y);
     }
 
-    // Getters que delegan la información al objeto de estado
-    public int getId() {
-        return this.estado.id;
-    }
-
-    public boolean estaVivo() {
-        return this.estado.estaVivo;
-    }
-
-    public Rectangle getBounds() {
-        return this.bounds;
-    }
-
+    /**
+     * Limpia los recursos utilizados por el animal visual.
+     */
     public void dispose() {
-        // La gestión de texturas idealmente se hace con un AssetManager
-        // para evitar liberar un recurso que otro objeto podría estar usando.
     }
 }

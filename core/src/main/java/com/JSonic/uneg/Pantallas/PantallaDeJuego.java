@@ -1,7 +1,5 @@
-// Archivo: src/com/JSonic/uneg/PantallaDeJuego.java
 package com.JSonic.uneg.Pantallas;
 
-// Tus imports se mantienen igual...
 import com.JSonic.uneg.*;
 import com.JSonic.uneg.EntidadesVisuales.*;
 import com.JSonic.uneg.ObjetosDelEntorno.*;
@@ -25,7 +23,6 @@ import com.badlogic.gdx.math.Vector3;
 import com.badlogic.gdx.scenes.scene2d.ui.Label;
 import com.badlogic.gdx.utils.viewport.FitViewport;
 import com.badlogic.gdx.utils.viewport.Viewport;
-import network.LocalServer;
 import network.Network;
 import com.JSonic.uneg.ObjetosDelEntorno.EsmeraldaVisual;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
@@ -39,9 +36,12 @@ import com.badlogic.gdx.scenes.scene2d.ui.Table;
 import com.badlogic.gdx.scenes.scene2d.ui.Image;
 import com.badlogic.gdx.math.Vector2;
 
+/**
+ * Pantalla principal del juego donde se desarrolla la jugabilidad.
+ * Maneja la lógica del juego, la interacción del jugador y la visualización de elementos en pantalla.
+ */
 public class PantallaDeJuego extends PantallaBase {
 
-    // --- TUS VARIABLES SE MANTIENEN IGUAL ---
     public static final float VIRTUAL_WIDTH = 900;
     public static final float VIRTUAL_HEIGHT = 505;
     private OrthographicCamera camaraJuego;
@@ -68,7 +68,6 @@ public class PantallaDeJuego extends PantallaBase {
     private static int basuraTotal = 0;
     private float porcentajeContaminacionActual = 0f;
 
-    //para el label de los aniamles
     private Label animalCountLabel; // El label para mostrar el conteo
     private int animalesVivos = 0;
     private int animalesMuertos = 0;
@@ -78,7 +77,7 @@ public class PantallaDeJuego extends PantallaBase {
     private ContadorUI contadorEsmeraldas;
     private int esmeraldasTotal = 0;
 
-    //private final HashMap<Integer, AnimalVisual> animalesEnPantalla = new HashMap<>(); // <-- AÑADIR ESTA LÍNEA
+
     private OrthographicCamera uiCamera;
     private ShaderProgram shaderNeblina;
     private Mesh quadMesh;
@@ -132,6 +131,11 @@ public class PantallaDeJuego extends PantallaBase {
     private static final float DURACION_FADE_OUT = 1.0f; // 1 segundo para desaparecer
     private static final float DURACION_TOTAL_TITULO = DURACION_FADE_IN + DURACION_VISIBLE + DURACION_FADE_OUT;
 
+    /**
+     * Constructor de la pantalla de juego.
+     * @param juego Instancia del juego principal.
+     * @param server Servidor local si se está jugando en modo local, o null si es un cliente.
+     */
     public PantallaDeJuego(JSonicJuego juego, IGameServer server) {
         super("");
         this.juegoPrincipal = juego;
@@ -152,7 +156,10 @@ public class PantallaDeJuego extends PantallaBase {
         PantallaDeJuego.basuraTotal = basuraTotal;
     }
 
-
+    /**
+     * Inicializa los componentes de la pantalla de juego.
+     * Configura la cámara, el viewport, el nivel, el personaje jugable y otros elementos visuales.
+     */
     @Override
     public void inicializar() {
         camaraJuego = new OrthographicCamera();
@@ -164,15 +171,13 @@ public class PantallaDeJuego extends PantallaBase {
         Vector2 llegada = manejadorNivel.obtenerPosicionLlegada();
         personajeJugableEstado.x = llegada.x;
         personajeJugableEstado.y = llegada.y;
-        // 1. Asigna el tipo de personaje al estado que se usará para el jugador local.
+
+        // Asigna el tipo de personaje al estado que se usará para el jugador local.
         personajeJugableEstado.characterType = miPersonaje;
 
         System.out.println("[JUEGO] Personaje recibido del menú: " + miPersonaje);
 
-        // 2. Crea la instancia del personaje jugable localmente.
-        // Este switch se asegura de que TÚ estás controlando al personaje correcto en tu pantalla.
-
-
+        // Crea la instancia del personaje jugable localmente.
         switch (miPersonaje) {
             case SONIC:
                 personajeJugable = new Sonic(personajeJugableEstado, manejadorNivel);
@@ -189,16 +194,11 @@ public class PantallaDeJuego extends PantallaBase {
                 break;
         }
 
-
         manejadorNivel.setPlayer(personajeJugable);
-        //justo despues de crear al personaje
-        personajeJugable.setSoundManager(this.soundManager);
-        //assetManager = new AssetManager();
-        //soundManager = new SoundManager(assetManager);
-        //soundManager.loadMusic(BACKGROUND_MUSIC_PATH2);
-        //soundManager.playBackgroundMusic(BACKGROUND_MUSIC_PATH2, 0.5f, true);
 
-        gestionarMusicaPorNivel();//Nuevo metodo para tocar musica por nivel
+        personajeJugable.setSoundManager(this.soundManager);
+
+        gestionarMusicaPorNivel();
 
         assetManager.finishLoading();
         shapeRenderer = new ShapeRenderer();
@@ -233,7 +233,7 @@ public class PantallaDeJuego extends PantallaBase {
             0, screenHeight, 0,
             screenWidth, screenHeight, 0
         };
-        short[] indices = { 0, 1, 2, 3 };
+        short[] indices = {0, 1, 2, 3};
 
         quadMesh.setVertices(vertices);
         quadMesh.setIndices(indices);
@@ -264,7 +264,6 @@ public class PantallaDeJuego extends PantallaBase {
 
         mainStage.addActor(tablaUI);
 
-        //tamanio de los label
         font = new BitmapFont(Gdx.files.internal("Fuentes/juego_fuente2.fnt"));
         font.getData().setScale(0.65f);
 
@@ -280,12 +279,10 @@ public class PantallaDeJuego extends PantallaBase {
         tablaInferior.bottom().right();
         tablaInferior.pad(15);
 
-        // 6. Añade nuestro Label a la tabla.
         tablaInferior.add(contaminationLabel);
         mainStage.addActor(tablaInferior);
 
         // CONFIGURACIÓN UI Animales ---
-        // Puedes reutilizar la misma fuente si quieres.
         animalMuertoIcono = new Texture(Gdx.files.internal("Items/animalMuerto.png"));
         Label.LabelStyle animalCountLabelStyle = new Label.LabelStyle(smallFont, Color.WHITE); // Cambia el color si lo deseas
         animalCountLabel = new Label("0/10", animalCountLabelStyle); // Texto inicial
@@ -323,20 +320,20 @@ public class PantallaDeJuego extends PantallaBase {
 
         shapeRendererPausa = new ShapeRenderer();
 
-        // 1. Creamos una instancia de la nueva clase PauseMenuUI.
+        // Creamos una instancia de la nueva clase PauseMenuUI.
         menuDePausaUI = new PauseMenuUI(juegoPrincipal, this, getSkin());
 
-        // 2. Creamos el wrapper que la contendrá.
+        // Creamos el wrapper que la contendrá.
         this.pauseWrapper = new Table();
         this.pauseWrapper.setFillParent(true);
         mainStage.addActor(this.pauseWrapper);
 
-        // 3. Añadimos el menú al wrapper y le damos tamaño.
+        // Añadimos el menú al wrapper y le damos tamaño.
         this.pauseWrapper.add(menuDePausaUI)
-                .width(Gdx.graphics.getWidth() * 0.8f)
-                .height(Gdx.graphics.getHeight() * 0.8f);
+            .width(Gdx.graphics.getWidth() * 0.8f)
+            .height(Gdx.graphics.getHeight() * 0.8f);
 
-        // 4. El wrapper (y por tanto el menú) empieza invisible.
+        // El wrapper (y por tanto el menú) empieza invisible.
         this.pauseWrapper.setVisible(false);
 
         fuenteTituloNivel = new BitmapFont(Gdx.files.internal("Fuentes/juego_fuente2.fnt")); // Asegúrate de que esta fuente exista
@@ -346,21 +343,25 @@ public class PantallaDeJuego extends PantallaBase {
         labelNombreNivel = new Label("", estiloTitulo);
         labelNombreNivel.getColor().a = 0f; // Empieza transparente
 
-// Crea una tabla que llenará toda la pantalla
+        // Crea una tabla que llenará toda la pantalla
         Table tablaTitulo = new Table();
         tablaTitulo.setFillParent(true);
 
-// Añade el label a la tabla y dile que se centre
+        // Añade el label a la tabla y dile que se centre
         tablaTitulo.center();
         tablaTitulo.add(labelNombreNivel);
 
-// Finalmente, añade la tabla (no el label directamente) al stage
+        // Finalmente, añade la tabla (no el label directamente) al stage
         mainStage.addActor(tablaTitulo);
 
-// Llama al método para el primer nivel
+        // Llama al método para el primer nivel
         mostrarNombreDeNivel();
     }
 
+    /**
+     * Muestra el nombre del nivel actual en la pantalla.
+     * El nombre se mostrará con un efecto de fade in y fade out.
+     */
     private void gestionarMusicaPorNivel() {
         // Medida de seguridad para evitar errores si algo no está listo.
         if (soundManager == null || manejadorNivel == null) {
@@ -375,8 +376,6 @@ public class PantallaDeJuego extends PantallaBase {
         String mapaActual = manejadorNivel.getNombreMapaActual();
         String cancionAReproducir = null;
 
-        //¡La lógica principal! Aquí decides qué canción suena en cada mapa.
-        //Este switch es fácil de expandir con nuevos niveles.
         Gdx.app.log("GestionarMusica", "Seleccionando música para el nivel: " + mapaActual);
         switch (mapaActual) {
             case "maps/Zona1N1.tmx":
@@ -395,7 +394,6 @@ public class PantallaDeJuego extends PantallaBase {
                 cancionAReproducir = "SoundsBackground/Level Theme/Heartache.mp3";
                 break;
             case "maps/ZonaJefeN1.tmx":
-                // Ejemplo: Una música más intensa para el jefe.
                 cancionAReproducir = "SoundsBackground/Level Theme/CommandoSteve.mp3";
                 break;
             case "maps/ZonaJefeN2.tmx":
@@ -406,21 +404,21 @@ public class PantallaDeJuego extends PantallaBase {
                 cancionAReproducir = "SoundsBackground/Level Theme/Strike the Earth.mp3";
                 break;
 
-            // --- > AÑADE AQUÍ UN 'case' PARA CADA UNO DE TUS MAPAS < ---
             default:
-                // Opcional: Una canción por defecto si el mapa no coincide con ninguno.
                 Gdx.app.log("GestionarMusica", "El mapa actual no tiene una canción asignada. Se usará silencio o una por defecto.");
-                // cancionAReproducir = "SoundsBackground/DefaultMusic.mp3";
                 break;
         }
 
-        //Si encontramos una canción para este nivel, la reproducimos.
         if (cancionAReproducir != null) {
             Gdx.app.log("GestionarMusica", "Reproduciendo: " + cancionAReproducir);
             soundManager.playBackgroundMusic(cancionAReproducir, 0.5f, true);
         }
     }
 
+    /**
+     * Envía información del mapa actual al servidor.
+     * @param deltat Tiempo transcurrido desde el último frame.
+     */
     @Override
     public void actualizar(float deltat) {
 
@@ -450,8 +448,6 @@ public class PantallaDeJuego extends PantallaBase {
             togglePause();
         }
 
-        // Si el juego está en pausa, solo actualizamos el Stage (para los botones)
-        // y detenemos el resto de la lógica.
         if (isPaused) {
             mainStage.act(deltat);
             return;
@@ -459,7 +455,6 @@ public class PantallaDeJuego extends PantallaBase {
 
         if (Gdx.input.isKeyJustPressed(Input.Keys.V)) { // Usamos la tecla 'V' de Victoria
 
-            // Comprobamos que el juego esté en curso antes de forzar la victoria
             if (gameClient != null && !isGameOver && !isVictoria) {
                 System.out.println("[DEBUG] Forzando la victoria con la tecla V...");
 
@@ -491,15 +486,12 @@ public class PantallaDeJuego extends PantallaBase {
             return;
         }
 
-        if(isGameOver){
+        if (isGameOver) {
             return;
         }
         if (personajeJugable != null && this.gameClient != null) {
-            // Como ya sabemos que el cliente no es nulo, lo asignamos.
             personajeJugable.setGameClient(this.gameClient);
 
-            // Ahora, dentro de este mismo bloque, comprobamos si es modo online.
-            // Ya no es necesario volver a preguntar si gameClient es nulo.
             if (this.localServer == null) {
                 if (personajeJugable instanceof Tails) {
                     ((Tails) personajeJugable).isOnlineMode = true;
@@ -535,11 +527,7 @@ public class PantallaDeJuego extends PantallaBase {
                     if (personajeJugableEstado != null && p.id != personajeJugableEstado.id) {
                         actualizarPosicionOtroJugador(p.id, p.x, p.y, p.estadoAnimacion);
                     }
-                }  else if (paquete instanceof Network.PaqueteJugadorDesconectado p) {
-                    // El servidor nos ha enviado una orden para eliminar un jugador.
-                    // Usamos Gdx.app.postRunnable para asegurarnos de que el código que modifica
-                    // los elementos visuales se ejecute en el hilo de renderizado principal,
-                    // evitando así errores de concurrencia.
+                } else if (paquete instanceof Network.PaqueteJugadorDesconectado p) {
                     Gdx.app.postRunnable(() -> {
                         eliminarOtroJugador(p.idJugador);
                     });
@@ -553,17 +541,13 @@ public class PantallaDeJuego extends PantallaBase {
                         System.out.println("[CLIENT] Obedeciendo orden de eliminar ítem con ID: " + p.idItem);
                         itemEliminado.dispose();
                     }
-                }
-                //para esmeraldas
-                else if (paquete instanceof Network.PaqueteActualizacionEsmeraldas p) {
+                } else if (paquete instanceof Network.PaqueteActualizacionEsmeraldas p) {
                     this.esmeraldasTotal = p.totalEsmeraldas;
 
                     personajeJugable.anadirGema();//Contador de gemas
 
                     this.contadorEsmeraldas.setValor(this.esmeraldasTotal);
-                }
-
-                else if (paquete instanceof Network.PaqueteActualizacionEnemigos p) {
+                } else if (paquete instanceof Network.PaqueteActualizacionEnemigos p) {
                     for (EnemigoState estadoServidor : p.estadosEnemigos.values()) {
                         if (estadoServidor.tipo == EnemigoType.ROBOTNIK) {
                             if (eggman != null) {
@@ -571,8 +555,7 @@ public class PantallaDeJuego extends PantallaBase {
                                 eggman.estado.y = estadoServidor.y;
                                 eggman.setEstadoActual(estadoServidor.estadoAnimacion);
                             }
-                        }
-                         else {
+                        } else {
                             RobotVisual enemigoVisual = enemigosEnPantalla.get(estadoServidor.id);
                             if (enemigoVisual != null) {
                                 enemigoVisual.estado.x = estadoServidor.x;
@@ -593,7 +576,7 @@ public class PantallaDeJuego extends PantallaBase {
                     System.out.println("[CLIENT] Posición de llegada real leída del mapa: " + posicionLlegadaReal.x + ", " + posicionLlegadaReal.y);
                     enviarInformacionDelMapaActualAlServidor();
 
-                    gestionarMusicaPorNivel();//Metodo para cambiar musica por nivel
+                    gestionarMusicaPorNivel();
                     mostrarNombreDeNivel();
 
                 } else if (paquete instanceof Network.PaqueteActualizacionPuntuacion p) {
@@ -619,11 +602,13 @@ public class PantallaDeJuego extends PantallaBase {
                         personajeJugable.setVida(0);
                         if (!isGameOver) {
                             activarGameOver();
-                        };
+                        }
+                        ;
                     }
-                    if(contaminationLabel != null) {
+                    if (contaminationLabel != null) {
                         contaminationLabel.setText("TOXIC: " + Math.round(this.porcentajeContaminacionActual) + "%");
-                    }                    if (this.porcentajeContaminacionActual >= 50 && totalAnimalesMapa > 0) {
+                    }
+                    if (this.porcentajeContaminacionActual >= 50 && totalAnimalesMapa > 0) {
                         actualizarAnimalCountLabel();
                     } else {
                         animalCountLabel.setText("");
@@ -649,15 +634,13 @@ public class PantallaDeJuego extends PantallaBase {
                         manejadorNivel.generarArbol(p.x, p.y);
                         System.out.println("[CLIENT] Orden recibida para generar árbol en " + p.x + "," + p.y);
                     }
-                }
-
-                else if (paquete instanceof Network.PaqueteMensajeUI p) {
+                } else if (paquete instanceof Network.PaqueteMensajeUI p) {
                     if (personajeJugable != null) {
                         // El servidor nos ordena mostrar un mensaje.
                         personajeJugable.mostrarMensaje(p.mensaje);
                     }
                 } else if (paquete instanceof Network.PaqueteDronEstado p) {
-                    // 1. Buscamos al jugador poseedor del dron
+                    // Buscamos al jugador poseedor del dron
                     Player poseedor = null;
                     if (personajeJugable.estado.id == p.ownerId) {
                         poseedor = personajeJugable;
@@ -665,13 +648,12 @@ public class PantallaDeJuego extends PantallaBase {
                         poseedor = otrosJugadores.get(p.ownerId);
                     }
 
-                    // 2. Si encontramos al poseedor y es un Tails...
+                    // Si encontramos al poseedor y es un Tails...
                     if (poseedor instanceof Tails) {
                         Tails tailsPoseedor = (Tails) poseedor;
                         Dron_Tails dron = tailsPoseedor.getDron();
 
                         if (dron != null) {
-                            // ¡LÓGICA CLAVE! Asignamos el objetivo.
                             dron.setObjetivo(tailsPoseedor);
 
                             // Ahora llamamos a tu método para que el dron reaccione
@@ -697,14 +679,14 @@ public class PantallaDeJuego extends PantallaBase {
                     Gdx.app.log("PantallaDeJuego", "¡Recibida confirmación del servidor! La habilidad de limpieza fue exitosa.");
 
                     if (personajeJugable instanceof Sonic) {
-                        // 2. Activamos los efectos visuales y de UI.
+                        // Activamos los efectos visuales y de UI.
                         ((Sonic) personajeJugable).activarEfectoFlash();
                         ((Sonic) personajeJugable).iniciarCooldownVisual();
                     }
 
-                    // 3. Reseteamos la contaminación visualmente para todos.
+                    // Reseteamos la contaminación visualmente para todos.
                     this.porcentajeContaminacionActual = 0f;
-                    if(contaminationLabel != null) {
+                    if (contaminationLabel != null) {
                         contaminationLabel.setText("TOXIC: 0%");
                     }
                 } else if (paquete instanceof Network.PaqueteActualizacionVida p) {
@@ -724,8 +706,7 @@ public class PantallaDeJuego extends PantallaBase {
                             activarGameOver();
                         }
                     }
-                }
-                  else if (paquete instanceof Network.PaqueteEntidadEliminada p) {
+                } else if (paquete instanceof Network.PaqueteEntidadEliminada p) {
                     System.out.println("Recibida orden de eliminar entidad con ID: " + p.idEntidad);
 
                     // Primero, determinamos si la entidad eliminada es un jugador o un enemigo.
@@ -771,31 +752,27 @@ public class PantallaDeJuego extends PantallaBase {
                             if (barra != null) barra.dispose();
                         }
                     }
-                }
-                  else if (paquete instanceof Network.PaqueteResultadosFinales p) {
+                } else if (paquete instanceof Network.PaqueteResultadosFinales p) {
                     if (!isVictoria && !isGameOver) {
                         juegoPrincipal.setEstadisticasUltimaPartida(p.estadisticasFinales);
                         activarVictoria();
                         this.resultadosGuardados = p.estadisticasFinales;
                         this.temporizadorVictoria = DURACION_PANTALLA_VICTORIA; // Inicia la cuenta atrás
                     }
-                    // 3. Salimos del bucle, ya no necesitamos procesar más paquetes.
+                    // Salimos del bucle, ya no necesitamos procesar más paquetes.
                     break;
 
-                  } else if (paquete instanceof Network.PaqueteTransformacionSuper p) {
+                } else if (paquete instanceof Network.PaqueteTransformacionSuper p) {
                     // El servidor nos ordena transformar a un jugador.
-
-                    // ¿La orden es para nuestro personaje?
                     if (personajeJugable != null && personajeJugable.estado.id == p.idJugador) {
                         personajeJugable.setSuper(p.esSuper);
                     } else {
-                        // Si no, buscamos al jugador entre los otros clientes.
                         Player otroJugador = otrosJugadores.get(p.idJugador);
                         if (otroJugador != null) {
                             otroJugador.setSuper(p.esSuper);
                         }
                     }
-                  } else if (paquete instanceof Network.PaqueteGameOver) {
+                } else if (paquete instanceof Network.PaqueteGameOver) {
                     // El servidor nos ordena mostrar la pantalla de Game Over.
                     System.out.println("[CLIENT] ¡Orden de Game Over recibida del servidor!");
                     activarGameOver();
@@ -817,7 +794,7 @@ public class PantallaDeJuego extends PantallaBase {
         }
 
         if (eggman != null) {
-            if(manejadorNivel.getNombreMapaActual().equals("maps/ZonaJefeN1.tmx") || manejadorNivel.getNombreMapaActual().equals("maps/ZonaJefeN2.tmx") || manejadorNivel.getNombreMapaActual().equals("maps/ZonaJefeN3.tmx")) {
+            if (manejadorNivel.getNombreMapaActual().equals("maps/ZonaJefeN1.tmx") || manejadorNivel.getNombreMapaActual().equals("maps/ZonaJefeN2.tmx") || manejadorNivel.getNombreMapaActual().equals("maps/ZonaJefeN3.tmx")) {
                 tiempoParaProximaBomba -= deltat;
                 if (tiempoParaProximaBomba <= 0) {
                     lanzarBombaDesdeEggman();
@@ -829,7 +806,7 @@ public class PantallaDeJuego extends PantallaBase {
         Iterator<Bomba> iterBombas = listaDeBombas.iterator();
         while (iterBombas.hasNext()) {
             Bomba bomba = iterBombas.next();
-            bomba.update(deltat,personajeJugable);
+            bomba.update(deltat, personajeJugable);
 
             if (bomba.isExplotando() && !bomba.yaHaHechoDanio()) {
                 if (bomba.getBounds().overlaps(personajeJugable.getBounds())) {
@@ -870,10 +847,9 @@ public class PantallaDeJuego extends PantallaBase {
                         soundManager.play("recolectar_anillo");
                     } else if (item instanceof EsmeraldaVisual) {
                         soundManager.play("recolectar_esmeralda");
-                    }
-                    else if (item instanceof BasuraVisual) {
+                    } else if (item instanceof BasuraVisual) {
                         soundManager.play("recolectar_basura");
-                    }else if (item instanceof PiezaDePlasticoVisual) {
+                    } else if (item instanceof PiezaDePlasticoVisual) {
                         soundManager.play("recolectar_basura");
                     }
                 }
@@ -898,15 +874,14 @@ public class PantallaDeJuego extends PantallaBase {
                 break; // Salimos para procesar solo un ítem por fotograma.
             }
 
-             if (idTeletransporteAEliminar != null) {
-            limpiarEnemigosEItems();
-            item = itemsEnPantalla.remove(idTeletransporteAEliminar);
-            if (item != null) item.dispose();
-        }
+            if (idTeletransporteAEliminar != null) {
+                limpiarEnemigosEItems();
+                item = itemsEnPantalla.remove(idTeletransporteAEliminar);
+                if (item != null) item.dispose();
+            }
         }
 
-
-        // 1. Preguntamos al LevelManager si hay una planta en este mapa.
+        // Preguntamos al LevelManager si hay una planta en este mapa.
         if (manejadorNivel != null) {
             Rectangle planta = manejadorNivel.obtenerPlantaDeTratamiento();
 
@@ -924,13 +899,11 @@ public class PantallaDeJuego extends PantallaBase {
         }
 
         manejadorNivel.actualizar(deltat);
-        //--------------------------------
         personajeJugable.KeyHandler();
         personajeJugable.update(deltat);
 
         gestionarHabilidadDeLimpiezaDeSonic();
 
-        // Este bloque hace de intermediario entre Knuckles y los bloques rompibles
         if (personajeJugable instanceof Knuckles) {
             Knuckles knuckles = (Knuckles) personajeJugable;
 
@@ -944,13 +917,13 @@ public class PantallaDeJuego extends PantallaBase {
 
                 // Buscamos el bloque rompible más cercano a Knuckles.
                 for (ObjetoRomperVisual bloque : manejadorNivel.getBloquesRompibles()) {
-                    // 1. Obtenemos el polígono del bloque.
+                    // Obtenemos el polígono del bloque.
                     com.badlogic.gdx.math.Polygon bloquePolygon = bloque.getBounds();
-                    // 2. Obtenemos el rectángulo que lo envuelve para calcular su centro.
+                    // Obtenemos el rectángulo que lo envuelve para calcular su centro.
                     Rectangle boundingBox = bloquePolygon.getBoundingRectangle();
 
                     Vector2 posKnuckles = new Vector2(knuckles.estado.x + knuckles.getTileSize() / 2f, knuckles.estado.y + knuckles.getTileSize() / 2f);
-                    // 3. Usamos el tamaño del rectángulo envolvente para encontrar el centro del bloque.
+                    // Usamos el tamaño del rectángulo envolvente para encontrar el centro del bloque.
                     Vector2 posBloque = new Vector2(bloque.x + boundingBox.width / 2f, bloque.y + boundingBox.height / 2f);
                     float distancia = posKnuckles.dst(posBloque);
 
@@ -963,10 +936,8 @@ public class PantallaDeJuego extends PantallaBase {
                 // Si encontramos un bloque cercano y está dentro del rango del golpe...
                 if (bloqueMasCercano != null && distanciaMinima <= rangoMaximoDeGolpe) {
                     Gdx.app.log("PantallaDeJuego", "¡Bloque encontrado en rango! ID: " + bloqueMasCercano.id + ". Dando orden de destruir.");
-                 //---> Knucles basura// bloqueMasCercano.destruir();
                     if (gameClient != null) {
                         Gdx.app.log("PantallaDeJuego", "Enviando paquete PaqueteBloqueDestruido al servidor.");
-                        // --- LÍNEA CORREGIDA ---
                         Network.PaqueteBloqueDestruido paquete = new Network.PaqueteBloqueDestruido();
                         paquete.idBloque = bloqueMasCercano.id;
                         paquete.idJugador = personajeJugable.estado.id;
@@ -993,10 +964,10 @@ public class PantallaDeJuego extends PantallaBase {
                 // Si el jugador está atacando y el enemigo no está en cooldown...
                 if (jugadorAtaca && !enemigoEnCooldown) {
 
-                    // a) Marcamos al enemigo para que no reciba más golpes por un momento.
+                    // Marcamos al enemigo para que no reciba más golpes por un momento.
                     enemigo.marcarComoGolpeado();
 
-                    // b) Informamos al servidor del ataque.
+                    // Informamos al servidor del ataque.
                     Gdx.app.log("Cliente->Servidor", "Reportando golpe al enemigo ID: " + enemigo.estado.id);
                     if (gameClient != null) {
                         Network.PaqueteAtaqueJugadorAEnemigo paquete = new Network.PaqueteAtaqueJugadorAEnemigo();
@@ -1006,7 +977,6 @@ public class PantallaDeJuego extends PantallaBase {
                     }
                 }
             }
-            // El update del enemigo se mantiene para que actualice su animación y cooldown.
             enemigo.update(deltat);
         }
 
@@ -1075,18 +1045,17 @@ public class PantallaDeJuego extends PantallaBase {
         mainStage.act(Math.min(deltat, 1 / 30f));
     }
 
+    /**
+     * Gestiona la habilidad de limpieza de Sonic.
+     * Si el jugador es Sonic y presiona la tecla ESPACIO, envía una solicitud al servidor.
+     */
     private void gestionarHabilidadDeLimpiezaDeSonic() {
-        // Solo nos interesa esta lógica si el jugador es una instancia de Sonic.
         if (personajeJugable instanceof Sonic) {
 
-            // Se elimina la dependencia del temporizador de destello.
-            // Ahora, detectamos la pulsación de la tecla directamente aquí.
             if (Gdx.input.isKeyJustPressed(Input.Keys.SPACE)) {
 
                 Gdx.app.log("PantallaDeJuego", "Tecla ESPACIO detectada. Enviando SOLICITUD de habilidad al servidor...");
 
-                // La lógica de envío es la misma: la interfaz se encarga de dirigirlo
-                // al LocalServer o al GameServer.
                 if (gameClient != null) {
                     Network.PaqueteSolicitudHabilidadLimpieza paqueteSolicitud = new Network.PaqueteSolicitudHabilidadLimpieza();
                     gameClient.send(paqueteSolicitud);
@@ -1095,6 +1064,12 @@ public class PantallaDeJuego extends PantallaBase {
         }
     }
 
+    /**
+     * Renderiza la pantalla de juego.
+     * Aquí se dibujan todos los elementos del juego, incluyendo el mapa, personajes, enemigos, etc.
+     *
+     * @param delta El tiempo transcurrido desde el último frame.
+     */
     @Override
     public void render(float delta) {
         super.render(delta);
@@ -1113,14 +1088,10 @@ public class PantallaDeJuego extends PantallaBase {
 
         if (personajeJugable instanceof Sonic) {
             Sonic miSonic = (Sonic) personajeJugable;
-
-            // Si la habilidad está lista y tenemos un frame para dibujar...
             if (miSonic.isCleanAbilityReady() && miSonic.getCooldownIndicatorFrame() != null) {
-                // Calculamos la posición del indicador sobre la cabeza de nuestro Sonic
                 float indicatorX = miSonic.estado.x + (miSonic.getTileSize() / 2) - (32f / 2); // Asumiendo 32f como tamaño del indicador
                 float indicatorY = miSonic.estado.y + miSonic.getTileSize();
 
-                // ¡Lo dibujamos!
                 batch.draw(miSonic.getCooldownIndicatorFrame(), indicatorX, indicatorY, 32f, 32f);
             }
         }
@@ -1177,6 +1148,13 @@ public class PantallaDeJuego extends PantallaBase {
         }
     }
 
+    /**
+     * Redimensiona la pantalla de juego.
+     * Actualiza las cámaras y los meshes según el nuevo tamaño de la ventana.
+     *
+     * @param width  El nuevo ancho de la ventana.
+     * @param height El nuevo alto de la ventana.
+     */
     @Override
     public void resize(int width, int height) {
         super.resize(width, height);
@@ -1201,8 +1179,11 @@ public class PantallaDeJuego extends PantallaBase {
         }
     }
 
-
-      private void lanzarBombaDesdeEggman() {
+    /**
+     * Lanza una bomba desde el jefe Eggman hacia el jugador.
+     * La bomba se dirige hacia la posición del jugador con una velocidad determinada.
+     */
+    private void lanzarBombaDesdeEggman() {
         if (eggman == null || personajeJugable == null) return;
         EnemigoState estadoBomba = new EnemigoState(0, eggman.estado.x, eggman.estado.y, 1, EnemigoType.ROBOT);
         Vector2 velocidad = new Vector2(
@@ -1211,17 +1192,20 @@ public class PantallaDeJuego extends PantallaBase {
         );
         velocidad.nor().scl(180f);
         estadoBomba.estadoAnimacion = (velocidad.x >= 0) ? EnemigoState.EstadoEnemigo.RUN_RIGHT : EnemigoState.EstadoEnemigo.RUN_LEFT;
-          // Cambia la línea de creación de la bomba por esta:
-          Bomba nuevaBomba = new Bomba(estadoBomba, velocidad, 2.5f, this.soundManager);
+        Bomba nuevaBomba = new Bomba(estadoBomba, velocidad, 2.5f, this.soundManager);
         listaDeBombas.add(nuevaBomba);
     }
 
+    /**
+     * Envía la información del mapa actual al servidor.
+     * Extrae las paredes y portales del mapa y los envía en un paquete.
+     */
     private void enviarInformacionDelMapaActualAlServidor() {
         if (gameClient == null || manejadorNivel == null) return;
 
         System.out.println("[CLIENT] Extrayendo y enviando información del mapa: " + manejadorNivel.getNombreMapaActual());
 
-        // 1. Extraer las paredes.
+        // Extrae las paredes
         ArrayList<Rectangle> paredes = new ArrayList<>();
         MapObjects objetosColision = manejadorNivel.getCollisionObjects();
         if (objetosColision != null) {
@@ -1232,7 +1216,7 @@ public class PantallaDeJuego extends PantallaBase {
             }
         }
 
-        // 2. Extraer los portales.
+        // Extraer los portales
         ArrayList<Network.PortalInfo> portalesDelMapa = new ArrayList<>();
         for (LevelManager.PortalInfo infoNivel : manejadorNivel.obtenerPortales()) {
             Network.PortalInfo infoRed = new Network.PortalInfo();
@@ -1244,7 +1228,7 @@ public class PantallaDeJuego extends PantallaBase {
             portalesDelMapa.add(infoRed);
         }
 
-        // 3. Crear y enviar el paquete completo.
+        // Crea y envia el paquete completo
         Network.PaqueteInformacionMapa paqueteMapa = new Network.PaqueteInformacionMapa();
         paqueteMapa.paredes = paredes;
         paqueteMapa.portales = portalesDelMapa;
@@ -1256,11 +1240,19 @@ public class PantallaDeJuego extends PantallaBase {
         System.out.println("[CLIENT] Plano del mapa con " + paredes.size() + " paredes y " + portalesDelMapa.size() + " portales enviado.");
     }
 
+    /**
+     * Activa la pantalla de Game Over.
+     * Muestra un mensaje de Game Over y detiene el juego.
+     */
     private void reiniciarTeletransporte() {
         teletransporteCreado = false;
         tiempoTranscurrido = 0f;
     }
 
+    /**
+     * Activa la pantalla de Game Over.
+     * Muestra un mensaje de Game Over y detiene el juego.
+     */
     private void renderizarNeblinaConShader() {
         float maxRadius = (float) Math.sqrt(Math.pow(Gdx.graphics.getWidth(), 2) + Math.pow(Gdx.graphics.getHeight(), 2)) / 2f;
         float minRadius = 45.0f;
@@ -1286,11 +1278,24 @@ public class PantallaDeJuego extends PantallaBase {
         Gdx.gl.glDisable(GL20.GL_BLEND);
     }
 
+    /**
+     * Inicializa el jugador local con el estado recibido del servidor.
+     * Asigna un ID y configura el personaje jugable.
+     *
+     * @param estadoRecibido El estado del jugador recibido del servidor.
+     */
     public void inicializarJugadorLocal(PlayerState estadoRecibido) {
         this.personajeJugable.estado = estadoRecibido;
         System.out.println("[CLIENT] ID asignado por el servidor: " + this.personajeJugable.estado.id);
     }
 
+    /**
+     * Crea un enemigo visual basado en el estado recibido.
+     * Si el enemigo es Robotnik, lo crea como un RobotnikVisual.
+     * Si es un robot normal, lo crea como un RobotVisual y añade su barra de vida.
+     *
+     * @param estadoEnemigo El estado del enemigo recibido del servidor.
+     */
     private void crearEnemigoVisual(EnemigoState estadoEnemigo) {
         if (estadoEnemigo.tipo == EnemigoType.ROBOTNIK) {
             if (this.eggman == null) {
@@ -1302,17 +1307,20 @@ public class PantallaDeJuego extends PantallaBase {
             RobotVisual nuevoRobot = new RobotVisual(estadoEnemigo, manejadorNivel, this.gameClient);
             enemigosEnPantalla.put(estadoEnemigo.id, nuevoRobot);
 
-            BarraDeVidaVillanos nuevaBarra = new BarraDeVidaVillanos(nuevoRobot.estado.vida, ANCHO_BARRA_ROBOT, ALTO_BARRA_ROBOT );
+            BarraDeVidaVillanos nuevaBarra = new BarraDeVidaVillanos(nuevoRobot.estado.vida, ANCHO_BARRA_ROBOT, ALTO_BARRA_ROBOT);
             barrasVidaEnemigos.put(estadoEnemigo.id, nuevaBarra);
         }
     }
-    //para actualizar el label de los animales
+
+
+    /**
+     * Actualiza el contador de animales en el mapa.
+     * Muestra la cantidad de animales muertos y el total en un label.
+     */
     private void actualizarAnimalCountLabel() {
         // Si no hay animales en el mapa, no mostramos nada.
         if (totalAnimalesMapa <= 0) {
             animalCountLabel.setText("");
-            // Opcional: podrías ocultar también el icono si lo deseas
-            // (requiere guardar una referencia al actor Image del icono)
             return;
         }
 
@@ -1320,7 +1328,10 @@ public class PantallaDeJuego extends PantallaBase {
         animalCountLabel.setText(animalesMuertos + "/" + totalAnimalesMapa);
     }
 
-    //para limpiar los enemigos en los otros mapasaaaaaaaa
+    /**
+     * Limpia todos los enemigos y items de la pantalla.
+     * Libera los recursos de cada enemigo y item visual.
+     */
     private void limpiarEnemigosEItems() {
         for (RobotVisual enemigo : enemigosEnPantalla.values()) {
             enemigo.dispose();
@@ -1343,7 +1354,12 @@ public class PantallaDeJuego extends PantallaBase {
         itemsEnPantalla.clear();
     }
 
-    //para delimitar los robots y crearlos por mapa
+    /**
+     * Crea los robots enemigos según el nivel actual.
+     * Limpia los enemigos e items previos y crea nuevos robots basados en el nombre del nivel.
+     *
+     * @param nombreNivel El nombre del nivel actual.
+     */
     private void crearRobotsPorNivel(String nombreNivel) {
         limpiarEnemigosEItems();
         if (nombreNivel.equals("maps/Zona1N1.tmx")) {
@@ -1371,15 +1387,32 @@ public class PantallaDeJuego extends PantallaBase {
         }
     }
 
+    /**
+     * Crea un item visual basado en el estado recibido.
+     * Si el item es un anillo, basura, pieza de plástico, teletransporte o esmeralda,
+     * lo crea y lo añade al mapa de items en pantalla.
+     *
+     * @param estadoItem El estado del item recibido del servidor.
+     */
     private void crearItemVisual(ItemState estadoItem) {
         if (!itemsEnPantalla.containsKey(estadoItem.id)) {
             ItemVisual nuevoItem = null;
             switch (estadoItem.tipo) {
-                case ANILLO: nuevoItem = new AnillosVisual(estadoItem); break;
-                case BASURA: nuevoItem = new BasuraVisual(estadoItem); break;
-                case PIEZA_PLASTICO: nuevoItem = new PiezaDePlasticoVisual(estadoItem); break;
-                case TELETRANSPORTE: nuevoItem = new TeletransporteVisual(estadoItem); break;
-                case ESMERALDA: nuevoItem = new EsmeraldaVisual(estadoItem); break;
+                case ANILLO:
+                    nuevoItem = new AnillosVisual(estadoItem);
+                    break;
+                case BASURA:
+                    nuevoItem = new BasuraVisual(estadoItem);
+                    break;
+                case PIEZA_PLASTICO:
+                    nuevoItem = new PiezaDePlasticoVisual(estadoItem);
+                    break;
+                case TELETRANSPORTE:
+                    nuevoItem = new TeletransporteVisual(estadoItem);
+                    break;
+                case ESMERALDA:
+                    nuevoItem = new EsmeraldaVisual(estadoItem);
+                    break;
             }
             if (nuevoItem != null) {
                 itemsEnPantalla.put(estadoItem.id, nuevoItem);
@@ -1387,13 +1420,18 @@ public class PantallaDeJuego extends PantallaBase {
         }
     }
 
+    /**
+     * Agrega o actualiza otro jugador en la pantalla.
+     * Si el jugador no existe, lo crea según su tipo de personaje.
+     * Si ya existe, actualiza su posición y estado de animación.
+     *
+     * @param estadoRecibido El estado del jugador recibido del servidor.
+     */
     public void agregarOActualizarOtroJugador(PlayerState estadoRecibido) {
         Player jugadorVisual = otrosJugadores.get(estadoRecibido.id);
         if (jugadorVisual == null) {
             System.out.println("Creando nuevo jugador gráfico con ID: " + estadoRecibido.id + " y personaje: " + estadoRecibido.characterType);
 
-            // --- LA CORRECCIÓN CLAVE ---
-            // El 'switch' ahora usa el 'characterType' del estado que RECIBIMOS del servidor.
             switch (estadoRecibido.characterType) {
                 case SONIC:
                     jugadorVisual = new Sonic(estadoRecibido, manejadorNivel);
@@ -1405,7 +1443,6 @@ public class PantallaDeJuego extends PantallaBase {
                     jugadorVisual = new Knuckles(estadoRecibido, manejadorNivel);
                     break;
                 default:
-                    // Si por alguna razón el personaje es nulo, creamos un Sonic por defecto para evitar que el juego se rompa.
                     System.err.println("[CLIENT] ADVERTENCIA: Se recibió un tipo de personaje nulo o desconocido.");
                     jugadorVisual = new Sonic(estadoRecibido, manejadorNivel);
                     break;
@@ -1424,6 +1461,15 @@ public class PantallaDeJuego extends PantallaBase {
         }
     }
 
+    /**
+     * Actualiza la posición de otro jugador en la pantalla.
+     * Si el jugador existe, actualiza su posición y estado de animación.
+     *
+     * @param id           El ID del jugador a actualizar.
+     * @param x            La nueva coordenada X del jugador.
+     * @param y            La nueva coordenada Y del jugador.
+     * @param estadoAnim   El nuevo estado de animación del jugador.
+     */
     public void actualizarPosicionOtroJugador(int id, float x, float y, EstadoPlayer estadoAnim) {
         Player jugador = otrosJugadores.get(id);
         if (jugador != null) {
@@ -1433,19 +1479,27 @@ public class PantallaDeJuego extends PantallaBase {
         }
     }
 
+    /**
+     * Verifica si el jefe Eggman debe mostrarse en la pantalla.
+     * Se muestra si estamos en uno de los mapas de jefe.
+     *
+     * @return true si el jefe debe mostrarse, false en caso contrario.
+     */
     private boolean debeMostrarseElJefe() {
         // Si la instancia de eggman no existe, no se muestra.
         if (eggman == null) {
             return false;
         }
-        // Añade aquí los nombres de todos tus mapas de jefe.
         String mapaActual = manejadorNivel.getNombreMapaActual();
         return mapaActual.equals("maps/ZonaJefeN1.tmx") ||
             mapaActual.equals("maps/ZonaJefeN2.tmx") ||
             mapaActual.equals("maps/ZonaJefeN3.tmx");
     }
 
-
+    /**
+     * Activa la pantalla de Game Over.
+     * Muestra un mensaje de Game Over y detiene el juego.
+     */
     private void activarGameOver() {
         // Si ya estamos en Game Over, no hacemos nada más para evitar errores.
         if (isGameOver) {
@@ -1454,21 +1508,24 @@ public class PantallaDeJuego extends PantallaBase {
 
         System.out.println("¡JUGADOR DERROTADO! Mostrando Game Over...");
 
-        // 1. Activamos la bandera para congelar el juego.
+        // Activamos la bandera para congelar el juego.
         this.isGameOver = true;
 
-        // 2. Hacemos visible nuestra interfaz de Game Over.
+        // Hacemos visible nuestra interfaz de Game Over.
         this.interfazGameOver.setVisible(true);
 
-        // 3. Le damos el "foco" al menú para que los botones funcionen.
+        // Le damos el "foco" al menú para que los botones funcionen.
         Gdx.input.setInputProcessor(mainStage);
 
-        // 4. Detenemos la música de fondo.
+        // Detenemos la música de fondo.
         if (soundManager != null) {
             soundManager.stopBackgroundMusic();
         }
     }
-
+    /**
+     * Activa la pantalla de victoria.
+     * Muestra un mensaje de victoria y detiene el juego.
+     */
     private void activarVictoria() {
         if (isVictoria || isGameOver) return;
 
@@ -1480,7 +1537,11 @@ public class PantallaDeJuego extends PantallaBase {
             soundManager.stopBackgroundMusic();
         }
     }
-
+    /**
+     * Alterna el estado de pausa del juego.
+     * Si el juego está en pausa, muestra el menú de pausa y detiene la música.
+     * Si se reanuda, oculta el menú y reanuda la música.
+     */
     public void togglePause() {
         isPaused = !isPaused;
         pauseWrapper.setVisible(isPaused);
@@ -1493,9 +1554,6 @@ public class PantallaDeJuego extends PantallaBase {
             Gdx.input.setInputProcessor(mainStage);
         } else {
             soundManager.resumeBackgroundMusic();
-            // Al reanudar, puedes decidir si el Stage sigue controlando el input
-            // o si lo devuelves a null o a otro procesador.
-            // Para la mayoría de los juegos, dejarlo en el Stage está bien.
         }
     }
 
@@ -1510,6 +1568,10 @@ public class PantallaDeJuego extends PantallaBase {
         if (soundManager != null) soundManager.resumeBackgroundMusic();
     }
 
+    /**
+     * Libera todos los recursos utilizados por la pantalla de juego.
+     * Esto incluye personajes, enemigos, bombas, items, y otros recursos gráficos y de sonido.
+     */
     @Override
     public void dispose() {
         super.dispose();
@@ -1527,8 +1589,8 @@ public class PantallaDeJuego extends PantallaBase {
         for (ItemVisual item : itemsEnPantalla.values()) {
             item.dispose();
         }
-         if (animalCountLabel != null) {
-            animalCountLabel.remove(); // Elimina el actor del Stage
+        if (animalCountLabel != null) {
+            animalCountLabel.remove();
         }
         if (contadorAnillos != null) contadorAnillos.dispose();
         if (contadorBasura != null) contadorBasura.dispose();
@@ -1553,26 +1615,30 @@ public class PantallaDeJuego extends PantallaBase {
     /**
      * Busca a un jugador en el mapa de 'otrosJugadores' por su ID,
      * libera sus recursos (dispose) y lo elimina de la pantalla.
+     *
      * @param id El ID del jugador a eliminar.
      */
     private void eliminarOtroJugador(int id) {
-        // 1. Buscamos al jugador visual en nuestro HashMap.
+        // Buscamos al jugador visual en nuestro HashMap.
         Player jugadorParaEliminar = otrosJugadores.get(id);
 
-        // 2. Si lo encontramos...
+        // Si lo encontramos...
         if (jugadorParaEliminar != null) {
             System.out.println("[CLIENT] Eliminando al jugador " + id + " de la pantalla.");
 
-            // 3. Liberamos sus recursos para evitar fugas de memoria (muy importante).
+            // Liberamos sus recursos para evitar fugas de memoria
             jugadorParaEliminar.dispose();
 
-            // 4. Lo quitamos del HashMap para que no se siga actualizando ni dibujando.
+            //Lo quitamos del HashMap para que no se siga actualizando ni dibujando.
             otrosJugadores.remove(id);
         } else {
             System.err.println("[CLIENT] Se intentó eliminar al jugador " + id + " pero no se encontró en la lista.");
         }
     }
 
+   /** Muestra el nombre del nivel actual en un label.
+     * Extrae el nombre del mapa actual, lo formatea y lo muestra en el label.
+     */
     public void mostrarNombreDeNivel() {
         if (manejadorNivel != null && labelNombreNivel != null) {
             String nombreMapa = manejadorNivel.getNombreMapaActual();

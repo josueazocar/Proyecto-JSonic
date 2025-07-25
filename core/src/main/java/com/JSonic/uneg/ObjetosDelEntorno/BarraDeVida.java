@@ -1,4 +1,3 @@
-// Archivo: src/com/JSonic/uneg/ObjetosDelEntorno/BarraDeVida.java
 package com.JSonic.uneg.ObjetosDelEntorno;
 
 import com.badlogic.gdx.graphics.g2d.TextureAtlas;
@@ -6,13 +5,21 @@ import com.badlogic.gdx.scenes.scene2d.ui.Image;
 import com.badlogic.gdx.scenes.scene2d.ui.Table;
 import com.badlogic.gdx.scenes.scene2d.utils.TextureRegionDrawable;
 
+/**
+ * Clase que representa la barra de vida en la interfaz de usuario.
+ * Muestra el nivel de vida actual y aplica un efecto de flash al recibir daño.
+ */
 public class BarraDeVida extends Table {
     private Image imagenVida;
     private TextureAtlas vidaAtlas;
 
     private float tiempoFlash = 0f; // El temporizador para el efecto de daño
-    private final float DURACION_FLASH = 0.3f; // Duración del flash en segundos. ¡Puedes ajustar esto!
+    private final float DURACION_FLASH = 0.3f; // Duración del flash en segundos
 
+    /**
+     * Crea una nueva barra de vida usando el atlas de texturas proporcionado.
+     * @param atlas TextureAtlas que contiene las regiones de vida.
+     */
     public BarraDeVida(TextureAtlas atlas) {
         super();
         this.vidaAtlas = atlas;
@@ -21,8 +28,8 @@ public class BarraDeVida extends Table {
     }
 
     /**
-     * El método act se llama automáticamente en cada fotograma por el Stage.
-     * Lo usamos para manejar la lógica del temporizador.
+     * Se llama cada frame para actualizar lógica interna, incluyendo el temporizador de flash.
+     * @param delta tiempo transcurrido desde el último frame en segundos.
      */
     @Override
     public void act(float delta) {
@@ -33,15 +40,17 @@ public class BarraDeVida extends Table {
     }
 
     /**
-     * Este es el método que llamaremos desde fuera para activar el efecto visual.
+     * Inicia el efecto visual de pérdida de vida (flash) durante una duración fija.
      */
     public void mostrarPerdidaDeVida() {
         this.tiempoFlash = DURACION_FLASH;
     }
 
     /**
-     * Actualiza la imagen de la barra de vida. Ahora también considera
-     * si el efecto de "daño" está activo.
+     * Actualiza la imagen de la barra de vida según los valores de vida actual y máxima.
+     * Aplica el efecto de flash si está activo.
+     * @param vidaActual valor actual de vida.
+     * @param vidaMaxima valor máximo de vida.
      */
     public void actualizar(float vidaActual, float vidaMaxima) {
         System.out.println("[DEBUG-HUD] El método 'actualizar' recibió vida: " + vidaActual);
@@ -61,6 +70,12 @@ public class BarraDeVida extends Table {
         ((TextureRegionDrawable) imagenVida.getDrawable()).setRegion(vidaAtlas.findRegion(nombreRegionFinal));
     }
 
+    /**
+     * Calcula la región de atlas correspondiente al porcentaje de vida.
+     * @param vidaActual valor actual de vida.
+     * @param vidaMaxima valor máximo de vida.
+     * @return nombre de la región de vida.
+     */
     private String getNombreRegionVida(float vidaActual, float vidaMaxima) {
         if (vidaMaxima <= 0) return "vida0";
         float porcentaje = (vidaActual / vidaMaxima) * 100;

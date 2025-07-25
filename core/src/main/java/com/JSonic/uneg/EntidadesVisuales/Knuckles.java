@@ -11,25 +11,30 @@ import com.badlogic.gdx.graphics.g2d.TextureRegion;
 import com.badlogic.gdx.math.Rectangle;
 
 
+/**
+ * Clase para el personaje Knuckles, extiende Player con animaciones y controles específicos.
+ */
 public class Knuckles extends Player {
 
     protected TextureRegion[] frameSpinRight;
     protected TextureRegion[] frameSpinLeft;
     protected TextureRegion[] framePunchRight;
     protected TextureRegion[] framePunchLeft;
-    //
+
     private float tiempoDesdeUltimoGolpe = 0f; // Tiempo para detectar doble toque
     private final float cooldownGolpe = 0.4f; // Tiempo máximo entre toques para considerar un doble toque
-    //private int idBloqueGolpeadoEsteFrame = -1;
     private boolean haIniciadoGolpeEsteFrame = false;
 
+    /**
+     * Constructor de Knuckles con estado inicial.
+     *
+     * @param estadoInicial Estado inicial del jugador.
+     */
     public Knuckles(PlayerState estadoInicial) {
         super(estadoInicial);
-        this.characterName="Knuckles";
+        this.characterName = "Knuckles";
         CargarSprites();
         inicializarHitbox();
-        // Asegúrate de que animacion no sea nula al inicio
-        // Si getEstadoActual() es nulo o no tiene una animación, usa un estado por defecto.
         EstadoPlayer estadoInicialAnimacion = (getEstadoActual() != null && animations.containsKey(getEstadoActual())) ? getEstadoActual() : EstadoPlayer.IDLE_RIGHT;
         animacion = animations.get(estadoInicialAnimacion);
         if (animacion == null) {
@@ -37,13 +42,17 @@ public class Knuckles extends Player {
         }
     }
 
+    /**
+     * Constructor de Knuckles con estado inicial y administrador de nivel.
+     *
+     * @param estadoInicial Estado inicial del jugador.
+     * @param levelManager  Administrador de nivel para interactuar con el entorno.
+     */
     public Knuckles(PlayerState estadoInicial, LevelManager levelManager) {
         super(estadoInicial, levelManager);
-        this.characterName="Knuckles";
+        this.characterName = "Knuckles";
         CargarSprites();
         inicializarHitbox();
-        // Asegúrate de que animacion no sea nula al inicio
-        // Si getEstadoActual() es nulo o no tiene una animación, usa un estado por defecto.
         EstadoPlayer estadoInicialAnimacion = (getEstadoActual() != null && animations.containsKey(getEstadoActual())) ? getEstadoActual() : EstadoPlayer.IDLE_RIGHT;
         animacion = animations.get(estadoInicialAnimacion);
         if (animacion == null) {
@@ -51,6 +60,9 @@ public class Knuckles extends Player {
         }
     }
 
+    /**
+     * Maneja la entrada de teclas específica de Knuckles, incluyendo ataques y acciones especiales.
+     */
     @Override
     public void KeyHandler() {
         // Primero, reiniciamos la bandera de acción de este frame.
@@ -59,19 +71,13 @@ public class Knuckles extends Player {
         float currentX = estado.x;
         float currentY = estado.y;
 
-        // Llama primero al KeyHandler del padre para manejar el movimiento básico (WASD).
-        // Esto calcula proposedMovementState y actualiza estado.x/y si no hay colisión,
-        // pero aún NO QUEREMOS que esto se aplique si hay una acción bloqueante.
         super.KeyHandler();
 
-        // Reinicia actionStateSet para el frame actual
         actionStateSet = false;
 
         // --- Lógica para MANEJAR TECLAS DE ACCIÓN ---
-        // (Golpe, Patada, Spin)
+        // Prioriza las acciones bloqueantes (HIT, KICK)
 
-        // 1. Prioriza las acciones bloqueantes (HIT, KICK)
-        // Si Sonic ya está en una acción bloqueante (que impide el movimiento), no procesa más entrada para movimiento u otras acciones.
         if (isActionBlockingMovement()) {
             // Si está en una acción bloqueante, RESTAURA la posición a la que estaba antes del super.KeyHandler()
             // para evitar cualquier desplazamiento no deseado.
@@ -80,8 +86,7 @@ public class Knuckles extends Player {
             return; // Termina la ejecución del KeyHandler para este frame
         }
 
-        // 2. Maneja las teclas de acción inmediata (J, K) que deben anular el movimiento continuo por un corto período.
-        // Estas son acciones que impiden el movimiento mientras duran.
+        // Maneja las teclas de acción inmediata (J, K) que deben anular el movimiento continuo por un corto período.
         if (Gdx.input.isKeyJustPressed(Input.Keys.J)) {
             if (soundManager != null) soundManager.play("golpe");
             if (lastDirection == EstadoPlayer.LEFT || lastDirection == EstadoPlayer.IDLE_LEFT) {
@@ -112,10 +117,8 @@ public class Knuckles extends Player {
             this.haIniciadoGolpeEsteFrame = true;
             System.out.println("[Knuckles] ¡Teclas ESPACIO presionada, iniciando PUNCH y revisando bloques!");
         }
-        //-------------FIN ATAQUE ESPECIAL -------------------
 
-        // 3. Maneja el ROMPE BLOQUES - Esta es una acción continua que SÍ permite movimiento en el eje X.
-        // Se usa 'else if' para que SPIN solo se active si J o K no fueron presionadas.
+        // Maneja el ROMPE BLOQUES - Esta es una acción continua que SÍ permite movimiento en el eje X.
         else if (Gdx.input.isKeyPressed(Input.Keys.L)) {
 
             // Determina la dirección del ROMPE BLOQUES basándose en WASD si se presiona.
@@ -129,7 +132,6 @@ public class Knuckles extends Player {
                 estado.x = currentX;
             } else {
                 // Si L se presiona sin A o D, mantiene el giro en la última dirección horizontal conocida.
-                // Aquí también se permite el movimiento si WASD fue presionado, el super.KeyHandler() ya lo aplicó.
                 if (lastDirection == EstadoPlayer.LEFT || lastDirection == EstadoPlayer.IDLE_LEFT) {
                     setEstadoActual(EstadoPlayer.SPECIAL_LEFT);
                 } else {
@@ -140,9 +142,7 @@ public class Knuckles extends Player {
         }
 
 
-
-        // 4. Si ninguna acción especial (J, K, L) fue activada en este frame,
-        // determina el estado basándose en el movimiento WASD o IDLE.
+        // Si ninguna acción especial (J, K, L) fue activada en este frame,
         if (!actionStateSet) {
             // 'isMoving' y 'proposedMovementState' se establecen en el KeyHandler del Player.
             if (isMoving) {
@@ -160,10 +160,18 @@ public class Knuckles extends Player {
     }
 
 
+    /**
+     * Obtiene la ruta relativa al sprite sheet de Knuckles.
+     *
+     * @return Cadena con la ruta del archivo de textura.
+     */
     protected String getSpriteSheetPath() {
         return "Entidades/Player/Knuckles/knuckles.png";
     }
 
+    /**
+     * Carga las animaciones y sprites específicos de Knuckles desde su sprite sheet.
+     */
     @Override
     protected void CargarSprites() {
         Texture coleccionDeSprites = new Texture(Gdx.files.internal(getSpriteSheetPath()));
@@ -226,7 +234,8 @@ public class Knuckles extends Player {
 
         for (int i = 0; i < 6; i++) {
             frameHitLeft[i] = matrizDeSprites[8][i];
-        }for (int i = 0; i < 6; i++) {
+        }
+        for (int i = 0; i < 6; i++) {
             frameHitLeft[i + 6] = matrizDeSprites[8][5 - i];
         }
 
@@ -234,7 +243,6 @@ public class Knuckles extends Player {
             frameHitRight[i] = new TextureRegion(frameHitLeft[i]);
             frameHitRight[i].flip(true, false);
         }
-
 
         for (int i = 0; i < 6; i++) {
             frameSpinLeft[i] = matrizDeSprites[10][i]; // Primeros 4 directos
@@ -244,14 +252,11 @@ public class Knuckles extends Player {
             // Esto asume que tienes suficientes sprites en matrizDeSprites[11] (al menos hasta el índice 3)
         }
 
-        // Tercer bucle: Crear frameSpinRight invirtiendo los frames de frameSpinLeft
         for (int i = 0; i < 12; i++) { // Cambiado de 24 a 8
             frameSpinRight[i] = new TextureRegion(frameSpinLeft[i]);
             frameSpinRight[i].flip(true, false); // Voltear horizontalmente
         }
 
-        //para el movimiento de de romper bloques
-        // Cargar PUNCH_LEFT (asumiendo que está en la fila 9)
         for (int i = 0; i < 6; i++) {
             framePunchLeft[i] = matrizDeSprites[9][i];
         }
@@ -259,12 +264,10 @@ public class Knuckles extends Player {
             framePunchLeft[i + 6] = matrizDeSprites[9][5 - i];
         }
 
-// Crear PUNCH_RIGHT invirtiendo PUNCH_LEFT
         for (int i = 0; i < 12; i++) {
             framePunchRight[i] = new TextureRegion(framePunchLeft[i]);
             framePunchRight[i].flip(true, false);
         }
-        //-------------Fin romper bloque--------------------
 
         animations.put(EstadoPlayer.IDLE_RIGHT, new Animation<TextureRegion>(0.12f, frameIdleRight));
         animations.put(EstadoPlayer.IDLE_LEFT, new Animation<TextureRegion>(0.12f, frameIdleLeft));
@@ -278,7 +281,7 @@ public class Knuckles extends Player {
         animations.put(EstadoPlayer.HIT_LEFT, new Animation<TextureRegion>(0.08f, frameHitLeft));
         animations.put(EstadoPlayer.SPECIAL_RIGHT, new Animation<TextureRegion>(0.07f, frameSpinRight));
         animations.put(EstadoPlayer.SPECIAL_LEFT, new Animation<TextureRegion>(0.07f, frameSpinLeft));
-        //para animacion destruir bloques
+
         animations.put(EstadoPlayer.PUNCH_RIGHT, new Animation<TextureRegion>(0.08f, framePunchRight));
         animations.put(EstadoPlayer.PUNCH_LEFT, new Animation<TextureRegion>(0.08f, framePunchLeft));
 
@@ -304,6 +307,9 @@ public class Knuckles extends Player {
         }
     }
 
+    /**
+     * Inicializa el hitbox del personaje basado en el tamaño de tile y offsets de colisión.
+     */
     private void inicializarHitbox() {
         float baseTileSize = getTileSize();
 
@@ -321,6 +327,11 @@ public class Knuckles extends Player {
     }
 
 
+    /**
+     * Actualiza la lógica y la animación de Knuckles cada frame.
+     *
+     * @param deltaTime tiempo transcurrido desde el último frame en segundos.
+     */
     @Override
     public void update(float deltaTime) {
 
@@ -372,7 +383,7 @@ public class Knuckles extends Player {
             Gdx.app.log("Knuckles", "Transición de acción a IDLE: " + getEstadoActual());
         }
 
-        // Finalmente, actualiza el frame visual del personaje.
+        // Actualiza el frame visual del personaje.
         if (animacion != null) {
             frameActual = animacion.getKeyFrame(tiempoXFrame);
         } else {
@@ -380,11 +391,20 @@ public class Knuckles extends Player {
         }
     }
 
-    //para pantalla de juego
+    /**
+     * Indica si Knuckles ha iniciado un golpe en el frame actual.
+     *
+     * @return true si se inició la acción de golpe, false de lo contrario.
+     */
     public boolean haIniciadoGolpe() {
         return haIniciadoGolpeEsteFrame;
     }
 
+    /**
+     * Dibuja el personaje Knuckles en pantalla.
+     *
+     * @param batch SpriteBatch usado para el renderizado.
+     */
     @Override
     public void draw(SpriteBatch batch) {
         if (frameActual != null) {

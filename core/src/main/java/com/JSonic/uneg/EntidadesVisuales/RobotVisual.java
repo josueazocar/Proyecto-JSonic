@@ -13,12 +13,20 @@ import network.interfaces.IGameClient;
 
 import java.util.EnumMap;
 
+/**
+ * Clase visual para el enemigo Robot, gestiona sus animaciones, estados y notificación de finalización de ataque.
+ */
 public class RobotVisual extends Enemy {
 
     private LevelManager levelManager;
     private IGameClient gameClient;
     private boolean animacionDeAtaqueTerminada = false;
 
+    /**
+     * Constructor de RobotVisual con estado inicial y gestor de nivel.
+     * @param estadoInicial Estado inicial del enemigo.
+     * @param levelManager Gestor de nivel para colisiones y entorno.
+     */
     public RobotVisual(EnemigoState estadoInicial, LevelManager levelManager) {
         this.estado = estadoInicial;
         this.levelManager = levelManager;
@@ -27,16 +35,27 @@ public class RobotVisual extends Enemy {
         CargarSprites();
         setEstadoActual(estado.estadoAnimacion);
     }
+
+    /**
+     * Constructor de RobotVisual con estado inicial, gestor de nivel y cliente de red.
+     * @param estadoInicial Estado inicial del enemigo.
+     * @param levelManager Gestor de nivel.
+     * @param gameClient Cliente de red para sincronización de estado del enemigo.
+     */
     public RobotVisual(EnemigoState estadoInicial, LevelManager levelManager, IGameClient gameClient) {
         this.estado = estadoInicial;
         this.levelManager = levelManager;
-        this.gameClient = gameClient; // <--- AÑADE ESTA LÍNEA
+        this.gameClient = gameClient;
         animations = new EnumMap<>(EnemigoState.EstadoEnemigo.class);
         tiempoXFrame = 0.0f;
         CargarSprites();
         setEstadoActual(estado.estadoAnimacion);
-       // setVida(3);
     }
+
+    /**
+     * Constructor de RobotVisual con estado inicial solo.
+     * @param estadoInicial Estado inicial del enemigo.
+     */
     public RobotVisual(EnemigoState estadoInicial) {
         this.estado = estadoInicial;
         animations = new EnumMap<>(EnemigoState.EstadoEnemigo.class);
@@ -45,14 +64,26 @@ public class RobotVisual extends Enemy {
         setEstadoActual(estado.estadoAnimacion);
     }
 
+    /**
+     * Asigna el gestor de nivel al enemigo después de la construcción.
+     * @param levelManager Gestor de nivel.
+     */
     public void setLevelManager(LevelManager levelManager) {
         this.levelManager = levelManager;
     }
 
+    /**
+     * Proporciona la ruta al sprite sheet del enemigo Robot.
+     * @return Cadena con la ruta del archivo de textura.
+     */
     protected String getSpriteSheetPath() {
-        return "Entidades/Enemy/Robots/robot.png"; // Asegúrate de que esta ruta es correcta para los sprites del robot.
+        return "Entidades/Enemy/Robots/robot.png";
     }
 
+    /**
+     * Carga los sprites y configura las animaciones del enemigo Robot.
+     */
+    @Override
     protected void CargarSprites() {
         spriteSheet = new Texture(Gdx.files.internal(getSpriteSheetPath()));
         TextureRegion[][] matrizDeSprites = TextureRegion.split(spriteSheet, spriteSheet.getWidth() / 9, spriteSheet.getHeight() / 26);
@@ -111,37 +142,43 @@ public class RobotVisual extends Enemy {
         }
     }
 
-    // Aquí puedes poner getBounds()
+    /**
+     * Obtiene el rectángulo de colisión basado en la posición y tamaño fijo.
+     * @return Rectángulo de colisión del enemigo.
+     */
     public com.badlogic.gdx.math.Rectangle getBounds() {
         return new com.badlogic.gdx.math.Rectangle(estado.x, estado.y, 48, 48);
     }
 
+    /**
+     * Actualiza la lógica de animación del enemigo cada frame.
+     * @param deltaTime Tiempo transcurrido desde el último frame en segundos.
+     */
+    @Override
     public void update(float deltaTime) {
         tiempoXFrame += deltaTime;
 
         if (tiempoDesdeUltimoGolpe > 0) {
             tiempoDesdeUltimoGolpe -= deltaTime;
         }
-        // 1. Revisa si una animación de ataque ha terminado.
+        //Revisa si una animación de ataque ha terminado.
         boolean estaAtacando = estado.estadoAnimacion == EstadoEnemigo.HIT_LEFT || estado.estadoAnimacion == EstadoEnemigo.HIT_RIGHT;
         if (estaAtacando) {
             Animation<TextureRegion> currentAnim = animations.get(estado.estadoAnimacion);
             if (currentAnim != null && currentAnim.isAnimationFinished(tiempoXFrame)) {
 
-                // 2. Si terminó, envía el paquete de notificación al servidor.
+                // Si terminó, envía el paquete de notificación al servidor.
                 if (gameClient != null) {
-                    //System.out.println("[CLIENTE] Animación GOLPE terminada para robot " + estado.id + ". Notificando.");
                     Network.PaqueteAnimacionEnemigoTerminada paquete = new Network.PaqueteAnimacionEnemigoTerminada();
                     paquete.idEnemigo = estado.id;
                     gameClient.send(paquete);
                 }
 
-                // 3. Reinicia el tiempo para no enviar el paquete repetidamente.
                 tiempoXFrame = 0;
             }
         }
 
-        // 4. Finalmente, actualiza el frame visual que se debe dibujar.
+        //Actualiza el frame visual que se debe dibujar.
         Animation<TextureRegion> currentAnimation = animations.get(estado.estadoAnimacion);
         if (currentAnimation != null) {
             frameActual = currentAnimation.getKeyFrame(tiempoXFrame);
@@ -151,14 +188,23 @@ public class RobotVisual extends Enemy {
         }
     }
 
+    /**
+     * Dibuja el enemigo en pantalla usando el SpriteBatch proporcionado.
+     * @param batch SpriteBatch para renderizar el frame actual.
+     */
+    @Override
     public void draw(SpriteBatch batch) {
         if (frameActual != null) {
-            batch.draw(frameActual, estado.x, estado.y, 48, 48); // Asumiendo un tamaño de tile de 48x48
+            batch.draw(frameActual, estado.x, estado.y, 48, 48);
         } else {
             Gdx.app.log("RobotVisual", "Advertencia: 'frameActual' es nulo en draw(). No se puede dibujar el robot.");
         }
     }
 
+    /**
+     * Cambia el estado de animación del enemigo y reinicia el tiempo de animación.
+     * @param nuevoEstado Nuevo estado de animación.
+     */
     public void setEstadoActual(EstadoEnemigo nuevoEstado) {
         // Solo cambia el estado si es diferente para evitar reiniciar animaciones innecesariamente
         if (estado.estadoAnimacion != nuevoEstado) {
@@ -167,17 +213,26 @@ public class RobotVisual extends Enemy {
         }
     }
 
-    // --- FIN: CÓDIGO A AÑADIR (3/3) ---
+    /**
+     * Libera los recursos de la hoja de sprites del enemigo.
+     */
     public void dispose() {
         if (spriteSheet != null) {
             spriteSheet.dispose();
         }
     }
+
+    /**
+     * Indica si la animación de ataque ha terminado desde la última comprobación.
+     * @return true si la animación de ataque terminó, false en caso contrario.
+     */
     public boolean haTerminadoAnimacionDeAtaque() {
         return animacionDeAtaqueTerminada;
     }
 
-    // Llama a este método después de enviar el paquete para que no se envíe múltiples veces.
+    /**
+     * Reinicia la bandera que indica la finalización de la animación de ataque.
+     */
     public void reiniciarBanderaDeAnimacion() {
         this.animacionDeAtaqueTerminada = false;
     }
