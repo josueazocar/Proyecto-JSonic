@@ -14,6 +14,7 @@ public class PantallaCrearPartida extends PantallaBase {
     private Texture texturaFondo;
     private Stage stage;
     private TextureAtlas texturesAtlas;
+    static String tuNombre = "";
 
     public PantallaCrearPartida(final JSonicJuego juegoApp) {
         super();
@@ -65,7 +66,7 @@ public class PantallaCrearPartida extends PantallaBase {
             public void clicked(InputEvent event, float x, float y) {
                 juegoApp.reproducirSonidoClick();
                 String nombrePartida = nombrePartidaField.getText();
-                String tuNombre = tuNombreField.getText();
+                tuNombre = tuNombreField.getText();
                 System.out.println("Iniciando partida con nombre: " + nombrePartida + " | Anfitrión: " + tuNombre);
                 /// --- SIMULACIÓN ---
                 // Al crear una partida, la lista de personajes ocupados está vacía.
@@ -87,6 +88,10 @@ public class PantallaCrearPartida extends PantallaBase {
             }
         });
         inicializar();
+    }
+
+   static public String getTuNombre() {
+        return tuNombre;
     }
 
     @Override

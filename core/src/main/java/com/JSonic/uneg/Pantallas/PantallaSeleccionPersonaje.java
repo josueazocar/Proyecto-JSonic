@@ -15,6 +15,8 @@ import com.badlogic.gdx.scenes.scene2d.utils.ClickListener;
 import com.badlogic.gdx.scenes.scene2d.utils.TextureRegionDrawable;
 import network.Network;
 
+import static com.JSonic.uneg.Pantallas.PantallaCrearPartida.getTuNombre;
+
 public class PantallaSeleccionPersonaje extends PantallaBase {
 
     private final JSonicJuego juegoApp;
@@ -113,7 +115,7 @@ public class PantallaSeleccionPersonaje extends PantallaBase {
                         if (esAnfitrion) {
                             // Si es el ANFITRIÓN, el siguiente paso es ELEGIR EL NIVEL.
                             Network.SolicitudAccesoPaquete solicitud = new Network.SolicitudAccesoPaquete();
-                            solicitud.nombreJugador = "jugador"; // Asumimos que guardaste el nombre aquí
+                            solicitud.nombreJugador = personajeSeleccionado.toString() + " - "+ getTuNombre();
                             solicitud.characterType = personajeSeleccionado;
                             juegoApp.getGameClient().send(solicitud);
 
