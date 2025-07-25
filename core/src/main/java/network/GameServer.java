@@ -11,7 +11,6 @@ import com.esotericsoftware.kryonet.Listener;
 import com.esotericsoftware.kryonet.Server;
 import network.interfaces.IGameServer;
 
-
 import java.io.IOException;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
@@ -70,7 +69,7 @@ public class GameServer implements IGameServer {
     private float tiempoGeneracionTeleport = 0f;
     private boolean teleportGenerado = false;
     private int basuraReciclada = 0;
-
+    private final Map<Integer, String> nombresEnLobby = new ConcurrentHashMap<>();
     private final HashMap<Integer, AnimalState> animalesActivos = new HashMap<>();
     private final HashMap<Integer, Float> cooldownsHabilidadLimpieza = new HashMap<>();
     private final HashMap<Integer, EstadisticasJugador> estadisticasJugadores = new HashMap<>();
@@ -796,6 +795,12 @@ public class GameServer implements IGameServer {
 
         // 7. CERRAMOS LA CONEXIÓN (si no estuviera ya cerrada).
         // Esto asegura que el servidor no mantenga conexiones inactivas.
+        nombresEnLobby.remove(jugadorId);
+
+        // Notificamos a los jugadores restantes de la nueva lista.
+        Network.PaqueteActualizarLobby paqueteLobby = new Network.PaqueteActualizarLobby();
+        paqueteLobby.nombres = new ArrayList<>(nombresEnLobby.values());
+        servidor.sendToAllTCP(paqueteLobby);
         conexion.close();
 
         if (jugadores.isEmpty()) {
@@ -1235,6 +1240,17 @@ public class GameServer implements IGameServer {
                         generarBloquesParaElNivel();
                         generarAnimales();
                         sincronizarBloquesConClientes();
+                        try {
+                            // Pausa estratégica para asegurar que todos los clientes se sincronicen.
+                            System.out.println("[SERVER] Pausa de sincronización iniciada (1.5s)...");
+                            Thread.sleep(1500);
+                        } catch (InterruptedException e) {
+                            Thread.currentThread().interrupt();
+                        }
+
+                        System.out.println("[SERVER] Mapa cargado. Enviando orden de iniciar partida a todos los jugadores...");
+                        Network.PaqueteIniciarPartida ordenInicio = new Network.PaqueteIniciarPartida();
+                        servidor.sendToAllTCP(ordenInicio);
                     }
                 }
                 if (objeto instanceof Network.PaqueteInvocarDron) {
@@ -1443,6 +1459,15 @@ public class GameServer implements IGameServer {
                     System.out.println("[GAMESERVER] ¡Recibida orden de forzar fin de juego!");
 
                     finalizarPartidaYEnviarResultados();
+                } if (objeto instanceof Network.PaqueteEnviarNombre paquete) {
+                    System.out.println("[SERVER] Recibido nombre '" + paquete.nombre + "' del jugador ID: " + conexion.getID());
+                    nombresEnLobby.put(conexion.getID(), paquete.nombre);
+
+                    // Creamos y enviamos la lista actualizada a todos.
+                    Network.PaqueteActualizarLobby paqueteLobby = new Network.PaqueteActualizarLobby();
+                    paqueteLobby.nombres = new ArrayList<>(nombresEnLobby.values());
+                    servidor.sendToAllTCP(paqueteLobby);
+                    System.out.println("[SERVER] Enviando lista de lobby actualizada a " + servidor.getConnections().size() + " jugadores.");
                 }
             }
 

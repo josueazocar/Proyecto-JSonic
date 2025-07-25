@@ -93,6 +93,9 @@ public class Network {
         kryo.register(ForzarFinDeJuegoDebug.class);
         kryo.register(PaqueteActualizacionVidaEnemigo.class);
         kryo.register(PaqueteHabilidadDronUsada.class);
+        kryo.register(PaqueteEnviarNombre.class);
+        kryo.register(PaqueteActualizarLobby.class);
+        kryo.register(PaqueteIniciarPartida.class);
     }
 
     // --- Definición de los Paquetes ---
@@ -303,6 +306,17 @@ public class Network {
 
     public static class PaqueteHabilidadDronUsada {
         // No necesita contenido. Su existencia es el mensaje.
+    }
+    // ... dentro de la clase Network
+    public static class PaqueteEnviarNombre {
+        public String nombre;
+    }
+
+    public static class PaqueteActualizarLobby {
+        public java.util.ArrayList<String> nombres;
+    }
+    public static class PaqueteIniciarPartida {
+
     }
 }
 

@@ -12,6 +12,9 @@ import com.badlogic.gdx.scenes.scene2d.ui.TextButton;
 import com.badlogic.gdx.scenes.scene2d.utils.ClickListener;
 import com.badlogic.gdx.utils.Align;
 import com.badlogic.gdx.utils.Array;
+import network.Network;
+
+import static com.JSonic.uneg.Pantallas.PantallaCrearPartida.getTuNombre;
 
 public class PantallaLobby extends PantallaBase {
     private static final int MAX_PLAYERS = 3;
@@ -97,6 +100,12 @@ public class PantallaLobby extends PantallaBase {
 
         // Inicializa la UI vacía
         actualizarListaJugadoresUI();
+        if (juegoApp.getGameClient() != null) {
+            Network.PaqueteEnviarNombre paqueteNombre = new Network.PaqueteEnviarNombre();
+            // Reemplaza "NombreDeUsuario" con la variable real que contiene el nombre.
+            paqueteNombre.nombre = getTuNombre(); // <-- USA TU VARIABLE DE NOMBRE AQUÍ
+            juegoApp.getGameClient().send(paqueteNombre);
+        }
     }
 
     /**
@@ -125,6 +134,7 @@ public class PantallaLobby extends PantallaBase {
      * Redibuja la lista de jugadores en la interfaz gráfica.
      */
     private void actualizarListaJugadoresUI() {
+
         for (int i = 0; i < MAX_PLAYERS; i++) {
             if (i < nombresJugadores.size) {
                 playerLabels[i].setText(nombresJugadores.get(i));
@@ -136,9 +146,45 @@ public class PantallaLobby extends PantallaBase {
 
     @Override
     public void actualizar(float delta){
-        // Se gestiona a través de agregarJugador/eliminarJugador.
-    }
+        if (juegoApp.getGameClient() == null) {
+            return;
+        }
 
+        java.util.Queue<Object> paquetesRecibidos = juegoApp.getGameClient().getPaquetesRecibidos();
+        java.util.ArrayList<Object> paquetesParaDespues = new java.util.ArrayList<>();
+
+        while (!paquetesRecibidos.isEmpty()) {
+            Object paquete = paquetesRecibidos.poll();
+
+            if (paquete instanceof Network.PaqueteActualizarLobby paqueteLobby) {
+                // CASO 1: Es para actualizar la lista de nombres. Lo procesamos.
+                System.out.println("[LOBBY] Procesando actualización de nombres.");
+                this.nombresJugadores.clear();
+                for(String nombre : paqueteLobby.nombres) {
+                    this.nombresJugadores.add(nombre);
+                }
+                actualizarListaJugadoresUI();
+
+            } else if (paquete instanceof Network.PaqueteIniciarPartida) {
+                // CASO 2: ¡Es la orden para iniciar el juego! La procesamos.
+                System.out.println("[LOBBY] Recibida orden del servidor para iniciar la partida.");
+                // Condición de seguridad para no iniciar dos veces.
+                if (!(juegoApp.getScreen() instanceof PantallaDeJuego)) {
+                    juegoApp.iniciarJuegoOnline();
+                }
+                // No necesitamos devolver este paquete a la cola.
+
+            } else {
+                // CASO 3: No es para el lobby. Lo guardamos para la siguiente pantalla.
+                paquetesParaDespues.add(paquete);
+            }
+        }
+
+        // Devolvemos los paquetes que no usamos a la cola principal.
+        if (!paquetesParaDespues.isEmpty()) {
+            paquetesRecibidos.addAll(paquetesParaDespues);
+        }
+    }
     @Override
     public void render(float delta) {
         super.render(delta);

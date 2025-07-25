@@ -106,17 +106,7 @@ public class PantallaUnirsePartida extends PantallaBase {
         // Por ahora, es una lista de ejemplo para el frontend.
 
         List<String> hosts = new ArrayList<>();
-        hosts.add("Partida de Juan [1/3]");         // Simularemos que no tiene a nadie
-        hosts.add("Servidor Mega Pro [2/3]");       // Simularemos que tiene a Sonic
-        hosts.add("Aventura Sonic [3/3]");
-        hosts.add("Partida (Simulacion)");
-        // Añadir más para probar el scroll
-        hosts.add("Servidor 5");
-        hosts.add("Servidor 6");
-        hosts.add("Servidor 7");
-        hosts.add("Servidor 8");
-        hosts.add("Servidor 9");
-        hosts.add("Servidor 10");
+        hosts.add("Partida en Servidor");         // Simularemos que no tiene a nadie
 
         if (hosts.isEmpty()) {
             partidasTable.add(new Label("No se encontraron partidas.", getSkin())).center();
