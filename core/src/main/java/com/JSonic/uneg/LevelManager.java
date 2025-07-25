@@ -14,8 +14,8 @@ import com.badlogic.gdx.maps.tiled.TiledMap;
 import com.badlogic.gdx.maps.tiled.TmxMapLoader;
 import com.badlogic.gdx.maps.MapObjects;
 import com.badlogic.gdx.maps.tiled.renderers.OrthogonalTiledMapRenderer;
-import com.badlogic.gdx.graphics.g2d.SpriteBatch; // Necesario para el constructor, aunque no se usa directamente en dibujar()
-import com.badlogic.gdx.math.MathUtils; // Importar para MathUtils.clamp
+import com.badlogic.gdx.graphics.g2d.SpriteBatch;
+import com.badlogic.gdx.math.MathUtils;
 import com.badlogic.gdx.math.Rectangle;
 import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.math.Intersector;
@@ -40,7 +40,7 @@ public class LevelManager {
     private Array<Rectangle> colisionesDinamicas;
     private TiledMap mapaActual;
     private OrthogonalTiledMapRenderer renderizadorMapa;
-    private final OrthographicCamera camaraJuego; // Referencia a la cámara principal del juego
+    private final OrthographicCamera camaraJuego;
     private String nombreMapaActual;
     private float anchoMapaPixels;
     private float altoMapaPixels;
@@ -553,7 +553,7 @@ public class LevelManager {
 
                 // Comprueba si el polígono de la entidad se superpone con el polígono del bloque.
                 if (Intersector.overlapConvexPolygons(bloque.getBounds(), boundsPolygon)) {
-                    return true; // Colisión precisa con un bloque rompible
+                    return true; // Colisión
                 }
             }
         }
@@ -593,7 +593,7 @@ public class LevelManager {
 
             // Comprobación de seguridad: nos aseguramos de que la capa exista y tenga al menos un objeto.
             if (layer != null && layer.getObjects().getCount() > 0) {
-                // Asumimos que cada capa de planta tiene un solo objeto grande que la define.
+
                 com.badlogic.gdx.maps.MapObject mapObject = layer.getObjects().get(0);
 
                 if (mapObject instanceof com.badlogic.gdx.maps.objects.RectangleMapObject) {
@@ -617,7 +617,7 @@ public class LevelManager {
 
         com.badlogic.gdx.maps.MapLayer capaEsmeraldas = mapaActual.getLayers().get("Esmeraldas");
         if (capaEsmeraldas != null && capaEsmeraldas.getObjects().getCount() > 0) {
-            // Asumimos que solo hay un objeto esmeralda por mapa
+
             com.badlogic.gdx.maps.MapObject obj = capaEsmeraldas.getObjects().get(0);
             if (obj instanceof com.badlogic.gdx.maps.objects.RectangleMapObject) {
                 com.badlogic.gdx.math.Rectangle rect = ((com.badlogic.gdx.maps.objects.RectangleMapObject) obj).getRectangle();
@@ -643,15 +643,14 @@ public class LevelManager {
             renderizadorMapa.dispose();
             renderizadorMapa = null;
         }
-        // --- AÑADIDO: Liberar la textura del animal ---
+
         if (animalTexture != null) {
             animalTexture.dispose();
             animalTexture = null;
         }
         limpiarAnimales();
         if (bloquesRompibles != null) {
-            // Si los bloques tienen recursos propios (como Texturas), hay que liberarlos aquí.
-            // Por ahora, solo limpiamos la lista.
+
             bloquesRompibles.clear();
         }
         if (arbolesGenerados != null) {
