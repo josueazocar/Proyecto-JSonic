@@ -57,6 +57,8 @@ jar {
   duplicatesStrategy(DuplicatesStrategy.EXCLUDE)
   dependsOn configurations.runtimeClasspath
   from { configurations.runtimeClasspath.collect { it.isDirectory() ? it : zipTree(it) } }
+// Copia los archivos de la carpeta 'assets' del proyecto raíz a la raíz del JAR.
+  from(rootProject.file('assets')) { into '' }
 // these "exclude" lines remove some unnecessary duplicate files in the output JAR.
   exclude('META-INF/INDEX.LIST', 'META-INF/*.SF', 'META-INF/*.DSA', 'META-INF/*.RSA')
   dependencies {
@@ -64,7 +66,7 @@ jar {
   }
 // setting the manifest makes the JAR runnable.
   manifest {
-    attributes 'Main-Class': project.mainClassName
+    attributes 'Main-Class': 'com.JSonic.uneg.lwjgl3.WindowLauncher'
   }
 // this last step may help on some OSes that need extra instruction to make runnable JARs.
   doLast {

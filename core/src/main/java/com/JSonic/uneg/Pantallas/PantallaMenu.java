@@ -65,7 +65,7 @@ public class PantallaMenu extends PantallaBase {
         texturaFondo = new Texture(Gdx.files.internal("Fondos/Portada.png"));
         texturaFondoInicio = new Texture(Gdx.files.internal("Fondos/Portada_desenfoque.png"));
         textureTextoInicio = new Texture(Gdx.files.internal("Fondos/Texto_inicial.png"));
-        atlasBotones = new TextureAtlas(Gdx.files.internal("Atlas/BotonesMenu.atlas"));
+        atlasBotones = new TextureAtlas(Gdx.files.internal("Atlas/botonesMenu.atlas"));
 
 
         imagenFondo = new Image(texturaFondoInicio);

@@ -212,8 +212,8 @@ public class PantallaDeJuego extends PantallaBase {
 
         ShaderProgram.pedantic = false;
         shaderNeblina = new ShaderProgram(
-            Gdx.files.internal("shaders/neblina.vert"),
-            Gdx.files.internal("shaders/neblina.frag")
+            Gdx.files.internal("Shaders/neblina.vert"),
+            Gdx.files.internal("Shaders/neblina.frag")
         );
 
         if (!shaderNeblina.isCompiled()) {
