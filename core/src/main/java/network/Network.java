@@ -204,7 +204,7 @@ public class Network {
 
     /** Paquete con la colección de estados de todos los animales. */
     public static class PaqueteActualizacionAnimales {
-        public HashMap<Integer, AnimalState> estadosAnimales;
+        public Map<Integer, AnimalState> estadosAnimales;
     }
 
     /** Paquete enviado por el cliente al servidor para liberar un animal. */

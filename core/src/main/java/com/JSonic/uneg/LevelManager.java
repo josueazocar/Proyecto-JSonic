@@ -304,7 +304,7 @@ public class LevelManager {
      *
      * @param estadosAnimales El HashMap que viene del paquete del servidor.
      */
-    public void actualizarAnimalesDesdePaquete(java.util.HashMap<Integer, AnimalState> estadosAnimales) {
+    public void actualizarAnimalesDesdePaquete(java.util.Map<Integer, AnimalState> estadosAnimales) {
         if (estadosAnimales == null) return;
 
         // Itera sobre cada estado de animal recibido en el paquete para añadir/actualizar.

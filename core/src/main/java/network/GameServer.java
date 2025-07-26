@@ -14,6 +14,7 @@ import network.interfaces.IGameServer;
 import java.io.IOException;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.CopyOnWriteArrayList;
 
 /**
  * Implementación de IGameServer que gestiona una partida multijugador en red.
@@ -32,11 +33,11 @@ public class GameServer implements IGameServer {
     private final Map<Integer, EnemigoState> enemigosActivos = new ConcurrentHashMap<>();
     private final Map<Integer, ItemState> itemsActivos = new ConcurrentHashMap<>();
     private volatile ArrayList<com.badlogic.gdx.math.Rectangle> paredesDelMapa = null;
-    private final HashMap<Integer, Integer> puntajesAnillosIndividuales = new HashMap<>();
-    private final HashMap<Integer, Integer> puntajesBasuraIndividuales = new HashMap<>();
-    private final HashMap<Integer, DronState> dronesActivos = new HashMap<>();
-    private final ArrayList<Rectangle> colisionesDinamicas = new ArrayList<>();
-    private final HashMap<String, Network.PortalInfo> infoPortales = new HashMap<>();
+    private final Map<Integer, Integer> puntajesAnillosIndividuales = new ConcurrentHashMap<>();
+    private final Map<Integer, Integer> puntajesBasuraIndividuales = new ConcurrentHashMap<>();
+    private final Map<Integer, DronState> dronesActivos = new ConcurrentHashMap<>();
+    private final List<Rectangle> colisionesDinamicas = new CopyOnWriteArrayList<>();
+    private final Map<String, Network.PortalInfo> infoPortales = new ConcurrentHashMap<>();
     private int proximoIdDron = 20000; // Un rango de IDs para los drones
     private final HashMap<Integer, Rectangle> bloquesRompibles = new HashMap<>();
     private int proximoIdBloque = 30000; // Un rango de IDs para bloques
@@ -74,9 +75,9 @@ public class GameServer implements IGameServer {
     private boolean teleportGenerado = false;
     private int basuraReciclada = 0;
     private final Map<Integer, String> nombresEnLobby = new ConcurrentHashMap<>();
-    private final HashMap<Integer, AnimalState> animalesActivos = new HashMap<>();
+    private final Map<Integer, AnimalState> animalesActivos = new ConcurrentHashMap<>();
     private final HashMap<Integer, Float> cooldownsHabilidadLimpieza = new HashMap<>();
-    private final HashMap<Integer, EstadisticasJugador> estadisticasJugadores = new HashMap<>();
+    private final Map<Integer, EstadisticasJugador> estadisticasJugadores = new ConcurrentHashMap<>();
     private static final float COOLDOWN_HABILIDAD_SONIC = 40.0f; // Cooldown real
     private int proximoIdAnimal = 20000; // ID base para evitar colisiones con otros IDs
 
