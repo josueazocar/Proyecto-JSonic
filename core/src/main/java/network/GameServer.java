@@ -10,7 +10,9 @@ import com.esotericsoftware.kryonet.Connection;
 import com.esotericsoftware.kryonet.Listener;
 import com.esotericsoftware.kryonet.Server;
 import network.interfaces.IGameServer;
-
+import java.net.InetAddress;
+import java.net.UnknownHostException;
+import javax.swing.JOptionPane;
 import java.io.IOException;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
@@ -113,6 +115,12 @@ public class GameServer implements IGameServer {
     @Override
     public void start() {
         System.out.println("[SERVER] Iniciando GameServer...");
+        try {
+            InetAddress ip = InetAddress.getLocalHost();
+            System.out.println("La direccion IPV4 de esta PC es: " + ip.getHostAddress());
+        } catch (UnknownHostException e) {
+            e.printStackTrace();
+        }
         iniciarInstanciaServidor();
     }
 

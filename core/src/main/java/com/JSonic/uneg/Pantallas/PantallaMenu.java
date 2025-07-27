@@ -12,6 +12,8 @@ import com.badlogic.gdx.scenes.scene2d.ui.Table;
 import com.badlogic.gdx.scenes.scene2d.utils.ClickListener;
 import com.badlogic.gdx.scenes.scene2d.utils.TextureRegionDrawable;
 
+import javax.swing.*;
+
 /**
  * Pantalla principal del menú que proporciona navegación entre opciones como jugar, opciones y multijugador.
  */
@@ -245,6 +247,23 @@ public class PantallaMenu extends PantallaBase {
             public void clicked(InputEvent event, float x, float y) {
                 JSonicJuego.modoMultijugador = true;
                 juegoApp.direccionIp = "localhost";
+                String ipAddress = JOptionPane.showInputDialog("Por favor, introduce la direccion del Serividor Local IP:");
+
+                // Verificamos si el usuario introdujo algo o si presionó "Cancelar".
+                if (ipAddress != null && !ipAddress.trim().isEmpty()) {
+                    // Si el usuario escribió algo, lo mostramos en la consola.
+                    System.out.println("La dirección IP introducida es: " + ipAddress);
+
+                    // También podemos mostrarlo en otro cuadro de diálogo.
+                    JOptionPane.showMessageDialog(null, "La IP guardada es: " + ipAddress);
+                    juegoApp.direccionIp = ipAddress;
+                } else {
+                    // Si el usuario no escribió nada o cerró la ventana.
+                    System.out.println("No se introdujo ninguna dirección IP.");
+                    JOptionPane.showMessageDialog(null, "Operación cancelada. El servidor local no se ha configurado. \n " +
+                        "Se recomienda retroceder e ingresar de nuevo la direccion IP del servidor correctamente");
+                    juegoApp.direccionIp = "localhost";
+                }
                 mostrarMenuCrearUnirse();
             }
         });
