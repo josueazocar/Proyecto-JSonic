@@ -1,5 +1,9 @@
 # J-SONIC
 
+Este proyecto es un juego de fans desarrollado con fines educativos como parte de un curso universitario. No está afiliado, respaldado, ni es oficial de SEGA o Sonic Team. Todos los derechos de los personajes, nombres, sonidos y música originales de Sonic son propiedad de SEGA y/o Sonic Team. Este proyecto no tiene fines de lucro ni comerciales.
+
+This project is a fan game developed for educational purposes as part of a college course. It is not affiliated with, endorsed by, or officially licensed by SEGA or Sonic Team. All rights to Sonic characters, names, sounds, and original music are owned by SEGA and/or Sonic Team. This project is non-profit and non-commercial.
+
 A [libGDX](https://libgdx.com/) project generated with [gdx-liftoff](https://github.com/libgdx/gdx-liftoff).
 
 This project was generated with a template including simple application launchers and an empty `ApplicationListener` implementation.
@@ -31,3 +35,6 @@ Useful Gradle tasks and flags:
 
 Note that most tasks that are not specific to a single project can be run with `name:` prefix, where the `name` should be replaced with the ID of a specific project.
 For example, `core:clean` removes `build` folder only from the `core` project.
+
+
+
