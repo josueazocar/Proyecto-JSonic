@@ -1,3 +1,4 @@
+<img width="1277" height="744" alt="Capture 2" src="https://github.com/user-attachments/assets/ae316b5a-cfb7-46ac-a175-a39ecb0a39b1" />
 # J-SONIC
 
 Este proyecto es un juego de fans desarrollado con fines educativos como parte de un curso universitario. No está afiliado, respaldado, ni es oficial de SEGA o Sonic Team. Todos los derechos de los personajes, nombres, sonidos y música originales de Sonic son propiedad de SEGA y/o Sonic Team. Este proyecto no tiene fines de lucro ni comerciales.
