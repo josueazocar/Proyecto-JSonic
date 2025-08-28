@@ -1,4 +1,8 @@
-<img width="1277" height="744" alt="Capture 2" src="https://github.com/user-attachments/assets/ae316b5a-cfb7-46ac-a175-a39ecb0a39b1" />
+<img width="900" height="540" alt="image" src="https://github.com/user-attachments/assets/5c599c86-534b-4613-9ea2-1c4abb7047c3" />
+<img width="900" height="540" alt="image" src="https://github.com/user-attachments/assets/f0852927-e18b-4628-a0a1-d17cdefa097d" />
+<img width="900" height="540" alt="image" src="https://github.com/user-attachments/assets/ae2db516-b573-451d-a88a-03d01227aaa2" />
+
+
 # J-SONIC
 
 Este proyecto es un juego de fans desarrollado con fines educativos como parte de un curso universitario. No está afiliado, respaldado, ni es oficial de SEGA o Sonic Team. Todos los derechos de los personajes, nombres, sonidos y música originales de Sonic son propiedad de SEGA y/o Sonic Team. Este proyecto no tiene fines de lucro ni comerciales.
