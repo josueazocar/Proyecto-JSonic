@@ -42,7 +42,7 @@ El objetivo es ofrecer una jugabilidad de plataformas clásica y veloz, al mismo
 ## ✨ Características Principales
 
 -   **Motor Multijugador**:
-    -   **Local**: Modo de pantalla dividida para dos jugadores.
+    -   **Local**: Modo de red local para 3 jugadores.
     -   **Online**: Conexión cliente-servidor para jugar a través de internet, utilizando **KryoNet** para una comunicación de red eficiente.
 -   **Jugabilidad Clásica**: Plataformas de alta velocidad, loops y físicas inspiradas en los juegos originales.
 -   **Misión Ecológica**: Los jugadores suman puntos recogiendo basura y plantando árboles, restaurando el entorno de cada nivel.
